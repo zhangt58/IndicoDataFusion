@@ -30,3 +30,8 @@ go.work.sum
 # Editor/IDE
 # .idea/
 # .vscode/
+
+# Wails build artifacts
+build/bin
+node_modules
+frontend/dist
