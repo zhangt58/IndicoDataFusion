@@ -326,6 +326,77 @@ func (c *IndicoClient) ExtractAbstractIDsAndCSRFFromFile(htmlPath string) ([]str
 	return ids, csrf, nil
 }
 
+// parseAbstractIDsAndCSRFFromRoot walks an HTML node tree and returns the
+// list of input `value` attributes found under any <tr class="abstract-row"> and
+// the first CSRF token found in a <meta name=... content=...> tag.
+func parseAbstractIDsAndCSRFFromRoot(doc *xhtml.Node) ([]string, string) {
+	var ids []string
+	var csrf string
+
+	getAttr := func(attrs []xhtml.Attribute, name string) string {
+		for _, a := range attrs {
+			if strings.EqualFold(a.Key, name) {
+				return a.Val
+			}
+		}
+		return ""
+	}
+
+	var walk func(*xhtml.Node)
+	walk = func(n *xhtml.Node) {
+		if n.Type == xhtml.ElementNode {
+			if strings.EqualFold(n.Data, "meta") && csrf == "" {
+				name := strings.ToLower(getAttr(n.Attr, "name"))
+				if name == "csrf_token" || name == "csrf-token" || name == "csrf" {
+					csrf = getAttr(n.Attr, "content")
+				}
+			}
+
+			if strings.EqualFold(n.Data, "tr") {
+				cls := getAttr(n.Attr, "class")
+				if cls != "" {
+					for _, tok := range strings.Fields(cls) {
+						if tok == "abstract-row" {
+							var findInputs func(*xhtml.Node)
+							findInputs = func(m *xhtml.Node) {
+								if m.Type == xhtml.ElementNode && strings.EqualFold(m.Data, "input") {
+									val := getAttr(m.Attr, "value")
+									if val != "" {
+										ids = append(ids, val)
+									}
+								}
+								for c := m.FirstChild; c != nil; c = c.NextSibling {
+									findInputs(c)
+								}
+							}
+							findInputs(n)
+							break
+						}
+					}
+				}
+			}
+		}
+		for c := n.FirstChild; c != nil; c = c.NextSibling {
+			walk(c)
+		}
+	}
+
+	walk(doc)
+	return ids, csrf
+}
+
+// ExtractAbstractIDsAndCSRFFromHTML parses HTML content provided as a string and
+// returns the abstract input values and csrf token (same semantics as the
+// file-based version).
+func (c *IndicoClient) ExtractAbstractIDsAndCSRFFromHTML(htmlContent string) ([]string, string, error) {
+	doc, err := xhtml.Parse(strings.NewReader(htmlContent))
+	if err != nil {
+		return nil, "", fmt.Errorf("parse html: %w", err)
+	}
+	ids, csrf := parseAbstractIDsAndCSRFFromRoot(doc)
+	return ids, csrf, nil
+}
+
 // FetchAbstractsData posts to the Indico manage abstracts endpoint and returns the decoded JSON
 // response as a map[string]any. It posts form-encoded data with csrf_token and repeated abstract_id
 // form fields. The caller must provide a non-empty csrfToken and at least one id.
@@ -432,4 +503,15 @@ func (c *IndicoClient) ListAbstracts(ctx context.Context, token string) (string,
 	}
 
 	return string(b), nil
+}
+
+// GetAbstractIDsAndCSRFFromList fetches the abstracts list page using the
+// provided token and returns the parsed abstract ids and csrf token. It is a
+// higher-level helper that combines ListAbstracts + parsing.
+func (c *IndicoClient) GetAbstractIDsAndCSRFFromList(ctx context.Context, token string) ([]string, string, error) {
+	htmlBody, err := c.ListAbstracts(ctx, token)
+	if err != nil {
+		return nil, "", fmt.Errorf("fetch list html: %w", err)
+	}
+	return c.ExtractAbstractIDsAndCSRFFromHTML(htmlBody)
 }
