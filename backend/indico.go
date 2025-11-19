@@ -454,22 +454,14 @@ func (c *IndicoClient) FetchAbstractsData(ctx context.Context, ids []string, csr
 }
 
 // ListAbstracts fetches the HTML page for the abstracts list at
-// /event/<event-id>/manage/abstracts/list/. The provided token is sent as a
-// query parameter named `token`. The function returns the response body as
-// a string (HTML) or an error.
-func (c *IndicoClient) ListAbstracts(ctx context.Context, token string) (string, error) {
+// /event/<event-id>/manage/abstracts/list/.
+func (c *IndicoClient) ListAbstracts(ctx context.Context) (string, error) {
 	u, err := url.Parse(c.BaseURL)
 	if err != nil {
 		return "", err
 	}
 	path := fmt.Sprintf("/event/%d/manage/abstracts/list/", c.EventID)
 	u.Path = joinPaths(u.Path, path)
-
-	q := url.Values{}
-	if token != "" {
-		q.Set("token", token)
-	}
-	u.RawQuery = q.Encode()
 
 	ctxReq, cancel := context.WithTimeout(ctx, c.Timeout)
 	defer cancel()
@@ -508,8 +500,8 @@ func (c *IndicoClient) ListAbstracts(ctx context.Context, token string) (string,
 // GetAbstractIDsAndCSRFFromList fetches the abstracts list page using the
 // provided token and returns the parsed abstract ids and csrf token. It is a
 // higher-level helper that combines ListAbstracts + parsing.
-func (c *IndicoClient) GetAbstractIDsAndCSRFFromList(ctx context.Context, token string) ([]string, string, error) {
-	htmlBody, err := c.ListAbstracts(ctx, token)
+func (c *IndicoClient) GetAbstractIDsAndCSRFFromList(ctx context.Context) ([]string, string, error) {
+	htmlBody, err := c.ListAbstracts(ctx)
 	if err != nil {
 		return nil, "", fmt.Errorf("fetch list html: %w", err)
 	}
