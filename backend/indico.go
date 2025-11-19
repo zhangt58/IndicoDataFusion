@@ -4,11 +4,15 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"html"
+	stdhtml "html"
 	"io"
 	"net/http"
 	"net/url"
+	"os"
+	"strings"
 	"time"
+
+	xhtml "golang.org/x/net/html"
 )
 
 // HTTPClient is the subset of http.Client used so the client can be mocked in tests.
@@ -88,7 +92,7 @@ func (c *IndicoClient) GetEventInfo(ctx context.Context, detail string) (*Event,
 
 	desc := get("description")
 	// Unescape any HTML entities so Description contains original HTML tags.
-	desc = html.UnescapeString(desc)
+	desc = stdhtml.UnescapeString(desc)
 
 	ev := &Event{
 		ID:          get("id"),
@@ -238,4 +242,194 @@ func parseDateField(v any) (time.Time, error) {
 	default:
 		return time.Time{}, fmt.Errorf("unsupported date field type: %T", v)
 	}
+}
+
+// ExtractAbstractIDsAndCSRFFromFile parses an HTML file and returns two values:
+//   - a slice of `value` attributes for any <input> element found within a
+//     <tr> element whose class contains the token "abstract-row";
+//   - the CSRF token (if found) from a <meta name="csrf_token"|"csrf-token"|"csrf" content="..."> tag.
+//
+// The function uses golang.org/x/net/html to robustly parse HTML and is defensive
+// about missing elements.
+func (c *IndicoClient) ExtractAbstractIDsAndCSRFFromFile(htmlPath string) ([]string, string, error) {
+	f, err := os.Open(htmlPath)
+	if err != nil {
+		return nil, "", fmt.Errorf("open html file: %w", err)
+	}
+	defer f.Close()
+
+	doc, err := xhtml.Parse(f)
+	if err != nil {
+		return nil, "", fmt.Errorf("parse html: %w", err)
+	}
+
+	var ids []string
+	var csrf string
+
+	// helper: check if an attribute list contains a key=value pair (case-insensitive key)
+	getAttr := func(attrs []xhtml.Attribute, name string) string {
+		for _, a := range attrs {
+			if strings.EqualFold(a.Key, name) {
+				return a.Val
+			}
+		}
+		return ""
+	}
+
+	// find meta csrf token anywhere in the document
+	var walk func(*xhtml.Node)
+	walk = func(n *xhtml.Node) {
+		if n.Type == xhtml.ElementNode {
+			if strings.EqualFold(n.Data, "meta") && csrf == "" {
+				name := strings.ToLower(getAttr(n.Attr, "name"))
+				if name == "csrf_token" || name == "csrf-token" || name == "csrf" {
+					csrf = getAttr(n.Attr, "content")
+				}
+			}
+
+			// tr with class token
+			if strings.EqualFold(n.Data, "tr") {
+				cls := getAttr(n.Attr, "class")
+				if cls != "" {
+					// tokenized by whitespace
+					for _, tok := range strings.Fields(cls) {
+						if tok == "abstract-row" {
+							// find any <input> descendants and collect value attributes
+							var findInputs func(*xhtml.Node)
+							findInputs = func(m *xhtml.Node) {
+								if m.Type == xhtml.ElementNode && strings.EqualFold(m.Data, "input") {
+									val := getAttr(m.Attr, "value")
+									if val != "" {
+										ids = append(ids, val)
+									}
+								}
+								for c := m.FirstChild; c != nil; c = c.NextSibling {
+									findInputs(c)
+								}
+							}
+							// run on this tr node
+							findInputs(n)
+							break
+						}
+					}
+				}
+			}
+		}
+
+		for c := n.FirstChild; c != nil; c = c.NextSibling {
+			walk(c)
+		}
+	}
+
+	walk(doc)
+
+	return ids, csrf, nil
+}
+
+// FetchAbstractsData posts to the Indico manage abstracts endpoint and returns the decoded JSON
+// response as a map[string]any. It posts form-encoded data with csrf_token and repeated abstract_id
+// form fields. The caller must provide a non-empty csrfToken and at least one id.
+func (c *IndicoClient) FetchAbstractsData(ctx context.Context, ids []string, csrfToken string) (map[string]any, error) {
+	if csrfToken == "" {
+		return nil, fmt.Errorf("empty csrf token")
+	}
+	if len(ids) == 0 {
+		return nil, fmt.Errorf("no ids provided")
+	}
+
+	u, err := url.Parse(c.BaseURL)
+	if err != nil {
+		return nil, err
+	}
+	path := fmt.Sprintf("/event/%d/manage/abstracts/abstracts.json", c.EventID)
+	u.Path = joinPaths(u.Path, path)
+
+	v := url.Values{}
+	v.Set("csrf_token", csrfToken)
+	for _, id := range ids {
+		v.Add("abstract_id", id)
+	}
+
+	ctxReq, cancel := context.WithTimeout(ctx, c.Timeout)
+	defer cancel()
+
+	req, err := http.NewRequestWithContext(ctxReq, http.MethodPost, u.String(), strings.NewReader(v.Encode()))
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	req.Header.Set("Accept", "application/json")
+	if c.APIToken != "" {
+		req.Header.Set("Authorization", "Bearer "+c.APIToken)
+	}
+
+	resp, err := c.Client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		b, _ := io.ReadAll(io.LimitReader(resp.Body, 4*1024))
+		return nil, fmt.Errorf("api error: status %d: %s", resp.StatusCode, string(b))
+	}
+
+	var out map[string]any
+	dec := json.NewDecoder(resp.Body)
+	if err := dec.Decode(&out); err != nil {
+		return nil, fmt.Errorf("decode error: %w", err)
+	}
+	return out, nil
+}
+
+// ListAbstracts fetches the HTML page for the abstracts list at
+// /event/<event-id>/manage/abstracts/list/. The provided token is sent as a
+// query parameter named `token`. The function returns the response body as
+// a string (HTML) or an error.
+func (c *IndicoClient) ListAbstracts(ctx context.Context, token string) (string, error) {
+	u, err := url.Parse(c.BaseURL)
+	if err != nil {
+		return "", err
+	}
+	path := fmt.Sprintf("/event/%d/manage/abstracts/list/", c.EventID)
+	u.Path = joinPaths(u.Path, path)
+
+	q := url.Values{}
+	if token != "" {
+		q.Set("token", token)
+	}
+	u.RawQuery = q.Encode()
+
+	ctxReq, cancel := context.WithTimeout(ctx, c.Timeout)
+	defer cancel()
+
+	req, err := http.NewRequestWithContext(ctxReq, http.MethodGet, u.String(), nil)
+	if err != nil {
+		return "", err
+	}
+
+	// Accept HTML
+	req.Header.Set("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8")
+	if c.APIToken != "" {
+		req.Header.Set("Authorization", "Bearer "+c.APIToken)
+	}
+
+	resp, err := c.Client.Do(req)
+	if err != nil {
+		return "", err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		b, _ := io.ReadAll(io.LimitReader(resp.Body, 8*1024))
+		return "", fmt.Errorf("api error: status %d: %s", resp.StatusCode, string(b))
+	}
+
+	// Read the HTML body (limit to reasonable size to avoid pathological responses)
+	b, err := io.ReadAll(io.LimitReader(resp.Body, 10*1024*1024))
+	if err != nil {
+		return "", fmt.Errorf("read body: %w", err)
+	}
+
+	return string(b), nil
 }
