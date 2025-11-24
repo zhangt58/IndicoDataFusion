@@ -32,7 +32,7 @@ type IndicoClient struct {
 // NewIndicoClient constructs a client with a sensible default http.Client.
 func NewIndicoClient(baseURL string, eventID int, apiToken string) *IndicoClient {
 	return &IndicoClient{
-		BaseURL:  stringsTrimRightSlash(baseURL),
+		BaseURL:  StringsTrimRightSlash(baseURL),
 		EventID:  eventID,
 		APIToken: apiToken,
 		Client:   &http.Client{Timeout: 10 * time.Second},
@@ -187,7 +187,7 @@ func joinPaths(base, add string) string {
 }
 
 // helper: trim trailing slash from base URL
-func stringsTrimRightSlash(s string) string {
+func StringsTrimRightSlash(s string) string {
 	for len(s) > 1 && s[len(s)-1] == '/' {
 		s = s[:len(s)-1]
 	}
@@ -506,4 +506,79 @@ func (c *IndicoClient) GetAbstractIDsAndCSRFFromList(ctx context.Context) ([]str
 		return nil, "", fmt.Errorf("fetch list html: %w", err)
 	}
 	return c.ExtractAbstractIDsAndCSRFFromHTML(htmlBody)
+}
+
+// AbstractData represents abstract information
+type AbstractData struct {
+	Title       string   `json:"title"`
+	Author      string   `json:"author"`
+	Description string   `json:"description"`
+	Keywords    []string `json:"keywords"`
+}
+
+// ContributionData represents contribution information
+type ContributionData struct {
+	Title       string `json:"title"`
+	Contributor string `json:"contributor"`
+	Type        string `json:"type"`
+	Status      string `json:"status"`
+	SubmittedAt string `json:"submittedAt"`
+}
+
+// GetAbstractData returns placeholder abstract data
+func (c *IndicoClient) GetAbstractData() []AbstractData {
+	return []AbstractData{
+		{
+			Title:       "Machine Learning Applications in Data Fusion",
+			Author:      "Dr. Jane Smith",
+			Description: "This abstract explores the integration of machine learning techniques in multi-source data fusion systems.",
+			Keywords:    []string{"Machine Learning", "Data Fusion", "AI"},
+		},
+		{
+			Title:       "Quantum Computing for Large-Scale Data Processing",
+			Author:      "Prof. John Doe",
+			Description: "An investigation into quantum algorithms for processing large datasets efficiently.",
+			Keywords:    []string{"Quantum Computing", "Big Data", "Algorithms"},
+		},
+		{
+			Title:       "Real-time Sensor Data Integration",
+			Author:      "Dr. Alice Johnson",
+			Description: "Methods for integrating heterogeneous sensor data in real-time environments.",
+			Keywords:    []string{"IoT", "Sensors", "Real-time"},
+		},
+	}
+}
+
+// GetContributionData returns placeholder contribution data
+func (c *IndicoClient) GetContributionData() []ContributionData {
+	return []ContributionData{
+		{
+			Title:       "Advanced Neural Network Architectures",
+			Contributor: "Team Alpha",
+			Type:        "Research Paper",
+			Status:      "Accepted",
+			SubmittedAt: "2024-11-15",
+		},
+		{
+			Title:       "Distributed Systems Design Patterns",
+			Contributor: "Team Beta",
+			Type:        "Technical Report",
+			Status:      "Under Review",
+			SubmittedAt: "2024-11-20",
+		},
+		{
+			Title:       "Data Visualization Techniques",
+			Contributor: "Team Gamma",
+			Type:        "Workshop",
+			Status:      "Pending",
+			SubmittedAt: "2024-11-22",
+		},
+		{
+			Title:       "Cloud Infrastructure Optimization",
+			Contributor: "Team Delta",
+			Type:        "Case Study",
+			Status:      "Accepted",
+			SubmittedAt: "2024-11-10",
+		},
+	}
 }

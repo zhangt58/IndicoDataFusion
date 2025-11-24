@@ -1,7 +1,3 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
-
 /* keep existing font face and basic background color */
 html {
     background-color: rgba(27, 38, 54, 1);
@@ -21,8 +17,8 @@ body {
     font-family: "Nunito";
     font-style: normal;
     font-weight: 400;
-    src: local(""),
-    url("/src/assets/fonts/nunito-v16-latin-regular.woff2") format("woff2");
+    src: local(""), url("assets/fonts/nunito-v16-latin-regular.woff2") format("woff2");
+    font-display: swap;
 }
 
 #app {
