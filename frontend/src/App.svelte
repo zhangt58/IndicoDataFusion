@@ -1,25 +1,31 @@
 <script>
-  import './app.css';
-  import { GetAbstractData, GetContributionData } from '../wailsjs/go/backend/IndicoClient.js';
-  // import { GetAbstractData, GetContributionData } from './wails-backend.js';
+  import { TextAlignJustifyIcon } from '@lucide/svelte';
+import './app.css';
 
-  import { Sidebar, SidebarGroup, SidebarItem, SidebarButton, uiHelpers } from "flowbite-svelte";
+  // Runtime wrappers for the generated Wails client (avoids compile-time module resolution issues)
+  function GetAbstractData() {
+    if (typeof window !== 'undefined' && window.go && window.go.backend && window.go.backend.IndicoClient && window.go.backend.IndicoClient.GetAbstractData) {
+      return window.go.backend.IndicoClient.GetAbstractData();
+    }
+    return Promise.resolve([]);
+  }
+
+  function GetContributionData() {
+    if (typeof window !== 'undefined' && window.go && window.go.backend && window.go.backend.IndicoClient && window.go.backend.IndicoClient.GetContributionData) {
+      return window.go.backend.IndicoClient.GetContributionData();
+    }
+    return Promise.resolve([]);
+  }
+
   import { BookSolid, BookOpenSolid } from "flowbite-svelte-icons";
 
-  const sidebarUi = uiHelpers();
   let activeUrl = $state(window.location.pathname);
   let isSidebarOpen = $state(false);
-  const closeSidebar = sidebarUi.close;
 
   // Data state
   let abstractData = $state([]);
   let contributionData = $state([]);
   let loading = $state(false);
-
-  // sync sidebar state
-  $effect(() => {
-    isSidebarOpen = sidebarUi.isOpen;
-  });
 
   // track navigation changes
   $effect(() => {
@@ -67,36 +73,72 @@
     window.history.pushState({}, '', href);
     activeUrl = href;
   }
+
+  function toggleSidebar() {
+    isSidebarOpen = !isSidebarOpen;
+  }
+
+  // Programmatic navigation helper used by the top-right quick buttons
+  function navigate(path) {
+    window.history.pushState({}, '', path);
+    activeUrl = path;
+    isSidebarOpen = false;
+  }
+
+  // close on Escape
+  $effect(() => {
+    const onKey = (e) => {
+      if (e.key === 'Escape') {
+        isSidebarOpen = false;
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  });
 </script>
 
-<SidebarButton onclick={sidebarUi.toggle} class="mb-2" />
-<div class="relative">
-  <Sidebar
-   {activeUrl}
-   backdrop={false}
-   isOpen={isSidebarOpen}
-   closeSidebar={closeSidebar}
-   params={{ x: -50, duration: 50 }}
-   class="z-50 h-full"
-   position="absolute"
-   classes={{ nonactive: "p-2", active: "p-2" }}
-  >
-    <SidebarGroup>
-      <SidebarItem label="Abstract" href="/abstract" active={activeUrl === '/abstract'} onclick={handleNavigation}>
-        {#snippet icon()}
-          <BookSolid class="h-5 w-5 text-gray-500 transition duration-75 group-hover:text-gray-900 dark:text-gray-400 dark:group-hover:text-white" />
-        {/snippet}
-      </SidebarItem>
-      <SidebarItem label="Contribution" href="/contribution" active={activeUrl === '/contribution'} onclick={handleNavigation}>
-        {#snippet icon()}
-          <BookOpenSolid class="h-5 w-5 text-gray-500 transition duration-75 group-hover:text-gray-900 dark:text-gray-400 dark:group-hover:text-white" />
-        {/snippet}
-      </SidebarItem>
-    </SidebarGroup>
-  </Sidebar>
-</div>
+<div class="flex min-h-screen">
 
-<main class="container mx-auto p-4">
+  {#if isSidebarOpen}
+  <!-- horizontal quick buttons left of the toggle -->
+  <div class="fixed top-4 right-18 z-[99998] flex items-center gap-2">
+    <button
+      onclick={() => navigate('/abstract')}
+      class="flex items-center gap-2 bg-white/50 dark:bg-gray-800/50 border border-gray-200/60 dark:border-gray-700/60 rounded px-3 py-2 text-sm shadow-sm hover:bg-white/70 transition"
+      aria-label="Go to Abstracts"
+      title="Abstracts"
+      type="button"
+    >
+      <BookSolid class="h-4 w-4 text-gray-700 dark:text-gray-200" />
+      <span class="hidden sm:inline">Abstract</span>
+    </button>
+
+    <button
+      onclick={() => navigate('/contribution')}
+      class="flex items-center gap-2 bg-white/50 dark:bg-gray-800/50 border border-gray-200/60 dark:border-gray-700/60 rounded px-3 py-2 text-sm shadow-sm hover:bg-white/70 transition"
+      aria-label="Go to Contributions"
+      title="Contributions"
+      type="button"
+    >
+      <BookOpenSolid class="h-4 w-4 text-gray-700 dark:text-gray-200" />
+      <span class="hidden sm:inline">Contrib</span>
+    </button>
+  </div>
+  {/if}
+
+  <button
+    onclick={toggleSidebar}
+    class="fixed top-3 right-4 z-[999] pointer-events-auto bg-white/60 dark:bg-gray-800/60 border border-gray-200/70 dark:border-gray-700/60 rounded p-3 shadow-md backdrop-blur-sm hover:bg-white/70 transition focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+    aria-label="Toggle sidebar"
+    title="Toggle sidebar"
+    type="button"
+  >
+      <TextAlignJustifyIcon class="h-4 w-4"/>
+  </button>
+
+
+
+<div class="flex-1 p-6">
   <div class="flex items-center gap-4 mb-6">
     <h1 class="text-3xl font-bold text-gray-800 dark:text-white">Indico Data Fusion</h1>
   </div>
@@ -148,7 +190,62 @@
       <p class="text-gray-600 dark:text-gray-400">Select a section from the sidebar to get started.</p>
     </section>
   {/if}
-</main>
+ </div>
+</div>
 
 <style>
+/* Force the sidebar area and its children to be transparent. Use !important to override utility classes from Flowbite/Tailwind. */
+.custom-sidebar,
+.custom-sidebar *,
+.custom-sidebar *::before,
+.custom-sidebar *::after {
+  background: transparent !important;
+  background-image: none !important;
+  border-color: transparent !important;
+  box-shadow: none !important;
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+  outline: none !important;
+}
+
+/* Ensure nav/container itself is transparent */
+.custom-sidebar {
+  background: transparent !important;
+}
+
+/* Ensure anchors, list items, and their hover/focus states remain transparent */
+.custom-sidebar a,
+.custom-sidebar a:visited,
+.custom-sidebar a:hover,
+.custom-sidebar a:focus,
+.custom-sidebar li,
+.custom-sidebar li:hover,
+.custom-sidebar li:focus {
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+/* Target any element inside the sidebar that uses Tailwind background utilities like bg-white, bg-opacity, etc. */
+.custom-sidebar [class*="bg-"] {
+  background: transparent !important;
+  background-image: none !important;
+}
+.custom-sidebar [class*="bg-"]::before,
+.custom-sidebar [class*="bg-"]::after {
+  background: transparent !important;
+  background-image: none !important;
+}
+.custom-sidebar nav,
+.custom-sidebar nav *,
+.custom-sidebar ul,
+.custom-sidebar li,
+.custom-sidebar a,
+.custom-sidebar a * {
+  background: transparent !important;
+  background-image: none !important;
+  border: none !important;
+  box-shadow: none !important;
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+}
 </style>
