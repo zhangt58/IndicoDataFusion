@@ -40,46 +40,72 @@ func NewIndicoClient(baseURL string, eventID int, apiToken string) *IndicoClient
 	}
 }
 
-// GetEventInfo retrieves the raw JSON export for the configured event, decodes
-// it and returns an Event populated from the first element of the "results"
-// key. If detail is non-empty, the query parameter `detail=<value>` will be sent.
-func (c *IndicoClient) GetEventInfo(ctx context.Context, detail string) (*Event, error) {
-	// Build path and query.
-	path := fmt.Sprintf("/export/event/%d.json", c.EventID)
-	q := url.Values{}
-	if detail != "" {
-		q.Set("detail", detail)
+// GetEventInfo retrieves event information either from a local JSON file or via API.
+// If jsonFile is non-empty, it reads from that file. Otherwise, it fetches from the Indico API.
+// If detail is non-empty (only used with API), the query parameter `detail=<value>` will be sent.
+// Dates are converted to local timezone and returned as formatted strings.
+func (c *IndicoClient) GetEventInfo(jsonFile string) (*Event, error) {
+	var ev *Event
+
+	if jsonFile != "" {
+		// Read from local JSON file
+		data, err := os.ReadFile(jsonFile)
+		if err != nil {
+			return nil, fmt.Errorf("failed to read %s: %w", jsonFile, err)
+		}
+
+		// Parse JSON into a map to handle flexible date formats
+		var raw map[string]any
+		if err := json.Unmarshal(data, &raw); err != nil {
+			return nil, fmt.Errorf("failed to parse %s: %w", jsonFile, err)
+		}
+
+		ev = c.parseEventFromMap(raw)
+	} else {
+		// Fetch from API
+		ctx := context.Background()
+		path := fmt.Sprintf("/export/event/%d.json", c.EventID)
+		q := url.Values{}
+
+		var resp map[string]any
+		if err := c.doGet(ctx, path, q, &resp); err != nil {
+			return nil, err
+		}
+
+		// Extract "results" from the response map
+		v, ok := resp["results"]
+		if !ok || v == nil {
+			return nil, fmt.Errorf("missing results in response")
+		}
+
+		arr, ok := v.([]any)
+		if !ok {
+			return nil, fmt.Errorf("results is not an array, got %T", v)
+		}
+		if len(arr) == 0 {
+			return nil, fmt.Errorf("no results in response")
+		}
+		firstMap, ok := arr[0].(map[string]any)
+		if !ok {
+			return nil, fmt.Errorf("first result element is not an object: %T", arr[0])
+		}
+
+		ev = c.parseEventFromMap(firstMap)
 	}
 
-	// Decode the whole response into a generic map. The doGet helper will
-	// stream-decode the JSON body into this map for us.
-	var resp map[string]any
-	if err := c.doGet(ctx, path, q, &resp); err != nil {
-		return nil, err
-	}
+	return ev, nil
+}
 
-	// Extract "results" from the response map. We expect an array of objects
-	// (type []any). Take the first element (a map) as the source of event fields.
-	v, ok := resp["results"]
-	if !ok || v == nil {
-		return nil, fmt.Errorf("missing results in response")
-	}
+// GetEventData is a convenience method that reads event info from event.json file
+func (c *IndicoClient) GetEventData() (*Event, error) {
+	return c.GetEventInfo("event.json")
+}
 
-	arr, ok := v.([]any)
-	if !ok {
-		return nil, fmt.Errorf("results is not an array, got %T", v)
-	}
-	if len(arr) == 0 {
-		return nil, fmt.Errorf("no results in response")
-	}
-	firstMap, ok := arr[0].(map[string]any)
-	if !ok {
-		return nil, fmt.Errorf("first result element is not an object: %T", arr[0])
-	}
-
+// parseEventFromMap extracts event information from a map and converts dates to local timezone
+func (c *IndicoClient) parseEventFromMap(m map[string]any) *Event {
 	// helper to fetch string values from the map
 	get := func(key string) string {
-		if x, ok := firstMap[key]; ok && x != nil {
+		if x, ok := m[key]; ok && x != nil {
 			switch s := x.(type) {
 			case string:
 				return s
@@ -103,19 +129,25 @@ func (c *IndicoClient) GetEventInfo(ctx context.Context, detail string) (*Event,
 		Category:    get("category"),
 	}
 
-	// parse startDate and endDate which may be either strings or maps
-	if raw, ok := firstMap["startDate"]; ok && raw != nil {
+	// parse startDate and endDate, convert to local timezone
+	localZone := time.Local
+
+	if raw, ok := m["startDate"]; ok && raw != nil {
 		if t, err := parseDateField(raw); err == nil {
-			ev.StartDate = t
+			// Convert to local timezone
+			localTime := t.In(localZone)
+			ev.StartDate = localTime.Format("2006-01-02 15:04 MST")
 		}
 	}
-	if raw, ok := firstMap["endDate"]; ok && raw != nil {
+	if raw, ok := m["endDate"]; ok && raw != nil {
 		if t, err := parseDateField(raw); err == nil {
-			ev.EndDate = t
+			// Convert to local timezone
+			localTime := t.In(localZone)
+			ev.EndDate = localTime.Format("2006-01-02 15:04 MST")
 		}
 	}
 
-	return ev, nil
+	return ev
 }
 
 func (c *IndicoClient) doGet(ctx context.Context, path string, query url.Values, out interface{}) error {
@@ -162,14 +194,14 @@ func (c *IndicoClient) doGet(ctx context.Context, path string, query url.Values,
 
 // Event holds the essential information about an Indico event.
 type Event struct {
-	ID          string    `json:"id"`
-	Title       string    `json:"title"`
-	Description string    `json:"description"`
-	StartDate   time.Time `json:"startDate,omitempty"`
-	EndDate     time.Time `json:"endDate,omitempty"`
-	Location    string    `json:"location,omitempty"`
-	Address     string    `json:"address,omitempty"`
-	Category    string    `json:"category,omitempty"`
+	ID          string `json:"id"`
+	Title       string `json:"title"`
+	Description string `json:"description"`
+	StartDate   string `json:"startDate,omitempty"`
+	EndDate     string `json:"endDate,omitempty"`
+	Location    string `json:"location,omitempty"`
+	Address     string `json:"address,omitempty"`
+	Category    string `json:"category,omitempty"`
 }
 
 // helper: joinPaths ensures no duplicate slashes.
@@ -197,6 +229,23 @@ func StringsTrimRightSlash(s string) string {
 // parseDateField accepts either a string date or a map with date/time/tz and returns time.Time
 func parseDateField(v any) (time.Time, error) {
 	switch t := v.(type) {
+	case string:
+		// Try parsing ISO 8601 format (e.g., "2025-06-22T15:00:00+02:00")
+		if tt, err := time.Parse(time.RFC3339, t); err == nil {
+			return tt, nil
+		}
+		// Try parsing date only
+		if tt, err := time.Parse("2006-01-02", t); err == nil {
+			return tt, nil
+		}
+		// Try other common formats
+		if tt, err := time.Parse("2006-01-02 15:04:05", t); err == nil {
+			return tt, nil
+		}
+		if tt, err := time.Parse("2006-01-02 15:04", t); err == nil {
+			return tt, nil
+		}
+		return time.Time{}, fmt.Errorf("unrecognized date string format: %s", t)
 	case map[string]any:
 		// expected keys: date, time, tz
 		dateStr := ""
