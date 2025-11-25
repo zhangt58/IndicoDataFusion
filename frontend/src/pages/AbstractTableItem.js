@@ -286,6 +286,53 @@ export function createRenderAuthors() {
   };
 }
 
+// Column names for filter placeholders (visible columns only)
+const visibleColumnNames = ['ID', 'Title', 'State', 'Submitter', 'Affiliation', 'Track', 'Type', 'Score', 'Submitted', 'Authors'];
+
+// Mapping from visible column index to actual data column index
+// Visible: 0=ID, 1=Title, 2=State, 3=Submitter, 4=Affiliation, 5=Track, 6=Type, 7=Score, 8=Submitted, 9=Authors
+// Data:    0=ID, 1=Title, 2=State, 3=Submitter, 4=Affiliation, 5=Track, 8=Type, 9=Score, 10=Submitted, 11=Authors
+// Hidden data columns: 6=TrackFull, 7=TrackType, 12=AuthorsTooltip
+const visibleToDataColumnIndex = [0, 1, 2, 3, 4, 5, 8, 9, 10, 11];
+
+/**
+ * Table render function to add column filtering row
+ * @param {Array} _data - Table data
+ * @param {Object} table - Table DOM structure
+ * @param {string} type - Render type ('print' or default)
+ * @returns {Object} Modified table structure
+ */
+export function tableRender(_data, table, type) {
+  if (type === 'print') {
+    return table;
+  }
+
+  const tHead = table.childNodes[0];
+  const filterHeaders = {
+    nodeName: 'TR',
+    attributes: {
+      class: 'search-filtering-row'
+    },
+    childNodes: tHead.childNodes[0].childNodes.map((_th, index) => ({
+      nodeName: 'TH',
+      childNodes: [
+        {
+          nodeName: 'INPUT',
+          attributes: {
+            class: 'datatable-input column-filter',
+            type: 'search',
+            placeholder: visibleColumnNames[index] || `Col ${index + 1}`,
+            'data-columns': `[${visibleToDataColumnIndex[index]}]`
+          }
+        }
+      ]
+    }))
+  };
+
+  tHead.childNodes.push(filterHeaders);
+  return table;
+}
+
 /**
  * Create DataTable options with column customization
  * @returns {Object} DataTable options configuration
@@ -298,6 +345,7 @@ export function createDataTableOptions() {
     perPage: 25,
     perPageSelect: [10, 25, 50, 100],
     rowRender: rowRender,
+    tableRender: tableRender,
     columns: [
       { select: 0, sortable: true, type: 'number' },  // ID
       { select: 1, render: createRenderTitle(), sortable: true, type: 'string' },  // Title
