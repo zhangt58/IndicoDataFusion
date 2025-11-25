@@ -8,8 +8,8 @@ This is a Wails desktop application with Svelte 5 as the frontend framework.
 
 ## Technology Stack
 
-- **Backend**: Go 1.24.9
-- **Frontend Framework**: Svelte 5.43.6
+- **Backend**: Go 1.25.4
+- **Frontend Framework**: Svelte 5.43.5
 - **Build Tool**: Vite 7.2.2
 - **Desktop Framework**: Wails v2.11.0
 - **UI**: Svelte with Vite
@@ -18,9 +18,9 @@ This is a Wails desktop application with Svelte 5 as the frontend framework.
 
 Before you begin, ensure you have the following installed:
 
-- Go 1.23 or later
-- Node.js v20 or later
-- npm 10 or later
+- Go 1.24 or later
+- Node.js v24 or later
+- npm 11 or later
 - Wails CLI v2.11.0
 
 ### Linux Dependencies
@@ -67,20 +67,6 @@ wails build
 ```
 
 The built application will be available in `build/bin/`.
-
-## Project Structure
-
-```
-.
-├── app.go              # Application logic
-├── main.go             # Main entry point
-├── wails.json          # Wails configuration
-├── frontend/           # Frontend Svelte application
-│   ├── src/           # Svelte source files
-│   ├── package.json   # Frontend dependencies
-│   └── vite.config.js # Vite configuration
-└── build/             # Build output directory
-```
 
 ## License
 
