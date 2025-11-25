@@ -125,24 +125,36 @@ export function getTableItems(data) {
 }
 
 /**
+ * Build a lookup map from ID to table item
+ * @param {Array} tableItems - Array of table items
+ * @returns {Map} Map from ID to table item
+ */
+export function buildTableItemsMap(tableItems) {
+  const map = new Map();
+  tableItems.forEach(item => {
+    map.set(String(item.ID), item);
+  });
+  return map;
+}
+
+/**
  * Custom column rendering for Title with clickable link
- * @param {Array} tableItems - The table items for ID lookup
+ * data-id will be set by rowRender
  * @returns {Function} Render function
  */
-export function createRenderTitle(tableItems) {
+export function createRenderTitle() {
   return function(data, cell, dataIndex, cellIndex) {
     const titleStr = String(data || '');
-    // Get the ID from the first column of the same row
-    const rowData = tableItems[dataIndex];
-    const id = rowData?.ID || '';
-    
+    // We need to find ID from the row. Use a custom attribute on the link
+    // that will be updated by rowRender with the actual row ID
     cell.childNodes = [
       {
         nodeName: 'A',
         attributes: { 
           class: 'title-link',
           href: '#',
-          'data-id': String(id)
+          'data-id': '',  // Will be filled by rowRender
+          'data-title': titleStr
         },
         childNodes: [{ nodeName: '#text', data: titleStr }]
       }
@@ -171,28 +183,22 @@ export function renderState(data, cell, dataIndex, cellIndex) {
 
 /**
  * Custom column rendering for Track with badge styling and clickable link
- * @param {Array} tableItems - The table items for track data lookup
+ * Badge class and data-tracks will be set by rowRender
  * @returns {Function} Render function
  */
-export function createRenderTrack(tableItems) {
+export function createRenderTrack() {
   return function(data, cell, dataIndex, cellIndex) {
     const trackStr = String(data || '');
     if (!trackStr) return;
     
-    // Get the full track data from the row
-    const rowData = tableItems[dataIndex];
-    const trackFull = rowData?.TrackFull || '[]';
-    
-    // Default to reviewed style, will be updated based on TrackType
-    const bgClass = 'track-badge track-reviewed track-link';
-    
+    // Default class, will be updated by rowRender based on TrackType
     cell.childNodes = [
       {
         nodeName: 'A',
         attributes: { 
-          class: bgClass,
+          class: 'track-badge track-reviewed track-link',
           href: '#',
-          'data-tracks': trackFull
+          'data-tracks': ''  // Will be filled by rowRender
         },
         childNodes: [{ nodeName: '#text', data: trackStr }]
       }
@@ -217,41 +223,62 @@ export function renderType(data, cell, dataIndex, cellIndex) {
 }
 
 /**
- * Row render to style track based on TrackType
+ * Row render to populate data attributes from row data
+ * This runs after cell render functions, so we can access all row cells
  */
 export function rowRender(row, tr, index) {
-  // Check TrackType (column 7) to style Track column (column 5)
-  const trackType = row.cells[7]?.data;
-  if (trackType === 'accepted' && tr.childNodes && tr.childNodes[5]) {
-    // Find the track cell and update its class
-    const trackCell = tr.childNodes[5];
-    if (trackCell.childNodes && trackCell.childNodes[0]?.attributes) {
-      trackCell.childNodes[0].attributes.class = 'track-badge track-accepted track-link';
+  // Get values from row cells
+  const id = row.cells[0]?.data || '';           // ID column
+  const trackType = row.cells[7]?.data || '';    // TrackType column  
+  const trackFull = row.cells[6]?.data || '[]';  // TrackFull column
+  const authorsTooltip = row.cells[12]?.data || '';  // AuthorsTooltip column
+  
+  // Update Title link (column 1) with data-id
+  if (tr.childNodes && tr.childNodes[1]) {
+    const titleCell = tr.childNodes[1];
+    if (titleCell.childNodes && titleCell.childNodes[0]?.attributes) {
+      titleCell.childNodes[0].attributes['data-id'] = String(id);
     }
   }
+  
+  // Update Track link (column 5) with data-tracks and proper class
+  if (tr.childNodes && tr.childNodes[5]) {
+    const trackCell = tr.childNodes[5];
+    if (trackCell.childNodes && trackCell.childNodes[0]?.attributes) {
+      trackCell.childNodes[0].attributes['data-tracks'] = trackFull;
+      trackCell.childNodes[0].attributes.class = trackType === 'accepted' 
+        ? 'track-badge track-accepted track-link'
+        : 'track-badge track-reviewed track-link';
+    }
+  }
+  
+  // Update Authors span (column 11) with tooltip
+  if (tr.childNodes && tr.childNodes[11]) {
+    const authorsCell = tr.childNodes[11];
+    if (authorsCell.childNodes && authorsCell.childNodes[0]?.attributes) {
+      authorsCell.childNodes[0].attributes.title = authorsTooltip;
+    }
+  }
+  
   return tr;
 }
 
 /**
  * Custom column rendering for Authors with tooltip
- * @param {Array} tableItems - The table items for tooltip lookup
+ * Tooltip will be set by rowRender
  * @returns {Function} Render function
  */
-export function createRenderAuthors(tableItems) {
+export function createRenderAuthors() {
   return function(data, cell, dataIndex, cellIndex) {
     const authorsStr = String(data || '');
     if (!authorsStr) return;
-    
-    // Get the tooltip from the row
-    const rowData = tableItems[dataIndex];
-    const tooltip = rowData?.AuthorsTooltip || '';
     
     cell.childNodes = [
       {
         nodeName: 'SPAN',
         attributes: { 
           class: 'authors-cell',
-          title: tooltip
+          title: ''  // Will be filled by rowRender
         },
         childNodes: [{ nodeName: '#text', data: authorsStr }]
       }
@@ -261,10 +288,9 @@ export function createRenderAuthors(tableItems) {
 
 /**
  * Create DataTable options with column customization
- * @param {Array} tableItems - The table items for title rendering
  * @returns {Object} DataTable options configuration
  */
-export function createDataTableOptions(tableItems) {
+export function createDataTableOptions() {
   return {
     searchable: true,
     sortable: true,
@@ -274,17 +300,17 @@ export function createDataTableOptions(tableItems) {
     rowRender: rowRender,
     columns: [
       { select: 0, sortable: true, type: 'number' },  // ID
-      { select: 1, render: createRenderTitle(tableItems), sortable: true, type: 'string' },  // Title
+      { select: 1, render: createRenderTitle(), sortable: true, type: 'string' },  // Title
       { select: 2, render: renderState, sortable: true, type: 'string' },  // State
       { select: 3, sortable: true, type: 'string' },  // Submitter
       { select: 4, sortable: true, type: 'string' },  // Affiliation
-      { select: 5, render: createRenderTrack(tableItems), sortable: true, type: 'string' },  // Track
+      { select: 5, render: createRenderTrack(), sortable: true, type: 'string' },  // Track
       { select: 6, hidden: true, type: 'string' },  // TrackFull (hidden - JSON of all tracks)
       { select: 7, hidden: true, type: 'string' },  // TrackType (hidden helper column)
       { select: 8, render: renderType, sortable: true, type: 'string' },  // Type
       { select: 9, sortable: true, type: 'number' },  // Score
       { select: 10, sortable: true, type: 'string' },  // Submitted
-      { select: 11, render: createRenderAuthors(tableItems), sortable: true, type: 'string' },  // Authors
+      { select: 11, render: createRenderAuthors(), sortable: true, type: 'string' },  // Authors
       { select: 12, hidden: true, type: 'string' }  // AuthorsTooltip (hidden)
     ]
   };
