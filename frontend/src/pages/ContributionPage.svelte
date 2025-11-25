@@ -25,8 +25,8 @@
 {:else if error}
   <div class="p-6 text-center text-red-600">Failed to load contributions.</div>
 {:else}
-  <section class="space-y-4">
-    <h2 class="text-2xl font-semibold text-gray-700 dark:text-gray-200 mb-4">Contributions</h2>
+  <h2 class="fixed bg-indigo-300 top-2 left-2 shadow-md px-2 py-1 rounded-sm text-xl font-semibold text-gray-700 dark:text-gray-200">Contributions ({contributionData.length})</h2>
+  <section class="space-y-4 mt-8">
     {#each contributionData as contribution}
       <div class="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 border border-gray-200 dark:border-gray-700">
         <h3 class="text-xl font-bold text-gray-800 dark:text-white mb-2">{contribution.title}</h3>
