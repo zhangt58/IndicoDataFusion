@@ -21,6 +21,7 @@
     ]
   },
   "dependencies": {
+    "@flowbite-svelte-plugins/datatable": "^0.4.1",
     "@lucide/svelte": "^0.554.0",
     "flowbite": "^4.0.1",
     "flowbite-svelte": "^1.28.1",
