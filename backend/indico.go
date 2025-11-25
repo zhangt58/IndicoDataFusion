@@ -508,14 +508,6 @@ func (c *IndicoClient) GetAbstractIDsAndCSRFFromList(ctx context.Context) ([]str
 	return c.ExtractAbstractIDsAndCSRFFromHTML(htmlBody)
 }
 
-// AbstractData represents abstract information
-type AbstractData struct {
-	Title       string   `json:"title"`
-	Author      string   `json:"author"`
-	Description string   `json:"description"`
-	Keywords    []string `json:"keywords"`
-}
-
 // ContributionData represents contribution information
 type ContributionData struct {
 	Title       string `json:"title"`
@@ -523,30 +515,6 @@ type ContributionData struct {
 	Type        string `json:"type"`
 	Status      string `json:"status"`
 	SubmittedAt string `json:"submittedAt"`
-}
-
-// GetAbstractData returns placeholder abstract data
-func (c *IndicoClient) GetAbstractData() []AbstractData {
-	return []AbstractData{
-		{
-			Title:       "Machine Learning Applications in Data Fusion",
-			Author:      "Dr. Jane Smith",
-			Description: "This abstract explores the integration of machine learning techniques in multi-source data fusion systems.",
-			Keywords:    []string{"Machine Learning", "Data Fusion", "AI"},
-		},
-		{
-			Title:       "Quantum Computing for Large-Scale Data Processing",
-			Author:      "Prof. John Doe",
-			Description: "An investigation into quantum algorithms for processing large datasets efficiently.",
-			Keywords:    []string{"Quantum Computing", "Big Data", "Algorithms"},
-		},
-		{
-			Title:       "Real-time Sensor Data Integration",
-			Author:      "Dr. Alice Johnson",
-			Description: "Methods for integrating heterogeneous sensor data in real-time environments.",
-			Keywords:    []string{"IoT", "Sensors", "Real-time"},
-		},
-	}
 }
 
 // GetContributionData returns placeholder contribution data
