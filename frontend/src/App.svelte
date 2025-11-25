@@ -1,7 +1,9 @@
 <script>
-  import { TextAlignJustifyIcon } from '@lucide/svelte';
-  import { BookSolid, BookOpenSolid } from 'flowbite-svelte-icons';
+  import { onMount } from 'svelte';
+  import { BookSolid, BookOpenSolid, AlignJustifyOutline } from 'flowbite-svelte-icons';
   import './app.css';
+
+  import { DarkMode } from 'flowbite-svelte';
 
   import LocalRouter from './router/Router.svelte';
   import { goto } from './router/index.js';
@@ -17,6 +19,11 @@
   };
 
   let isSidebarOpen = false;
+
+  // Keep onMount in case other init logic is needed
+  onMount(() => {
+    // no-op for now
+  });
 
   // navigation helpers
   function navigate(path) {
@@ -47,7 +54,7 @@
 
   {#if isSidebarOpen}
   <!-- horizontal quick buttons left of the toggle -->
-  <div class="fixed top-2 right-4 z-[99998] flex items-center gap-2 animate-slide-in">
+  <div class="fixed top-2 right-4 z-50 flex items-center gap-2 animate-slide-in">
     <button
       on:click={() => quickGoto('/abstract')}
       class="flex items-center gap-2 bg-white/50 dark:bg-gray-800/50 border border-gray-200/60 dark:border-gray-700/60 rounded px-3 py-2 text-sm shadow-sm hover:bg-white/70 transition-all duration-200 hover:scale-105"
@@ -55,7 +62,7 @@
       title="Abstracts"
       type="button"
     >
-      <BookSolid class="h-4 w-4 text-gray-700 dark:text-gray-200" />
+      <BookSolid class="text-gray-700 dark:text-gray-200" />
       <span class="hidden sm:inline">Abstract</span>
     </button>
 
@@ -66,9 +73,11 @@
       title="Contributions"
       type="button"
     >
-      <BookOpenSolid class="h-4 w-4 text-gray-700 dark:text-gray-200" />
+      <BookOpenSolid class="text-gray-700 dark:text-gray-200" />
       <span class="hidden sm:inline">Contrib</span>
     </button>
+    <!-- Dark mode toggle provided by Flowbite (placed with contrib buttons) -->
+    <DarkMode class="flex items-center px-3 py-2 rounded bg-white/50 dark:bg-gray-800/50 border border-gray-200/60 dark:border-gray-700/60 shadow-md backdrop-blur-sm" />
 
     <button
       on:click={toggleSidebar}
@@ -77,20 +86,22 @@
       title="Toggle sidebar"
       type="button"
     >
-      <TextAlignJustifyIcon class="h-4 w-4 text-blue-500"/>
-      <span class="text-sm font-semibold text-blue-500 dark:text-gray-200 whitespace-nowrap">Indico Data Fusion</span>
+      <AlignJustifyOutline class="text-blue-500 dark:bg-gray-200"/>
+      <span class="text-sm font-semibold text-blue-500 dark:text-gray-200 whitespace-nowrap">IndicoDataFusion</span>
     </button>
   </div>
   {:else}
-  <button
-    on:click={toggleSidebar}
-    class="fixed top-2 right-4 z-[99999] pointer-events-auto bg-white/60 dark:bg-gray-800/60 border border-gray-200/70 dark:border-gray-700/60 rounded p-3 shadow-md backdrop-blur-sm hover:bg-white/70 transition-all duration-200 hover:scale-110 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 animate-fade-in"
-    aria-label="Toggle sidebar"
-    title="Toggle sidebar"
-    type="button"
-  >
-      <TextAlignJustifyIcon class="h-4 w-4"/>
-  </button>
+  <div class="fixed top-2 right-4 z-50 flex items-center gap-2 animate-fade-in">
+    <button
+      on:click={toggleSidebar}
+      class="pointer-events-auto bg-white/60 dark:bg-gray-800/60 border border-gray-200/70 dark:border-gray-700/60 rounded px-3 py-2 shadow-md backdrop-blur-sm hover:bg-white/70 transition-all duration-200 hover:scale-110 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+      aria-label="Toggle sidebar"
+      title="Toggle sidebar"
+      type="button"
+    >
+      <AlignJustifyOutline class="text-blue-500 dark:bg-gray-200"/>
+    </button>
+  </div>
   {/if}
 
 

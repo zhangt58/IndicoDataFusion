@@ -35,4 +35,22 @@
     input[type="search"]::-webkit-search-cancel-button {
         display: none;
     }
+
+    /* Set global background for light and dark themes */
+    html, body {
+        height: 100%;
+        margin: 0;
+    }
+
+    /* Light theme background */
+    html {
+        background-color: #f8fafc; /* slate-50 */
+        color-scheme: light;
+    }
+
+    /* Dark theme background when Tailwind's `dark` class is present on html */
+    .dark, html.dark {
+        background-color: #0f172a; /* slate-900 */
+        color-scheme: dark;
+    }
 }

@@ -25,7 +25,7 @@
 {:else if error}
   <div class="p-6 text-center text-red-600">Failed to load abstracts.</div>
 {:else}
-  <h2 class="fixed bg-sky-300 top-2 left-2 shadow-md px-2 py-1 rounded-sm text-xl font-semibold text-gray-700 dark:text-gray-200">Abstracts ({abstractData.length})</h2>
+  <h2 class="fixed bg-sky-300 top-2 left-2 shadow-md px-2 py-1 rounded-sm text-xl font-semibold text-gray-700 dark:text-gray-50">Abstracts ({abstractData.length})</h2>
   <section class="space-y-4 mt-8">
     {#each abstractData as abstract}
       <div class="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 border border-gray-200 dark:border-gray-700">
