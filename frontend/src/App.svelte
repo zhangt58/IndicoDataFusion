@@ -4,11 +4,9 @@
   import { BookSolid, BookOpenSolid } from 'flowbite-svelte-icons';
   import './app.css';
 
-  import LocalRouter from './lib/local-router/Router.svelte';
-  import { goto } from './lib/local-router/index.js';
-  /** @type {any} */
+  import LocalRouter from './router/Router.svelte';
+  import { goto } from './router/index.js';
   let Router = LocalRouter;
-
 
   import AbstractPage from './pages/AbstractPage.svelte';
   import ContributionPage from './pages/ContributionPage.svelte';
