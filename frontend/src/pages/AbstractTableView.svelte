@@ -1,126 +1,109 @@
 <script>
   import { Table } from '@flowbite-svelte-plugins/datatable';
+  import AbstractDetailsDialog from './AbstractDetailsDialog.svelte';
+  import TrackDetailsDialog from './TrackDetailsDialog.svelte';
+  import { 
+    getTableItems, 
+    createDataTableOptions 
+  } from './AbstractTableItem.js';
 
   /** @type {Array} */
   export let abstractData = [];
 
-  // Helper to format timestamp (remove timezone and microseconds)
-  function formatTimestamp(dt) {
-    if (!dt) return '';
-    // Remove microseconds (.123456) and timezone suffix like +00:00 or Z
-    return dt.replace(/\.\d{6}/, '').replace(/([+-]\d{2}:\d{2}|Z)$/, '').replace('T', ' ');
+  // Abstract dialog state
+  let showAbstractDialog = false;
+  let selectedAbstract = null;
+
+  // Track dialog state
+  let showTrackDialog = false;
+  let selectedTracks = [];
+
+  // Collect all unique tracks from all abstracts
+  $: allAvailableTracks = abstractData.reduce((acc, abstract) => {
+    if (abstract.accepted_track && !acc.some(t => t.title === abstract.accepted_track.title)) {
+      acc.push({ title: abstract.accepted_track.title, type: 'accepted' });
+    }
+    if (abstract.reviewed_for_tracks) {
+      abstract.reviewed_for_tracks.forEach(track => {
+        if (!acc.some(t => t.title === track.title)) {
+          acc.push({ title: track.title, type: 'reviewed' });
+        }
+      });
+    }
+    return acc;
+  }, []);
+
+  // Find abstract by ID
+  function findAbstractById(id) {
+    return abstractData.find(a => (a.friendly_id || a.id) == id);
   }
 
-  // Transform abstract data for the table view
-  function getTableItems(data) {
-    return data.map(abstract => ({
-      ID: abstract.friendly_id || abstract.id,
-      Title: abstract.title || '',
-      State: abstract.state || '',
-      Submitter: abstract.submitter?.full_name || '',
-      Affiliation: abstract.submitter?.affiliation || '',
-      Track: abstract.accepted_track?.title || abstract.reviewed_for_tracks?.[0]?.title || '',
-      TrackType: abstract.accepted_track ? 'accepted' : 'reviewed',
-      Type: abstract.accepted_contrib_type?.name || '',
-      Score: abstract.score ?? '',
-      Submitted: formatTimestamp(abstract.submitted_dt),
-      Authors: abstract.persons?.map(p => `${p.first_name} ${p.last_name}`).join(', ') || ''
-    }));
-  }
-
-  // Custom column rendering for State with badge styling
-  const renderState = function(data, cell, dataIndex, cellIndex) {
-    const stateStr = String(data || '');
-    const state = stateStr.toLowerCase();
-    let bgClass = 'state-badge state-other';
-    if (state === 'accepted') bgClass = 'state-badge state-accepted';
-    else if (state === 'rejected') bgClass = 'state-badge state-rejected';
+  // Handle clicks on the table
+  function handleTableClick(event) {
+    const target = event.target;
     
-    cell.childNodes = [
-      {
-        nodeName: 'SPAN',
-        attributes: { class: bgClass },
-        childNodes: [{ nodeName: '#text', data: stateStr }]
-      }
-    ];
-  };
-
-  // Custom column rendering for Track with badge styling
-  const renderTrack = function(data, cell, dataIndex, cellIndex) {
-    const trackStr = String(data || '');
-    if (!trackStr) return;
-    
-    // Default to reviewed style, will be updated based on TrackType
-    const bgClass = 'track-badge track-reviewed';
-    
-    cell.childNodes = [
-      {
-        nodeName: 'SPAN',
-        attributes: { class: bgClass },
-        childNodes: [{ nodeName: '#text', data: trackStr }]
-      }
-    ];
-  };
-
-  // Custom column rendering for Type with badge styling
-  const renderType = function(data, cell, dataIndex, cellIndex) {
-    const typeStr = String(data || '');
-    if (!typeStr) return;
-    
-    cell.childNodes = [
-      {
-        nodeName: 'SPAN',
-        attributes: { class: 'type-badge' },
-        childNodes: [{ nodeName: '#text', data: typeStr }]
-      }
-    ];
-  };
-
-  // Row render to style track based on TrackType
-  const rowRender = function(row, tr, index) {
-    // Check TrackType (column 6) to style Track column (column 5)
-    const trackType = row.cells[6]?.data;
-    if (trackType === 'accepted' && tr.childNodes && tr.childNodes[5]) {
-      // Find the track cell and update its class
-      const trackCell = tr.childNodes[5];
-      if (trackCell.childNodes && trackCell.childNodes[0]?.attributes) {
-        trackCell.childNodes[0].attributes.class = 'track-badge track-accepted';
+    // Handle title link click
+    if (target.classList.contains('title-link')) {
+      event.preventDefault();
+      const abstractId = target.dataset.id;
+      selectedAbstract = findAbstractById(abstractId);
+      if (selectedAbstract) {
+        showAbstractDialog = true;
       }
     }
-    return tr;
-  };
-
-  // DataTable options with column customization
-  const dataTableOptions = {
-    searchable: true,
-    sortable: true,
-    paging: true,
-    perPage: 25,
-    perPageSelect: [10, 25, 50, 100],
-    rowRender: rowRender,
-    columns: [
-      { select: 0, sortable: true, type: 'number' },  // ID
-      { select: 1, sortable: true, type: 'string' },  // Title
-      { select: 2, render: renderState, sortable: true, type: 'string' },  // State
-      { select: 3, sortable: true, type: 'string' },  // Submitter
-      { select: 4, sortable: true, type: 'string' },  // Affiliation
-      { select: 5, render: renderTrack, sortable: true, type: 'string' },  // Track
-      { select: 6, hidden: true, type: 'string' },  // TrackType (hidden helper column)
-      { select: 7, render: renderType, sortable: true, type: 'string' },  // Type
-      { select: 8, sortable: true, type: 'number' },  // Score
-      { select: 9, sortable: true, type: 'string' },  // Submitted
-      { select: 10, sortable: true, type: 'string' }  // Authors
-    ]
-  };
+    
+    // Handle track link click
+    if (target.classList.contains('track-link')) {
+      event.preventDefault();
+      const tracksData = target.dataset.tracks;
+      try {
+        selectedTracks = JSON.parse(tracksData || '[]');
+        if (selectedTracks.length > 0) {
+          showTrackDialog = true;
+        }
+      } catch (e) {
+        console.error('Failed to parse tracks data:', e);
+      }
+    }
+  }
 
   $: tableItems = getTableItems(abstractData);
+  $: dataTableOptions = createDataTableOptions(tableItems);
 </script>
 
-<section class="mt-12 p-4 abstract-table-view">
+<!-- svelte-ignore a11y_click_events_have_key_events -->
+<!-- svelte-ignore a11y_no_static_element_interactions -->
+<section class="mt-12 p-4 abstract-table-view" on:click={handleTableClick}>
   <Table items={tableItems} dataTableOptions={dataTableOptions} />
 </section>
 
+<!-- Abstract Detail Dialog -->
+<AbstractDetailsDialog bind:open={showAbstractDialog} abstract={selectedAbstract} />
+
+<!-- Track Details Dialog -->
+<TrackDetailsDialog bind:open={showTrackDialog} tracks={selectedTracks} allTracks={allAvailableTracks} />
+
 <style>
+  /* Title link styling */
+  :global(.title-link) {
+    color: #0d6efd;
+    text-decoration: none;
+    cursor: pointer;
+  }
+
+  :global(.title-link:hover) {
+    color: #0a58ca;
+    text-decoration: underline;
+  }
+
+  :global(.dark .title-link) {
+    color: #60a5fa;
+  }
+
+  :global(.dark .title-link:hover) {
+    color: #93c5fd;
+  }
+
   /* State badge styling - matches card view */
   :global(.state-badge) {
     display: inline-block;
@@ -152,6 +135,20 @@
     padding: 0.125rem 0.5rem;
     border-radius: 0.25rem;
     font-size: 0.75rem;
+  }
+
+  :global(.track-link) {
+    cursor: pointer;
+    text-decoration: none;
+  }
+
+  :global(.track-link:hover) {
+    text-decoration: underline;
+  }
+
+  /* Authors cell with tooltip */
+  :global(.authors-cell) {
+    cursor: help;
   }
 
   :global(.track-accepted) {
@@ -229,15 +226,15 @@
   /* Pagination styling */
   .abstract-table-view :global(.datatable-pagination) {
     display: flex;
-    gap: 0.25rem;
-    margin-top: 1rem;
+    gap: 0.1rem;
+    margin-top: 0.6rem;
   }
 
   .abstract-table-view :global(.datatable-pagination li a),
   .abstract-table-view :global(.datatable-pagination li button) {
-    padding: 0.375rem 0.75rem;
+    padding: 0.3rem 0.7rem;
     border: 1px solid #dee2e6;
-    border-radius: 0.25rem;
+    border-radius: 0;
     background-color: #fff;
     color: #0d6efd;
     text-decoration: none;
