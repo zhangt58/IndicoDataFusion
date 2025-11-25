@@ -23,6 +23,8 @@ export function GetContributionsByTrack(arg1:string):Promise<Array<backend.Contr
 
 export function GetContributionsByType(arg1:string):Promise<Array<backend.ContributionData>>;
 
-export function GetEventInfo(arg1:context.Context,arg2:string):Promise<backend.Event>;
+export function GetEventData():Promise<backend.Event>;
+
+export function GetEventInfo(arg1:string):Promise<backend.Event>;
 
 export function ListAbstracts(arg1:context.Context):Promise<string>;

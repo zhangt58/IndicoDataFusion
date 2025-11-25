@@ -1,6 +1,6 @@
 <script>
   import { onMount } from 'svelte';
-  import { BookSolid, BookOpenSolid, AlignJustifyOutline } from 'flowbite-svelte-icons';
+  import { BookSolid, BookOpenSolid, AlignJustifyOutline, HomeSolid } from 'flowbite-svelte-icons';
   import './app.css';
 
   import { DarkMode } from 'flowbite-svelte';
@@ -9,11 +9,12 @@
   import { goto } from './router/index.js';
   let Router = LocalRouter;
 
+  import EventInfo from './pages/EventInfo.svelte';
   import AbstractPage from './pages/AbstractPage.svelte';
   import ContributionPage from './pages/ContributionPage.svelte';
 
   const routes = {
-    '/': AbstractPage,
+    '/': EventInfo,
     '/abstract': AbstractPage,
     '/contribution': ContributionPage
   };
@@ -55,6 +56,17 @@
   {#if isSidebarOpen}
   <!-- horizontal quick buttons left of the toggle -->
   <div class="fixed top-2 right-4 z-50 flex items-center gap-2 animate-slide-in">
+    <button
+      on:click={() => quickGoto('/')}
+      class="flex items-center gap-2 bg-white/50 dark:bg-gray-800/50 border border-gray-200/60 dark:border-gray-700/60 rounded px-3 py-2 text-sm shadow-sm hover:bg-white/70 transition-all duration-200 hover:scale-105"
+      aria-label="Go to Home"
+      title="Home"
+      type="button"
+    >
+      <HomeSolid class="text-gray-700 dark:text-gray-200" />
+      <span class="hidden sm:inline">Home</span>
+    </button>
+
     <button
       on:click={() => quickGoto('/abstract')}
       class="flex items-center gap-2 bg-white/50 dark:bg-gray-800/50 border border-gray-200/60 dark:border-gray-700/60 rounded px-3 py-2 text-sm shadow-sm hover:bg-white/70 transition-all duration-200 hover:scale-105"
