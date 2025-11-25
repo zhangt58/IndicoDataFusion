@@ -1,6 +1,7 @@
 <script>
   import { onMount } from 'svelte';
   import { GetContributionData } from '../../wailsjs/go/backend/IndicoClient';
+  import { BrowserOpenURL } from '../../wailsjs/runtime';
 
   let loading = false;
   let contributionData = [];
@@ -225,8 +226,16 @@
         <!-- Link to Indico -->
         {#if contribution.url}
           <div class="mt-3 pt-3 border-t border-gray-200 dark:border-gray-600">
-            <a href={contribution.url} target="_blank" rel="noopener noreferrer" 
-               class="text-sm text-blue-600 dark:text-blue-400 hover:underline">
+            <a href={contribution.url}
+               on:click|preventDefault={async () => {
+                 try {
+                   await BrowserOpenURL(contribution.url);
+                 } catch (e) {
+                   console.error('BrowserOpenURL failed', e);
+                 }
+               }}
+               class="text-sm text-blue-600 dark:text-blue-400 hover:underline"
+               title="Open contribution link in web-browser">
               View on Indico →
             </a>
           </div>
