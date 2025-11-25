@@ -6,7 +6,8 @@
 export function formatDate(dateInfo) {
   if (!dateInfo) return '';
   const { date, time, tz } = dateInfo;
-  return tz ? `${date} ${time} (${tz})` : `${date} ${time}`;
+//   return tz ? `${date} ${time} (${tz})` : `${date} ${time}`;
+  return `${date} ${time}`;
 }
 
 /**
@@ -247,15 +248,14 @@ export function createRenderAuthors() {
 export function rowRender(row, tr, index) {
   // Data column indices (row.cells):
   // 0=ID, 1=Code, 2=Title, 3=Type, 4=Session, 5=Track, 6=StartDate, 7=Duration,
-  // 8=Location, 9=Room, 10=Speakers, 11=SpeakersTooltip(hidden), 12=Authors, 13=AuthorsTooltip(hidden), 14=URL(hidden)
+  // 8=Location(hidden), 9=Room, 10=Speakers, 11=SpeakersTooltip(hidden), 12=Authors(hidden), 13=AuthorsTooltip(hidden), 14=URL(hidden)
   //
   // Visible column indices (tr.childNodes) - hidden columns are excluded:
   // 0=ID, 1=Code, 2=Title, 3=Type, 4=Session, 5=Track, 6=StartDate, 7=Duration,
-  // 8=Location, 9=Room, 10=Speakers, 11=Authors
+  // 8=Room, 9=Speakers
   
   const id = row.cells[0]?.data || '';
   const speakersTooltip = row.cells[11]?.data || '';
-  const authorsTooltip = row.cells[13]?.data || '';
   
   // Update Title link (visible column 2) with data-id
   if (tr.childNodes && tr.childNodes[2]) {
@@ -265,19 +265,11 @@ export function rowRender(row, tr, index) {
     }
   }
   
-  // Update Speakers span (visible column 10) with tooltip
-  if (tr.childNodes && tr.childNodes[10]) {
-    const speakersCell = tr.childNodes[10];
+  // Update Speakers span (visible column 9) with tooltip
+  if (tr.childNodes && tr.childNodes[9]) {
+    const speakersCell = tr.childNodes[9];
     if (speakersCell.childNodes && speakersCell.childNodes[0]?.attributes) {
       speakersCell.childNodes[0].attributes.title = speakersTooltip;
-    }
-  }
-  
-  // Update Authors span (visible column 11, not 12!) with tooltip
-  if (tr.childNodes && tr.childNodes[11]) {
-    const authorsCell = tr.childNodes[11];
-    if (authorsCell.childNodes && authorsCell.childNodes[0]?.attributes) {
-      authorsCell.childNodes[0].attributes.title = authorsTooltip;
     }
   }
   
@@ -285,13 +277,14 @@ export function rowRender(row, tr, index) {
 }
 
 // Column names for filter placeholders (visible columns only)
-const visibleColumnNames = ['ID', 'Code', 'Title', 'Type', 'Session', 'Track', 'Start', 'Duration', 'Location', 'Room', 'Speakers', 'Authors'];
+// Visible: 0=ID, 1=Code, 2=Title, 3=Type, 4=Session, 5=Track, 6=Start, 7=Duration, 8=Room, 9=Speakers
+const visibleColumnNames = ['ID', 'Code', 'Title', 'Type', 'Session', 'Track', 'Start', 'Duration', 'Room', 'Speakers'];
 
 // Mapping from visible column index to actual data column index
-// Visible: 0=ID, 1=Code, 2=Title, 3=Type, 4=Session, 5=Track, 6=Start, 7=Duration, 8=Location, 9=Room, 10=Speakers, 11=Authors
-// Data:    0=ID, 1=Code, 2=Title, 3=Type, 4=Session, 5=Track, 6=StartDate, 7=Duration, 8=Location, 9=Room, 10=Speakers, 12=Authors
-// Hidden data columns: 11=SpeakersTooltip, 13=AuthorsTooltip, 14=URL
-const visibleToDataColumnIndex = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 12];
+// Visible: 0=ID, 1=Code, 2=Title, 3=Type, 4=Session, 5=Track, 6=Start, 7=Duration, 8=Room, 9=Speakers
+// Data:    0=ID, 1=Code, 2=Title, 3=Type, 4=Session, 5=Track, 6=StartDate, 7=Duration, 9=Room, 10=Speakers
+// Hidden data columns: 8=Location, 11=SpeakersTooltip, 12=Authors, 13=AuthorsTooltip, 14=URL
+const visibleToDataColumnIndex = [0, 1, 2, 3, 4, 5, 6, 7, 9, 10];
 
 /**
  * Table render function to add column filtering row
@@ -353,11 +346,11 @@ export function createDataTableOptions() {
       { select: 5, render: renderTrack, sortable: true, type: 'string' },  // Track
       { select: 6, sortable: true, type: 'string' },  // StartDate
       { select: 7, sortable: true, type: 'string' },  // Duration
-      { select: 8, sortable: true, type: 'string' },  // Location
+      { select: 8, sortable: true, hidden: true, type: 'string' },  // Location
       { select: 9, sortable: true, type: 'string' },  // Room
       { select: 10, render: createRenderSpeakers(), sortable: true, type: 'string' },  // Speakers
       { select: 11, hidden: true, type: 'string' },  // SpeakersTooltip (hidden)
-      { select: 12, render: createRenderAuthors(), sortable: true, type: 'string' },  // Authors
+      { select: 12, hidden: true, render: createRenderAuthors(), sortable: true, type: 'string' },  // Authors
       { select: 13, hidden: true, type: 'string' },  // AuthorsTooltip (hidden)
       { select: 14, hidden: true, type: 'string' }   // URL (hidden)
     ]

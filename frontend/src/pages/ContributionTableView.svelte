@@ -26,13 +26,11 @@
     if (target.classList.contains('title-link')) {
       event.preventDefault();
       const contributionId = target.dataset.id;
-      console.log('Title clicked, contributionId:', contributionId);
       if (!contributionId) {
         console.warn('No contribution ID found in data-id attribute');
         return;
       }
       selectedContribution = findContributionById(contributionId);
-      console.log('Found contribution:', selectedContribution);
       if (selectedContribution) {
         showContributionDialog = true;
       }
