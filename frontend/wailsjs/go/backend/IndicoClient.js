@@ -22,8 +22,24 @@ export function GetAbstractIDsAndCSRFFromList(arg1) {
   return window['go']['backend']['IndicoClient']['GetAbstractIDsAndCSRFFromList'](arg1);
 }
 
+export function GetContributionByID(arg1) {
+  return window['go']['backend']['IndicoClient']['GetContributionByID'](arg1);
+}
+
 export function GetContributionData() {
   return window['go']['backend']['IndicoClient']['GetContributionData']();
+}
+
+export function GetContributionsBySession(arg1) {
+  return window['go']['backend']['IndicoClient']['GetContributionsBySession'](arg1);
+}
+
+export function GetContributionsByTrack(arg1) {
+  return window['go']['backend']['IndicoClient']['GetContributionsByTrack'](arg1);
+}
+
+export function GetContributionsByType(arg1) {
+  return window['go']['backend']['IndicoClient']['GetContributionsByType'](arg1);
 }
 
 export function GetEventInfo(arg1, arg2) {

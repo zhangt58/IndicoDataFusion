@@ -215,12 +215,107 @@ export namespace backend {
 		}
 	}
 	
+	export class Folder {
+	    _type: string;
+	    id: number;
+	    title?: string;
+	    description: string;
+	    attachments: any[];
+	    default_folder: boolean;
+	    is_protected: boolean;
+	
+	    static createFrom(source: any = {}) {
+	        return new Folder(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this._type = source["_type"];
+	        this.id = source["id"];
+	        this.title = source["title"];
+	        this.description = source["description"];
+	        this.attachments = source["attachments"];
+	        this.default_folder = source["default_folder"];
+	        this.is_protected = source["is_protected"];
+	    }
+	}
+	export class ContributionParticipation {
+	    _type: string;
+	    _fossil: string;
+	    first_name: string;
+	    last_name: string;
+	    fullName: string;
+	    id: string;
+	    affiliation: string;
+	    emailHash: string;
+	    db_id: number;
+	    person_id: number;
+	    email: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new ContributionParticipation(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this._type = source["_type"];
+	        this._fossil = source["_fossil"];
+	        this.first_name = source["first_name"];
+	        this.last_name = source["last_name"];
+	        this.fullName = source["fullName"];
+	        this.id = source["id"];
+	        this.affiliation = source["affiliation"];
+	        this.emailHash = source["emailHash"];
+	        this.db_id = source["db_id"];
+	        this.person_id = source["person_id"];
+	        this.email = source["email"];
+	    }
+	}
+	export class DateInfo {
+	    date: string;
+	    time: string;
+	    tz: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new DateInfo(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.date = source["date"];
+	        this.time = source["time"];
+	        this.tz = source["tz"];
+	    }
+	}
 	export class ContributionData {
+	    _type: string;
+	    _fossil: string;
+	    id: string;
+	    db_id: number;
+	    friendly_id: number;
 	    title: string;
-	    contributor: string;
+	    description: string;
+	    startDate: DateInfo;
+	    endDate: DateInfo;
+	    duration: number;
+	    location: string;
+	    room: string;
+	    roomFullname: string;
 	    type: string;
-	    status: string;
-	    submittedAt: string;
+	    session: string;
+	    track: string;
+	    speakers: ContributionParticipation[];
+	    primaryauthors: ContributionParticipation[];
+	    coauthors: ContributionParticipation[];
+	    keywords: any[];
+	    references: any[];
+	    board_number: string;
+	    code: string;
+	    url: string;
+	    note: any;
+	    material: any[];
+	    folders: Folder[];
+	    allowed: Record<string, any>;
 	
 	    static createFrom(source: any = {}) {
 	        return new ContributionData(source);
@@ -228,13 +323,56 @@ export namespace backend {
 	
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
+	        this._type = source["_type"];
+	        this._fossil = source["_fossil"];
+	        this.id = source["id"];
+	        this.db_id = source["db_id"];
+	        this.friendly_id = source["friendly_id"];
 	        this.title = source["title"];
-	        this.contributor = source["contributor"];
+	        this.description = source["description"];
+	        this.startDate = this.convertValues(source["startDate"], DateInfo);
+	        this.endDate = this.convertValues(source["endDate"], DateInfo);
+	        this.duration = source["duration"];
+	        this.location = source["location"];
+	        this.room = source["room"];
+	        this.roomFullname = source["roomFullname"];
 	        this.type = source["type"];
-	        this.status = source["status"];
-	        this.submittedAt = source["submittedAt"];
+	        this.session = source["session"];
+	        this.track = source["track"];
+	        this.speakers = this.convertValues(source["speakers"], ContributionParticipation);
+	        this.primaryauthors = this.convertValues(source["primaryauthors"], ContributionParticipation);
+	        this.coauthors = this.convertValues(source["coauthors"], ContributionParticipation);
+	        this.keywords = source["keywords"];
+	        this.references = source["references"];
+	        this.board_number = source["board_number"];
+	        this.code = source["code"];
+	        this.url = source["url"];
+	        this.note = source["note"];
+	        this.material = source["material"];
+	        this.folders = this.convertValues(source["folders"], Folder);
+	        this.allowed = source["allowed"];
 	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
 	}
+	
+	
 	
 	export class Event {
 	    id: string;
@@ -282,6 +420,7 @@ export namespace backend {
 		    return a;
 		}
 	}
+	
 	
 	
 	

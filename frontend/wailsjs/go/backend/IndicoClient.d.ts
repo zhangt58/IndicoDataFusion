@@ -13,7 +13,15 @@ export function GetAbstractData():Promise<Array<backend.AbstractData>>;
 
 export function GetAbstractIDsAndCSRFFromList(arg1:context.Context):Promise<Array<string>>;
 
+export function GetContributionByID(arg1:string):Promise<backend.ContributionData>;
+
 export function GetContributionData():Promise<Array<backend.ContributionData>>;
+
+export function GetContributionsBySession(arg1:string):Promise<Array<backend.ContributionData>>;
+
+export function GetContributionsByTrack(arg1:string):Promise<Array<backend.ContributionData>>;
+
+export function GetContributionsByType(arg1:string):Promise<Array<backend.ContributionData>>;
 
 export function GetEventInfo(arg1:context.Context,arg2:string):Promise<backend.Event>;
 
