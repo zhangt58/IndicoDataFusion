@@ -42,8 +42,12 @@ export function GetContributionsByType(arg1) {
   return window['go']['backend']['IndicoClient']['GetContributionsByType'](arg1);
 }
 
-export function GetEventInfo(arg1, arg2) {
-  return window['go']['backend']['IndicoClient']['GetEventInfo'](arg1, arg2);
+export function GetEventData() {
+  return window['go']['backend']['IndicoClient']['GetEventData']();
+}
+
+export function GetEventInfo(arg1) {
+  return window['go']['backend']['IndicoClient']['GetEventInfo'](arg1);
 }
 
 export function ListAbstracts(arg1) {
