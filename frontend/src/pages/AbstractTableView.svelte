@@ -173,7 +173,7 @@
 
   /* Bootstrap-like table styling */
   .abstract-table-view :global(.datatable-wrapper) {
-    font-size: 0.875rem;
+    font-size: 0.9rem;
   }
 
   .abstract-table-view :global(.datatable-table) {
@@ -184,7 +184,7 @@
   .abstract-table-view :global(.datatable-table thead th) {
     background-color: #f8f9fa;
     border-bottom: 2px solid #dee2e6;
-    padding: 0.75rem;
+    padding: 0.3rem, 0.5rem;
     text-align: left;
     font-weight: 600;
     white-space: nowrap;
@@ -199,20 +199,20 @@
   }
 
   .abstract-table-view :global(.datatable-table tbody td) {
-    padding: 0.5rem 0.75rem;
+    padding: 0.2rem 0.5rem;
     border-top: 1px solid #dee2e6;
     vertical-align: middle;
   }
 
   /* Compact styling */
   .abstract-table-view :global(.datatable-table.compact tbody td) {
-    padding: 0.3rem 0.5rem;
+    padding: 0.1rem 0.3rem;
   }
 
   /* Search input styling */
   .abstract-table-view :global(.datatable-input) {
     padding: 0.375rem 0.75rem;
-    font-size: 0.875rem;
+    font-size: 0.95rem;
     border: 1px solid #ced4da;
     border-radius: 0.25rem;
   }
@@ -220,7 +220,7 @@
   .abstract-table-view :global(.datatable-input:focus) {
     border-color: #86b7fe;
     outline: 0;
-    box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+    box-shadow: 0 0 0.1rem 0.2rem rgba(13, 110, 253, 0.25);
   }
 
   /* Column filter row styling */
