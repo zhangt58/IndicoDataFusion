@@ -2,13 +2,15 @@ package main
 
 import (
 	"context"
-	"fmt"
+	"log"
 	"os"
 	"path/filepath"
 	"runtime"
 	"time"
 
 	"IndicoDataFusion/backend"
+
+	"github.com/pkg/errors"
 )
 
 const (
@@ -84,23 +86,23 @@ func (a *App) startup(ctx context.Context) {
 	}
 
 	if configPath == "" {
-		fmt.Fprintf(os.Stderr, "Error: no config file path specified (%s not set and no default available)\n", ConfEnvName)
+		log.Printf("Error: no config file path specified (%s not set and no default available)\n", ConfEnvName)
 		os.Exit(1)
 	}
 
 	handler, err := backend.NewDataSourceHandlerFromConfigFile(configPath)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error: Failed to initialize data handler from %s: %v\n", configPath, err)
+		log.Printf("Error: Failed to initialize data handler from %s: %v\n", configPath, err)
 		os.Exit(1)
 	}
 	a.handler = handler
-	fmt.Printf("Data handler initialized from: %s\n", configPath)
+	log.Printf("Data handler initialized from: %s\n", configPath)
 }
 
 // GetEventInfo retrieves event information from the configured data source
 func (a *App) GetEventInfo() (*backend.Event, error) {
 	if a.handler == nil {
-		return nil, fmt.Errorf("data handler not initialized")
+		return nil, errors.Errorf("data handler not initialized")
 	}
 	return a.handler.GetInfo(a.ctx)
 }
@@ -108,7 +110,7 @@ func (a *App) GetEventInfo() (*backend.Event, error) {
 // GetAbstracts retrieves all abstracts from the configured data source
 func (a *App) GetAbstracts() ([]backend.AbstractData, error) {
 	if a.handler == nil {
-		return nil, fmt.Errorf("data handler not initialized")
+		return nil, errors.Errorf("data handler not initialized")
 	}
 	return a.handler.GetAbstracts(a.ctx)
 }
@@ -116,7 +118,7 @@ func (a *App) GetAbstracts() ([]backend.AbstractData, error) {
 // GetContributions retrieves all contributions from the configured data source
 func (a *App) GetContributions() ([]backend.ContributionData, error) {
 	if a.handler == nil {
-		return nil, fmt.Errorf("data handler not initialized")
+		return nil, errors.Errorf("data handler not initialized")
 	}
 	return a.handler.GetContributions(a.ctx)
 }
@@ -124,7 +126,7 @@ func (a *App) GetContributions() ([]backend.ContributionData, error) {
 // GetAbstractByID retrieves a specific abstract by ID
 func (a *App) GetAbstractByID(id int) (*backend.AbstractData, error) {
 	if a.handler == nil {
-		return nil, fmt.Errorf("data handler not initialized")
+		return nil, errors.Errorf("data handler not initialized")
 	}
 	return a.handler.GetAbstractByID(a.ctx, id)
 }
@@ -132,7 +134,7 @@ func (a *App) GetAbstractByID(id int) (*backend.AbstractData, error) {
 // GetContributionByID retrieves a specific contribution by ID
 func (a *App) GetContributionByID(id string) (*backend.ContributionData, error) {
 	if a.handler == nil {
-		return nil, fmt.Errorf("data handler not initialized")
+		return nil, errors.Errorf("data handler not initialized")
 	}
 	return a.handler.GetContributionByID(a.ctx, id)
 }
@@ -140,7 +142,7 @@ func (a *App) GetContributionByID(id string) (*backend.ContributionData, error) 
 // FilterAbstractsByState filters abstracts by their state
 func (a *App) FilterAbstractsByState(state string) ([]backend.AbstractData, error) {
 	if a.handler == nil {
-		return nil, fmt.Errorf("data handler not initialized")
+		return nil, errors.Errorf("data handler not initialized")
 	}
 	return a.handler.FilterAbstractsByState(a.ctx, state)
 }
@@ -148,7 +150,7 @@ func (a *App) FilterAbstractsByState(state string) ([]backend.AbstractData, erro
 // FilterContributionsBySession filters contributions by session
 func (a *App) FilterContributionsBySession(session string) ([]backend.ContributionData, error) {
 	if a.handler == nil {
-		return nil, fmt.Errorf("data handler not initialized")
+		return nil, errors.Errorf("data handler not initialized")
 	}
 	return a.handler.FilterContributionsBySession(a.ctx, session)
 }
@@ -156,7 +158,7 @@ func (a *App) FilterContributionsBySession(session string) ([]backend.Contributi
 // FilterContributionsByTrack filters contributions by track
 func (a *App) FilterContributionsByTrack(track string) ([]backend.ContributionData, error) {
 	if a.handler == nil {
-		return nil, fmt.Errorf("data handler not initialized")
+		return nil, errors.Errorf("data handler not initialized")
 	}
 	return a.handler.FilterContributionsByTrack(a.ctx, track)
 }
