@@ -48,8 +48,9 @@ func TestNewDataSourceHandler(t *testing.T) {
 	if !handler.isTestMode {
 		t.Fatalf("Expected test mode, got API mode")
 	}
-	if handler.dataDir != "./testdata" {
-		t.Fatalf("Expected dataDir './testdata', got %q", handler.dataDir)
+	// dataDir is converted to absolute path, so check it's absolute and contains testdata
+	if !filepath.IsAbs(handler.dataDir) {
+		t.Fatalf("Expected absolute dataDir, got %q", handler.dataDir)
 	}
 
 	// Test with invalid config

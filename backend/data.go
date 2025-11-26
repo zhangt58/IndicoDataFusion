@@ -81,6 +81,7 @@ func (h *DataSourceHandler) getInfoFromFile() (*Event, error) {
 	}
 
 	filePath := filepath.Join(h.dataDir, h.config.Test.EventInfo)
+	log.Printf("Reading event info from: %v\n", filePath)
 	data, err := os.ReadFile(filePath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read %s: %w", filePath, err)
@@ -102,6 +103,7 @@ func (h *DataSourceHandler) getInfoFromAPI(ctx context.Context) (*Event, error) 
 	if h.client == nil {
 		return nil, fmt.Errorf("indico client not initialized")
 	}
+	log.Printf("Reading event info from Indico API\n")
 	return h.client.GetEventInfo("")
 }
 
@@ -120,7 +122,7 @@ func (h *DataSourceHandler) getAbstractsFromFile() ([]AbstractData, error) {
 	}
 
 	filePath := filepath.Join(h.dataDir, h.config.Test.Abstracts)
-	log.Printf("abstract json path: %v\n", filePath)
+	log.Printf("Reading abstract data from: %v\n", filePath)
 	data, err := os.ReadFile(filePath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read %s: %w", filePath, err)
@@ -140,6 +142,8 @@ func (h *DataSourceHandler) getAbstractsFromAPI(ctx context.Context) ([]Abstract
 	if h.client == nil {
 		return nil, fmt.Errorf("indico client not initialized")
 	}
+
+	log.Printf("Reading abstract data from Indico API\n")
 
 	// Fetch the abstracts list page to get IDs and CSRF token
 	ids, csrfToken, err := h.client.GetAbstractIDsAndCSRFFromList(ctx)
@@ -192,6 +196,7 @@ func (h *DataSourceHandler) getContributionsFromFile() ([]ContributionData, erro
 	}
 
 	filePath := filepath.Join(h.dataDir, h.config.Test.Contribs)
+	log.Printf("Reading contribution data from: %v\n", filePath)
 	data, err := os.ReadFile(filePath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read %s: %w", filePath, err)
@@ -214,6 +219,8 @@ func (h *DataSourceHandler) getContributionsFromAPI(ctx context.Context) ([]Cont
 	if h.client == nil {
 		return nil, fmt.Errorf("indico client not initialized")
 	}
+
+	log.Printf("Reading contribution data from Indico API\n")
 
 	// Construct the API path for contributions
 	path := fmt.Sprintf("/export/event/%d.json", h.client.EventID)
