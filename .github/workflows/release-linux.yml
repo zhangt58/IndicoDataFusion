@@ -1,0 +1,91 @@
+name: Release Linux
+
+on:
+  release:
+    types:
+      - created
+
+permissions:
+  contents: write
+
+env:
+  NODE_OPTIONS: "--max-old-space-size=4096"
+
+jobs:
+  build:
+    name: Build and package (linux)
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        arch: [amd64]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+        with:
+          submodules: recursive
+
+      - name: Get Package Info
+        id: pkginfo
+        shell: bash
+        run: |
+          # Extract the version from app.go
+          ver=$(grep 'AppVersion' app.go | awk -F'v' '{print $2}' | tr -d "',\"")  # 1.0.0
+          echo "pkg_version=${ver}" >> $GITHUB_OUTPUT
+
+      - name: Build App
+        uses: zhangt58/wails-build-action@d6591b923bfae2f9350207b7cf6ff0cb59dd97ce
+        with:
+          build-name: 'idf'
+          build-platform: "linux/${{ matrix.arch }}"
+          package: false
+          go-version: '1.25'
+          wails-version: 'v2.11.0'
+          node-version: '24'
+
+      - name: Prepare artifact
+        shell: bash
+        run: |
+          set -e
+          mkdir -p ./dist
+          # Ensure built binary exists
+          if [ ! -f ./build/bin/idf ]; then
+            echo "Expected built binary at ./build/bin/idf but not found" >&2
+            ls -R ./build || true
+            exit 1
+          fi
+          chmod +x ./build/bin/idf || true
+          # Rename to include arch so artifacts don't overwrite one another
+          mv ./build/bin/idf ./build/bin/idf-${{ matrix.arch }}
+          cp ./build/bin/idf-${{ matrix.arch }} ./dist/
+          cd ./dist
+          tar -czf IndicoDataFusion_${{ steps.pkginfo.outputs.pkg_version }}_linux_${{ matrix.arch }}.tar.gz idf-${{ matrix.arch }}
+          ls -lh
+
+      - name: Upload Linux artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-tarball-${{ matrix.arch }}
+          path: ./dist/IndicoDataFusion_${{ steps.pkginfo.outputs.pkg_version }}_linux_${{ matrix.arch }}.tar.gz
+          retention-days: 1
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download Artifacts (amd64)
+        uses: actions/download-artifact@v4
+        with:
+          name: linux-tarball-amd64
+          path: ./dist
+
+      - name: List downloaded files
+        run: |
+          ls -lhtr ./dist
+          echo "Artifacts downloaded above."
+
+      - name: Create a new release
+        uses: softprops/action-gh-release@v2
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          files: ./dist/*.tar.gz
