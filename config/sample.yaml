@@ -1,0 +1,20 @@
+# Sample configuration for the data source
+
+default:
+  data_source: test
+
+indico:
+  base_url: https://indico.jacow.org
+  event_id: <event-id>
+  api_token: <your-token>
+  timeout: 15s
+
+test:
+  data_dir: ./testdata
+  event_info: info.json
+  abstracts: abstracts.json
+  contribs: contribs.json
+
+
+
+

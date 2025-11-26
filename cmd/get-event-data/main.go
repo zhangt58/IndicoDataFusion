@@ -1,55 +1,53 @@
 package main
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"flag"
 	"fmt"
-	"html"
 	"log"
-	"net/http"
-	"time"
+	"os"
 
 	"IndicoDataFusion/backend"
 )
 
+func writeDataToFile(path string, data any) error {
+	b, err := json.MarshalIndent(data, "", "  ")
+	if err != nil {
+		return fmt.Errorf("marshal abstracts: %w", err)
+	}
+	if err := os.WriteFile(path, b, 0644); err != nil {
+		return fmt.Errorf("write file: %w", err)
+	}
+	return nil
+}
+
 func main() {
-	cfgPath := flag.String("config", "backend/config.yaml", "path to config yaml")
-	detail := flag.String("detail", "", "detail query value (optional)")
+	cfgPath := flag.String("config", "", "path to config yaml")
+	out := flag.String("out", "event-out.json", "Output JSON file")
 	flag.Parse()
+
+	if *cfgPath == "" {
+		log.Fatalf("config path is required")
+	}
 
 	cfg, err := backend.LoadConfig(*cfgPath)
 	if err != nil {
 		log.Fatalf("load config: %v", err)
 	}
 
-	client := backend.NewIndicoClient(cfg.BaseURL, cfg.EventID, cfg.APIToken)
-	// apply configured timeout if present
-	client.Timeout = time.Duration(cfg.Timeout)
-	client.Client = &http.Client{Timeout: time.Duration(cfg.Timeout)}
-
-	ctx := context.Background()
-	ev, err := client.GetEventInfo(ctx, *detail)
+	dataHandler, err := backend.NewDataSourceHandlerFromConfig(cfg)
 	if err != nil {
-		log.Fatalf("GetEventInfo failed: %v", err)
+		log.Fatalf("NewDataSourceHandlerFromConfig failed: %v", err)
 	}
 
-	// Ensure description contains real HTML tags (backend may already unescape it)
-	ev.Description = html.UnescapeString(ev.Description)
+	eventData, err := dataHandler.GetInfo(context.Background())
+	if err != nil {
+		log.Fatalf("GetInfo failed: %v", err)
+	}
 
-	// Encode without escaping HTML, then pretty-print the JSON
-	var buf bytes.Buffer
-	enc := json.NewEncoder(&buf)
-	enc.SetEscapeHTML(false)
-	if err := enc.Encode(ev); err != nil {
-		log.Fatalf("encode event: %v", err)
+	if err := writeDataToFile(*out, eventData); err != nil {
+		log.Fatalf("write events failed: %v", err)
 	}
-	var pretty bytes.Buffer
-	if err := json.Indent(&pretty, buf.Bytes(), "", "  "); err != nil {
-		// fallback: print compact unescaped JSON
-		fmt.Print(buf.String())
-		return
-	}
-	fmt.Print(pretty.String())
+	fmt.Printf("Wrote %s\n", *out)
 }

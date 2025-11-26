@@ -6,53 +6,48 @@ import (
 	"flag"
 	"fmt"
 	"log"
-	"net/http"
 	"os"
-	"time"
 
 	"IndicoDataFusion/backend"
 )
 
+func writeDataToFile(path string, data any) error {
+	b, err := json.MarshalIndent(data, "", "  ")
+	if err != nil {
+		return fmt.Errorf("marshal abstracts: %w", err)
+	}
+	if err := os.WriteFile(path, b, 0644); err != nil {
+		return fmt.Errorf("write file: %w", err)
+	}
+	return nil
+}
+
 func main() {
-	cfgPath := flag.String("config", "backend/config.yaml", "path to config yaml")
-	out := flag.String("out", "abstracts.json", "Output JSON file")
+	cfgPath := flag.String("config", "", "path to config yaml")
+	out := flag.String("out", "abstracts-out.json", "Output JSON file")
 	flag.Parse()
+
+	if *cfgPath == "" {
+		log.Fatalf("config path is required")
+	}
 
 	cfg, err := backend.LoadConfig(*cfgPath)
 	if err != nil {
 		log.Fatalf("load config: %v", err)
 	}
 
-	client := backend.NewIndicoClient(cfg.BaseURL, cfg.EventID, cfg.APIToken)
-	// apply configured timeout if present
-	client.Timeout = time.Duration(cfg.Timeout)
-	client.Client = &http.Client{Timeout: time.Duration(cfg.Timeout)}
-
-	ctx := context.Background()
-
-	ids, csrf, err := client.GetAbstractIDsAndCSRFFromList(ctx)
+	dataHandler, err := backend.NewDataSourceHandlerFromConfig(cfg)
 	if err != nil {
-		log.Fatalf("GetAbstractIDsAndCSRFFromList failed: %v", err)
-	}
-	log.Printf("found %d abstract ids, csrf=%s", len(ids), csrf)
-
-	if len(ids) == 0 {
-		log.Fatalf("no abstract ids found")
+		log.Fatalf("NewDataSourceHandlerFromConfig failed: %v", err)
 	}
 
-	data, err := client.FetchAbstractsData(ctx, ids, csrf)
+	abstractData, err := dataHandler.GetAbstracts(context.Background())
 	if err != nil {
-		log.Fatalf("FetchAbstractsData failed: %v", err)
+		log.Fatalf("GetAbstracts failed: %v", err)
 	}
 
-	b, err := json.MarshalIndent(data, "", "  ")
-	if err != nil {
-		log.Fatalf("json marshal failed: %v", err)
+	if err := writeDataToFile(*out, abstractData); err != nil {
+		log.Fatalf("write abstracts failed: %v", err)
 	}
-
-	if err := os.WriteFile(*out, b, 0644); err != nil {
-		log.Fatalf("write file failed: %v", err)
-	}
-
-	fmt.Printf("Wrote %s (%d bytes)\n", *out, len(b))
+	fmt.Printf("Wrote %s\n", *out)
 }

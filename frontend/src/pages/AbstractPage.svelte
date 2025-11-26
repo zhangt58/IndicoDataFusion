@@ -1,6 +1,6 @@
 <script>
   import { onMount } from 'svelte';
-  import { GetAbstractData } from '../../wailsjs/go/backend/IndicoClient';
+  import { GetAbstracts } from '../../wailsjs/go/main/App';
   import { LayoutGrid, CreditCard } from '@lucide/svelte';
   import AbstractCardView from './AbstractCardView.svelte';
   import AbstractTableView from './AbstractTableView.svelte';
@@ -13,9 +13,9 @@
   onMount(async () => {
     loading = true;
     try {
-      abstractData = (await GetAbstractData()) || [];
+      abstractData = (await GetAbstracts()) || [];
     } catch (e) {
-      console.error('GetAbstractData failed', e);
+      console.error('GetAbstracts failed', e);
       abstractData = [];
       error = e;
     } finally {
