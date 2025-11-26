@@ -1,6 +1,6 @@
 <script>
   import { onMount } from 'svelte';
-  import { GetEventData } from '../../wailsjs/go/backend/IndicoClient';
+  import { GetEventInfo } from '../../wailsjs/go/main/App';
 
   let loading = false;
   let eventInfo = null;
@@ -9,9 +9,9 @@
   onMount(async () => {
     loading = true;
     try {
-      eventInfo = await GetEventData();
+      eventInfo = await GetEventInfo();
     } catch (e) {
-      console.error('GetEventData failed', e);
+      console.error('GetEventInfo failed', e);
       error = e;
     } finally {
       loading = false;

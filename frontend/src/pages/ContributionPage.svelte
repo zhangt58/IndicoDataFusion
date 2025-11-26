@@ -1,6 +1,6 @@
 <script>
   import { onMount } from 'svelte';
-  import { GetContributionData } from '../../wailsjs/go/backend/IndicoClient';
+  import { GetContributions } from '../../wailsjs/go/main/App';
   import { LayoutGrid, CreditCard } from '@lucide/svelte';
   import ContributionCardView from './ContributionCardView.svelte';
   import ContributionTableView from './ContributionTableView.svelte';
@@ -13,9 +13,9 @@
   onMount(async () => {
     loading = true;
     try {
-      contributionData = (await GetContributionData()) || [];
+      contributionData = (await GetContributions()) || [];
     } catch (e) {
-      console.error('GetContributionData failed', e);
+      console.error('GetContributions failed', e);
       contributionData = [];
       error = e;
     } finally {
