@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	stdhtml "html"
 	"log"
 	"net/url"
 	"os"
@@ -88,15 +89,13 @@ func (h *DataSourceHandler) getInfoFromFile() (*Event, error) {
 		return nil, fmt.Errorf("failed to read %s: %w", filePath, err)
 	}
 
-	var raw map[string]any
-	if err := json.Unmarshal(data, &raw); err != nil {
+	var ev Event
+	if err := json.Unmarshal(data, &ev); err != nil {
 		return nil, fmt.Errorf("failed to parse %s: %w", filePath, err)
 	}
-
-	// Create a temporary client just for parsing
-	tempClient := &IndicoClient{}
-	ev := tempClient.parseEventFromMap(raw)
-	return ev, nil
+	// Unescape description entities for parity with API path
+	ev.Description = stdhtml.UnescapeString(ev.Description)
+	return &ev, nil
 }
 
 // getInfoFromAPI fetches event info from the Indico API.

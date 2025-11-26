@@ -202,7 +202,7 @@ func TestNewDataSourceHandlerFromConfig(t *testing.T) {
 	}
 }
 
-func TestFilterAbstractsByState(t *testing.T) {
+func TestGetAbstractsByState(t *testing.T) {
 	// Create test config pointing to testdata directory
 	testDS := &DataSource{
 		Name: "test",
@@ -220,20 +220,20 @@ func TestFilterAbstractsByState(t *testing.T) {
 	}
 
 	ctx := context.Background()
-	filtered, err := handler.FilterAbstractsByState(ctx, "accepted")
+	filtered, err := handler.GetAbstractsByState(ctx, "accepted")
 	if err != nil {
 		// Check if testdata exists
 		if os.IsNotExist(err) {
 			t.Skipf("Skipping test: testdata not found")
 			return
 		}
-		t.Fatalf("FilterAbstractsByState failed: %v", err)
+		t.Fatalf("GetAbstractsByState failed: %v", err)
 	}
 
 	t.Logf("Found %d abstracts with state 'accepted'", len(filtered))
 }
 
-func TestFilterContributionsBySession(t *testing.T) {
+func TestGetContributionsBySession(t *testing.T) {
 	// Create test config pointing to testdata directory
 	testDS := &DataSource{
 		Name: "test",
@@ -264,9 +264,9 @@ func TestFilterContributionsBySession(t *testing.T) {
 	// If there are contributions, test filtering by the first one's session
 	if len(contribs) > 0 && contribs[0].Session != "" {
 		session := contribs[0].Session
-		filtered, err := handler.FilterContributionsBySession(ctx, session)
+		filtered, err := handler.GetContributionsBySession(ctx, session)
 		if err != nil {
-			t.Fatalf("FilterContributionsBySession failed: %v", err)
+			t.Fatalf("GetContributionsBySession failed: %v", err)
 		}
 		t.Logf("Found %d contributions in session %q", len(filtered), session)
 		if len(filtered) == 0 {

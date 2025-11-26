@@ -42,39 +42,28 @@ func NewIndicoClient(baseURL string, eventID int, apiToken string) *IndicoClient
 
 // GetEventInfo retrieves event information via API.
 func (c *IndicoClient) GetEventInfo() (*Event, error) {
-	var ev *Event
-
 	// Fetch from API
 	ctx := context.Background()
 	path := fmt.Sprintf("/export/event/%d.json", c.EventID)
 	q := url.Values{}
 
-	var resp map[string]any
+	// Unmarshal directly into typed response wrapper
+	type eventAPIResponse struct {
+		Results []Event `json:"results"`
+	}
+	var resp eventAPIResponse
 	if err := c.doGet(ctx, path, q, &resp); err != nil {
 		return nil, err
 	}
 
-	// Extract "results" from the response map
-	v, ok := resp["results"]
-	if !ok || v == nil {
-		return nil, fmt.Errorf("missing results in response")
-	}
-
-	arr, ok := v.([]any)
-	if !ok {
-		return nil, fmt.Errorf("results is not an array, got %T", v)
-	}
-	if len(arr) == 0 {
+	if len(resp.Results) == 0 {
 		return nil, fmt.Errorf("no results in response")
 	}
-	firstMap, ok := arr[0].(map[string]any)
-	if !ok {
-		return nil, fmt.Errorf("first result element is not an object: %T", arr[0])
-	}
 
-	ev = c.parseEventFromMap(firstMap)
-
-	return ev, nil
+	ev := resp.Results[0]
+	// Unescape any HTML entities so Description contains original HTML tags.
+	ev.Description = stdhtml.UnescapeString(ev.Description)
+	return &ev, nil
 }
 
 // parseEventFromMap extracts event information from a map and converts dates to local timezone
