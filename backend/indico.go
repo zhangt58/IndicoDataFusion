@@ -40,6 +40,19 @@ func NewIndicoClient(baseURL string, eventID int, apiToken string) *IndicoClient
 	}
 }
 
+// normalizeDateString converts a date string (ISO8601 or common layouts) to a
+// local timezone string formatted as "2006-01-02 15:04 MST". If parsing fails,
+// it returns the input unchanged.
+func normalizeDateString(s string) string {
+	if s == "" {
+		return s
+	}
+	if t, err := parseDateField(s); err == nil {
+		return t.In(time.Local).Format("2006-01-02 15:04 MST")
+	}
+	return s
+}
+
 // GetEventInfo retrieves event information via API.
 func (c *IndicoClient) GetEventInfo() (*Event, error) {
 	// Fetch from API
@@ -63,6 +76,11 @@ func (c *IndicoClient) GetEventInfo() (*Event, error) {
 	ev := resp.Results[0]
 	// Unescape any HTML entities so Description contains original HTML tags.
 	ev.Description = stdhtml.UnescapeString(ev.Description)
+
+	// Normalize StartDate/EndDate to local timezone human format if present
+	ev.StartDate = normalizeDateString(ev.StartDate)
+	ev.EndDate = normalizeDateString(ev.EndDate)
+
 	return &ev, nil
 }
 

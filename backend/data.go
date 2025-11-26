@@ -95,6 +95,11 @@ func (h *DataSourceHandler) getInfoFromFile() (*Event, error) {
 	}
 	// Unescape description entities for parity with API path
 	ev.Description = stdhtml.UnescapeString(ev.Description)
+
+	// Normalize StartDate/EndDate to local timezone human format if present
+	ev.StartDate = normalizeDateString(ev.StartDate)
+	ev.EndDate = normalizeDateString(ev.EndDate)
+
 	return &ev, nil
 }
 
