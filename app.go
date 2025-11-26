@@ -15,7 +15,7 @@ import (
 
 const (
 	AppName     = "IndicoDataFusion"
-	AppVersion  = "0.1.0"
+	AppVersion  = "v0.1.0"
 	Author      = "Tong Zhang"
 	Company     = "Michigan State University"
 	AuthorEmail = "zhangt@frib.msu.edu"
