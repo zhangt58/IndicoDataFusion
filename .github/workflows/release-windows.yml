@@ -38,7 +38,7 @@ jobs:
         uses: zhangt58/wails-build-action@d6591b923bfae2f9350207b7cf6ff0cb59dd97ce
         id: build
         with:
-          build-name: 'indico-data-fusion'
+          build-name: 'idf.exe'
           build-platform: 'windows/amd64'
           package: false
           go-version: '1.25'
@@ -50,11 +50,6 @@ jobs:
         run: |
           cd ./build/windows
           sed -i "/define MyAppVersion/s/.*/#define MyAppVersion \"${{ steps.pkginfo.outputs.pkg_version }}\"/" setup.iss
-
-      - name: Fix Executable Filename
-        shell: bash
-        run: |
-          mv ./build/bin/indico-data-fusion ./build/bin/indico-data-fusion.exe
 
       - name: Create Inno Setup Installer
         uses: zhangt58/InnoSetupAction@v6.4.3
