@@ -40,65 +40,41 @@ func NewIndicoClient(baseURL string, eventID int, apiToken string) *IndicoClient
 	}
 }
 
-// GetEventInfo retrieves event information either from a local JSON file or via API.
-// If jsonFile is non-empty, it reads from that file. Otherwise, it fetches from the Indico API.
-// If detail is non-empty (only used with API), the query parameter `detail=<value>` will be sent.
-// Dates are converted to local timezone and returned as formatted strings.
-func (c *IndicoClient) GetEventInfo(jsonFile string) (*Event, error) {
+// GetEventInfo retrieves event information via API.
+func (c *IndicoClient) GetEventInfo() (*Event, error) {
 	var ev *Event
 
-	if jsonFile != "" {
-		// Read from local JSON file
-		data, err := os.ReadFile(jsonFile)
-		if err != nil {
-			return nil, fmt.Errorf("failed to read %s: %w", jsonFile, err)
-		}
+	// Fetch from API
+	ctx := context.Background()
+	path := fmt.Sprintf("/export/event/%d.json", c.EventID)
+	q := url.Values{}
 
-		// Parse JSON into a map to handle flexible date formats
-		var raw map[string]any
-		if err := json.Unmarshal(data, &raw); err != nil {
-			return nil, fmt.Errorf("failed to parse %s: %w", jsonFile, err)
-		}
-
-		ev = c.parseEventFromMap(raw)
-	} else {
-		// Fetch from API
-		ctx := context.Background()
-		path := fmt.Sprintf("/export/event/%d.json", c.EventID)
-		q := url.Values{}
-
-		var resp map[string]any
-		if err := c.doGet(ctx, path, q, &resp); err != nil {
-			return nil, err
-		}
-
-		// Extract "results" from the response map
-		v, ok := resp["results"]
-		if !ok || v == nil {
-			return nil, fmt.Errorf("missing results in response")
-		}
-
-		arr, ok := v.([]any)
-		if !ok {
-			return nil, fmt.Errorf("results is not an array, got %T", v)
-		}
-		if len(arr) == 0 {
-			return nil, fmt.Errorf("no results in response")
-		}
-		firstMap, ok := arr[0].(map[string]any)
-		if !ok {
-			return nil, fmt.Errorf("first result element is not an object: %T", arr[0])
-		}
-
-		ev = c.parseEventFromMap(firstMap)
+	var resp map[string]any
+	if err := c.doGet(ctx, path, q, &resp); err != nil {
+		return nil, err
 	}
 
-	return ev, nil
-}
+	// Extract "results" from the response map
+	v, ok := resp["results"]
+	if !ok || v == nil {
+		return nil, fmt.Errorf("missing results in response")
+	}
 
-// GetEventData is a convenience method that reads event info from event.json file
-func (c *IndicoClient) GetEventData() (*Event, error) {
-	return c.GetEventInfo("event.json")
+	arr, ok := v.([]any)
+	if !ok {
+		return nil, fmt.Errorf("results is not an array, got %T", v)
+	}
+	if len(arr) == 0 {
+		return nil, fmt.Errorf("no results in response")
+	}
+	firstMap, ok := arr[0].(map[string]any)
+	if !ok {
+		return nil, fmt.Errorf("first result element is not an object: %T", arr[0])
+	}
+
+	ev = c.parseEventFromMap(firstMap)
+
+	return ev, nil
 }
 
 // parseEventFromMap extracts event information from a map and converts dates to local timezone
@@ -218,7 +194,7 @@ func joinPaths(base, add string) string {
 	return base + add
 }
 
-// helper: trim trailing slash from base URL
+// StringsTrimRightSlash helper: trim trailing slash from base URL
 func StringsTrimRightSlash(s string) string {
 	for len(s) > 1 && s[len(s)-1] == '/' {
 		s = s[:len(s)-1]

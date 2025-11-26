@@ -105,7 +105,7 @@ func (h *DataSourceHandler) getInfoFromAPI(ctx context.Context) (*Event, error) 
 		return nil, fmt.Errorf("indico client not initialized")
 	}
 	log.Printf("Reading event info from Indico API\n")
-	return h.client.GetEventInfo("")
+	return h.client.GetEventInfo()
 }
 
 // GetAbstracts retrieves abstract data from the configured data source.
