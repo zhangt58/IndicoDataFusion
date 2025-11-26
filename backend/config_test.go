@@ -39,10 +39,23 @@ func TestSaveLoadConfig(t *testing.T) {
 	path := filepath.Join(dir, "config.yaml")
 
 	cfg := &Config{
-		BaseURL:  "https://example.test",
-		APIToken: "secret",
-		EventID:  42,
-		Timeout:  Duration(7 * time.Second),
+		Default: DefaultSection{
+			DataSource: "test",
+		},
+		DataSources: map[string]map[string]any{
+			"indico": {
+				"base_url":  "https://example.test",
+				"api_token": "secret",
+				"event_id":  42,
+				"timeout":   "7s",
+			},
+			"test": {
+				"data_dir":   "./testdata",
+				"event_info": "info.json",
+				"abstracts":  "abstracts.json",
+				"contribs":   "contribs.json",
+			},
+		},
 	}
 
 	if err := SaveConfig(path, cfg); err != nil {
@@ -54,13 +67,80 @@ func TestSaveLoadConfig(t *testing.T) {
 		t.Fatalf("LoadConfig failed: %v", err)
 	}
 
-	if loaded.BaseURL != cfg.BaseURL {
-		t.Fatalf("BaseURL mismatch: got %q want %q", loaded.BaseURL, cfg.BaseURL)
+	if loaded.Default.DataSource != cfg.Default.DataSource {
+		t.Fatalf("Default.DataSource mismatch: got %q want %q", loaded.Default.DataSource, cfg.Default.DataSource)
 	}
-	if loaded.APIToken != cfg.APIToken {
-		t.Fatalf("APIToken mismatch: got %q want %q", loaded.APIToken, cfg.APIToken)
+
+	// Test GetDataSource for Indico
+	indicoDS, err := loaded.GetDataSource("indico")
+	if err != nil {
+		t.Fatalf("GetDataSource(indico) failed: %v", err)
 	}
-	if time.Duration(loaded.Timeout) != time.Duration(cfg.Timeout) {
-		t.Fatalf("Timeout mismatch: got %v want %v", time.Duration(loaded.Timeout), time.Duration(cfg.Timeout))
+	if indicoDS.Indico == nil {
+		t.Fatalf("expected Indico config, got nil")
+	}
+	if indicoDS.Indico.BaseURL != "https://example.test" {
+		t.Fatalf("Indico BaseURL mismatch: got %q want %q", indicoDS.Indico.BaseURL, "https://example.test")
+	}
+	if indicoDS.Indico.EventID != 42 {
+		t.Fatalf("Indico EventID mismatch: got %d want %d", indicoDS.Indico.EventID, 42)
+	}
+	if time.Duration(indicoDS.Indico.Timeout) != 7*time.Second {
+		t.Fatalf("Indico Timeout mismatch: got %v want %v", time.Duration(indicoDS.Indico.Timeout), 7*time.Second)
+	}
+
+	// Test GetDataSource for Test
+	testDS, err := loaded.GetDataSource("test")
+	if err != nil {
+		t.Fatalf("GetDataSource(test) failed: %v", err)
+	}
+	if testDS.Test == nil {
+		t.Fatalf("expected Test config, got nil")
+	}
+	if testDS.Test.DataDir != "./testdata" {
+		t.Fatalf("Test DataDir mismatch: got %q want %q", testDS.Test.DataDir, "./testdata")
+	}
+	if testDS.Test.EventInfo != "info.json" {
+		t.Fatalf("Test EventInfo mismatch: got %q want %q", testDS.Test.EventInfo, "info.json")
+	}
+
+	// Test GetDefaultDataSource
+	defaultDS, err := loaded.GetDefaultDataSource()
+	if err != nil {
+		t.Fatalf("GetDefaultDataSource failed: %v", err)
+	}
+	if defaultDS.Name != "test" {
+		t.Fatalf("Default data source name mismatch: got %q want %q", defaultDS.Name, "test")
+	}
+	if defaultDS.Test == nil {
+		t.Fatalf("expected Test config for default data source, got nil")
+	}
+}
+
+func TestLoadRealConfig(t *testing.T) {
+	// Test loading the actual config.yaml file
+	cfg, err := LoadConfig("config.yaml")
+	if err != nil {
+		t.Skipf("Skipping real config test (config.yaml not found): %v", err)
+		return
+	}
+
+	if cfg.Default.DataSource == "" {
+		t.Fatalf("Default.DataSource is empty")
+	}
+
+	t.Logf("Default data source: %s", cfg.Default.DataSource)
+
+	// Try to get the default data source
+	ds, err := cfg.GetDefaultDataSource()
+	if err != nil {
+		t.Fatalf("GetDefaultDataSource failed: %v", err)
+	}
+
+	t.Logf("Successfully loaded data source: %s", ds.Name)
+
+	// Verify data source is properly parsed
+	if ds.Indico == nil && ds.Test == nil {
+		t.Fatalf("Data source has neither Indico nor Test configuration")
 	}
 }
