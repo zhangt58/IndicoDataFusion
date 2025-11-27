@@ -88,12 +88,12 @@ func (h *DataSourceHandler) getInfoFromFile() (*Event, error) {
 		return nil, fmt.Errorf("failed to read %s: %w", filePath, err)
 	}
 
-	var ev Event
+	var ev EventAPIResponse
 	if err := json.Unmarshal(data, &ev); err != nil {
 		return nil, fmt.Errorf("failed to parse %s: %w", filePath, err)
 	}
 
-	return &ev, nil
+	return &ev.Results[0], nil
 }
 
 // getInfoFromAPI fetches event info from the Indico API.
