@@ -161,3 +161,25 @@ func (a *App) GetContributionsByTrack(track string) ([]backend.ContributionData,
 	}
 	return a.handler.GetContributionsByTrack(a.ctx, track)
 }
+
+// AppInfo holds application metadata
+type AppInfo struct {
+	Name        string `json:"name"`
+	Version     string `json:"version"`
+	Author      string `json:"author"`
+	Company     string `json:"company"`
+	AuthorEmail string `json:"authorEmail"`
+	BuildDate   string `json:"buildDate"`
+}
+
+// GetAppInfo returns application metadata
+func (a *App) GetAppInfo() AppInfo {
+	return AppInfo{
+		Name:        AppName,
+		Version:     AppVersion,
+		Author:      Author,
+		Company:     Company,
+		AuthorEmail: AuthorEmail,
+		BuildDate:   BuildDate,
+	}
+}

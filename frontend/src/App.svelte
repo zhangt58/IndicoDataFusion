@@ -1,6 +1,6 @@
 <script>
   import { onMount } from 'svelte';
-  import { BookSolid, BookOpenSolid, AlignJustifyOutline, HomeSolid } from 'flowbite-svelte-icons';
+  import { BookSolid, BookOpenSolid, AlignJustifyOutline, HomeSolid, CogOutline } from 'flowbite-svelte-icons';
   import './app.css';
 
   import { DarkMode } from 'flowbite-svelte';
@@ -12,6 +12,7 @@
   import EventInfo from './pages/EventInfo.svelte';
   import AbstractPage from './pages/AbstractPage.svelte';
   import ContributionPage from './pages/ContributionPage.svelte';
+  import Settings from './components/Settings.svelte';
 
   const routes = {
     '/': EventInfo,
@@ -20,6 +21,7 @@
   };
 
   let isSidebarOpen = false;
+  let settingsOpen = false;
 
   // Keep onMount in case other init logic is needed
   onMount(() => {
@@ -48,6 +50,10 @@
 
   function toggleSidebar() {
     isSidebarOpen = !isSidebarOpen;
+  }
+
+  function toggleSettings() {
+    settingsOpen = !settingsOpen;
   }
 </script>
 
@@ -88,8 +94,20 @@
       <BookOpenSolid class="text-gray-700 dark:text-gray-200" />
       <span class="hidden sm:inline">Contrib</span>
     </button>
+
+    <button
+      on:click={toggleSettings}
+      class="flex items-center gap-2 bg-white/50 dark:bg-gray-800/50 border border-gray-200/60 dark:border-gray-700/60 rounded px-3 py-2 text-sm shadow-sm hover:bg-white/70 transition-all duration-200 hover:scale-105"
+      aria-label="Settings"
+      title="Settings"
+      type="button"
+    >
+      <CogOutline class="text-gray-700 dark:text-gray-200" />
+      <span class="hidden sm:inline">Settings</span>
+    </button>
+
     <!-- Dark mode toggle provided by Flowbite (placed with contrib buttons) -->
-    <DarkMode class="flex items-center px-3 py-2 rounded bg-white/50 dark:bg-gray-800/50 border border-gray-200/60 dark:border-gray-700/60 shadow-md backdrop-blur-sm" />
+    <DarkMode class="flex items-center px-3 py-2 rounded dark:text-primary-600 bg-white/50 dark:bg-gray-800/50 border border-gray-200/60 dark:border-gray-700/60 shadow-md backdrop-blur-sm" />
 
     <button
       on:click={toggleSidebar}
@@ -98,8 +116,8 @@
       title="Toggle sidebar"
       type="button"
     >
-      <AlignJustifyOutline class="text-blue-500 dark:bg-gray-200"/>
-      <span class="text-sm font-semibold text-blue-500 dark:text-gray-200 whitespace-nowrap">IndicoDataFusion</span>
+      <AlignJustifyOutline class="text-blue-500 dark:text-blue-400"/>
+      <span class="text-sm font-semibold text-blue-500 dark:text-blue-400 whitespace-nowrap">IndicoDataFusion</span>
     </button>
   </div>
   {:else}
@@ -111,7 +129,7 @@
       title="Toggle sidebar"
       type="button"
     >
-      <AlignJustifyOutline class="text-blue-500 dark:bg-gray-200"/>
+      <AlignJustifyOutline class="text-blue-500 dark:text-blue-400"/>
     </button>
   </div>
   {/if}
@@ -122,6 +140,9 @@
   <svelte:component this={Router} {routes} />
 </div>
 </div>
+
+<!-- Settings Modal -->
+<Settings bind:open={settingsOpen} />
 
 <style>
   /* Animation for sliding in from right */
