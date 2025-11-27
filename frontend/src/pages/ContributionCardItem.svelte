@@ -1,14 +1,9 @@
 <script>
   import { BrowserOpenURL } from '../../wailsjs/runtime';
+  import { formatDate } from '../utils/dateUtils.js';
 
   /** @type {Object} */
   export let contribution = {};
-
-  function formatDate(dateInfo) {
-    if (!dateInfo) return '';
-    const { date, time, tz } = dateInfo;
-    return tz ? `${date} ${time} (${tz})` : `${date} ${time}`;
-  }
 </script>
 
 <div class="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 border border-gray-200 dark:border-gray-700">

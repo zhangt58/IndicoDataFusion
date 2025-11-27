@@ -1,6 +1,7 @@
 <script>
   import { onMount } from 'svelte';
   import { GetEventInfo } from '../../wailsjs/go/main/App';
+  import { formatDate } from '../utils/dateUtils.js';
 
   let loading = false;
   let eventInfo = null;
@@ -17,6 +18,11 @@
       loading = false;
     }
   });
+
+  // Wrapper to handle 'N/A' for empty dates in EventInfo
+  function formatEventDate(dateInfo) {
+    return dateInfo ? formatDate(dateInfo) : 'N/A';
+  }
 </script>
 
 {#if loading}
@@ -50,8 +56,8 @@
             </div>
             <div>
               <p class="text-sm font-semibold text-gray-600 dark:text-gray-400">Date</p>
-              <p class="text-gray-800 dark:text-gray-200">{eventInfo.startDate || 'N/A'}</p>
-              <p class="text-gray-600 dark:text-gray-400 text-sm">to {eventInfo.endDate || 'N/A'}</p>
+              <p class="text-gray-800 dark:text-gray-200">{formatEventDate(eventInfo.startDate)}</p>
+              <p class="text-gray-600 dark:text-gray-400 text-sm">to {formatEventDate(eventInfo.endDate)}</p>
             </div>
           </div>
 
