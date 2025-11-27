@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	stdhtml "html"
 	"io"
 	"net/http"
 	"net/url"
@@ -40,19 +39,6 @@ func NewIndicoClient(baseURL string, eventID int, apiToken string) *IndicoClient
 	}
 }
 
-// normalizeDateString converts a date string (ISO8601 or common layouts) to a
-// local timezone string formatted as "2006-01-02 15:04 MST". If parsing fails,
-// it returns the input unchanged.
-func normalizeDateString(s string) string {
-	if s == "" {
-		return s
-	}
-	if t, err := parseDateField(s); err == nil {
-		return t.In(time.Local).Format("2006-01-02 15:04 MST")
-	}
-	return s
-}
-
 // GetEventInfo retrieves event information via API.
 func (c *IndicoClient) GetEventInfo() (*Event, error) {
 	// Fetch from API
@@ -60,11 +46,7 @@ func (c *IndicoClient) GetEventInfo() (*Event, error) {
 	path := fmt.Sprintf("/export/event/%d.json", c.EventID)
 	q := url.Values{}
 
-	// Unmarshal directly into typed response wrapper
-	type eventAPIResponse struct {
-		Results []Event `json:"results"`
-	}
-	var resp eventAPIResponse
+	var resp EventAPIResponse
 	if err := c.doGet(ctx, path, q, &resp); err != nil {
 		return nil, err
 	}
@@ -73,64 +55,7 @@ func (c *IndicoClient) GetEventInfo() (*Event, error) {
 		return nil, fmt.Errorf("no results in response")
 	}
 
-	ev := resp.Results[0]
-	// Unescape any HTML entities so Description contains original HTML tags.
-	ev.Description = stdhtml.UnescapeString(ev.Description)
-
-	// Normalize StartDate/EndDate to local timezone human format if present
-	ev.StartDate = normalizeDateString(ev.StartDate)
-	ev.EndDate = normalizeDateString(ev.EndDate)
-
-	return &ev, nil
-}
-
-// parseEventFromMap extracts event information from a map and converts dates to local timezone
-func (c *IndicoClient) parseEventFromMap(m map[string]any) *Event {
-	// helper to fetch string values from the map
-	get := func(key string) string {
-		if x, ok := m[key]; ok && x != nil {
-			switch s := x.(type) {
-			case string:
-				return s
-			default:
-				return fmt.Sprintf("%v", s)
-			}
-		}
-		return ""
-	}
-
-	desc := get("description")
-	// Unescape any HTML entities so Description contains original HTML tags.
-	desc = stdhtml.UnescapeString(desc)
-
-	ev := &Event{
-		ID:          get("id"),
-		Title:       get("title"),
-		Description: desc,
-		Location:    get("location"),
-		Address:     get("address"),
-		Category:    get("category"),
-	}
-
-	// parse startDate and endDate, convert to local timezone
-	localZone := time.Local
-
-	if raw, ok := m["startDate"]; ok && raw != nil {
-		if t, err := parseDateField(raw); err == nil {
-			// Convert to local timezone
-			localTime := t.In(localZone)
-			ev.StartDate = localTime.Format("2006-01-02 15:04 MST")
-		}
-	}
-	if raw, ok := m["endDate"]; ok && raw != nil {
-		if t, err := parseDateField(raw); err == nil {
-			// Convert to local timezone
-			localTime := t.In(localZone)
-			ev.EndDate = localTime.Format("2006-01-02 15:04 MST")
-		}
-	}
-
-	return ev
+	return &resp.Results[0], nil
 }
 
 func (c *IndicoClient) doGet(ctx context.Context, path string, query url.Values, out interface{}) error {
@@ -173,18 +98,6 @@ func (c *IndicoClient) doGet(ctx context.Context, path string, query url.Values,
 		return fmt.Errorf("decode error: %w", err)
 	}
 	return nil
-}
-
-// Event holds the essential information about an Indico event.
-type Event struct {
-	ID          string `json:"id"`
-	Title       string `json:"title"`
-	Description string `json:"description"`
-	StartDate   string `json:"startDate,omitempty"`
-	EndDate     string `json:"endDate,omitempty"`
-	Location    string `json:"location,omitempty"`
-	Address     string `json:"address,omitempty"`
-	Category    string `json:"category,omitempty"`
 }
 
 // helper: joinPaths ensures no duplicate slashes.

@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	stdhtml "html"
 	"log"
 	"net/url"
 	"os"
@@ -93,12 +92,6 @@ func (h *DataSourceHandler) getInfoFromFile() (*Event, error) {
 	if err := json.Unmarshal(data, &ev); err != nil {
 		return nil, fmt.Errorf("failed to parse %s: %w", filePath, err)
 	}
-	// Unescape description entities for parity with API path
-	ev.Description = stdhtml.UnescapeString(ev.Description)
-
-	// Normalize StartDate/EndDate to local timezone human format if present
-	ev.StartDate = normalizeDateString(ev.StartDate)
-	ev.EndDate = normalizeDateString(ev.EndDate)
 
 	return &ev, nil
 }
