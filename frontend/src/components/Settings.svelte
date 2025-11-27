@@ -3,6 +3,7 @@
   import { Modal } from 'flowbite-svelte';
   import { InfoCircleSolid } from 'flowbite-svelte-icons';
   import { GetAppInfo } from '../../wailsjs/go/main/App';
+  import { BrowserOpenURL } from '../../wailsjs/runtime/runtime.js';
 
   /** @type {boolean} */
   export let open = false;
@@ -23,6 +24,14 @@
 
   function setTab(tab) {
     activeTab = tab;
+  }
+
+  function reportIssue() {
+    if (!appInfo) return;
+    const subject = encodeURIComponent(`${appInfo.name} ${appInfo.version} Issue Report`);
+    const body = encodeURIComponent('Please describe the issue here...\n\n');
+    const mailto = `mailto:${appInfo.authorEmail}?subject=${subject}&body=${body}`;
+    BrowserOpenURL(mailto);
   }
 </script>
 
@@ -92,10 +101,14 @@
               <span class="text-sm text-gray-600 dark:text-gray-400">{appInfo.company}</span>
             </div>
             <div class="flex justify-between items-center py-2">
-              <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Email</span>
-              <a href="mailto:{appInfo.authorEmail}" class="text-sm text-blue-600 dark:text-blue-400 hover:underline">
-                {appInfo.authorEmail}
-              </a>
+              <span class="text-sm font-medium text-gray-700 dark:text-gray-300">See an Issue?</span>
+              <button
+                type="button"
+                on:click={reportIssue}
+                class="text-sm px-3 py-1 rounded bg-indigo-600 text-white hover:bg-indigo-700 dark:bg-indigo-500 dark:hover:bg-indigo-600 focus:outline-none focus:ring-2 focus:ring-indigo-400"
+              >
+                Report
+              </button>
             </div>
           </div>
 
@@ -121,5 +134,3 @@
     max-width: 600px;
   }
 </style>
-
-
