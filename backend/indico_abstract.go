@@ -1,11 +1,5 @@
 package backend
 
-import (
-	"encoding/json"
-	"fmt"
-	"os"
-)
-
 // Person represents a person in an abstract (author, speaker, etc.)
 type Person struct {
 	Affiliation string `json:"affiliation"`
@@ -110,21 +104,4 @@ type AbstractData struct {
 // AbstractsResponse represents the top-level structure of abstracts.json
 type AbstractsResponse struct {
 	Abstracts []AbstractData `json:"abstracts"`
-}
-
-// GetAbstractData reads abstract data from abstracts.json file
-func (c *IndicoClient) GetAbstractData() ([]AbstractData, error) {
-	// Read the abstracts.json file
-	data, err := os.ReadFile("abstracts.json")
-	if err != nil {
-		return nil, fmt.Errorf("failed to read abstracts.json: %w", err)
-	}
-
-	// Parse the JSON data
-	var response AbstractsResponse
-	if err := json.Unmarshal(data, &response); err != nil {
-		return nil, fmt.Errorf("failed to parse abstracts.json: %w", err)
-	}
-
-	return response.Abstracts, nil
 }

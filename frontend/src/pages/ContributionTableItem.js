@@ -1,14 +1,4 @@
-/**
- * Helper to format date info object to string
- * @param {Object} dateInfo - The date info object with date, time, tz
- * @returns {string} Formatted date string
- */
-export function formatDate(dateInfo) {
-  if (!dateInfo) return '';
-  const { date, time, tz } = dateInfo;
-//   return tz ? `${date} ${time} (${tz})` : `${date} ${time}`;
-  return `${date} ${time}`;
-}
+import { formatDate } from '../utils/dateUtils.js';
 
 /**
  * Get speakers display text (first name, with ... if more exist)

@@ -14,7 +14,7 @@ import (
 func writeDataToFile(path string, data any) error {
 	b, err := json.MarshalIndent(data, "", "  ")
 	if err != nil {
-		return fmt.Errorf("marshal info: %w", err)
+		return fmt.Errorf("marshal contribs: %w", err)
 	}
 	if err := os.WriteFile(path, b, 0644); err != nil {
 		return fmt.Errorf("write file: %w", err)
@@ -24,7 +24,7 @@ func writeDataToFile(path string, data any) error {
 
 func main() {
 	cfgPath := flag.String("config", "", "path to config yaml")
-	out := flag.String("out", "event-out.json", "Output JSON file")
+	out := flag.String("out", "contribs-out.json", "Output JSON file")
 	flag.Parse()
 
 	if *cfgPath == "" {
@@ -41,7 +41,7 @@ func main() {
 		log.Fatalf("NewDataSourceHandlerFromConfig failed: %v", err)
 	}
 
-	eventData, err := dataHandler.GetInfo(context.Background())
+	eventData, err := dataHandler.GetContributions(context.Background())
 	if err != nil {
 		log.Fatalf("GetInfo failed: %v", err)
 	}

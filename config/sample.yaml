@@ -3,16 +3,26 @@
 default:
   data_source: test
 
+# must be indico
 indico:
-  base_url: https://indico.jacow.org
+  # the base URL of the Indico server, e.g. https://indico.jacow.org
+  base_url: <indico-base-url>
+  # the event ID of Indico event, e.g. 82
   event_id: <event-id>
+  # the API token, get it from your account settings, e.g. indp_xxx
   api_token: <your-token>
+  # the request timeout duration
   timeout: 15s
 
+# extra data source for testing purposes
 test:
+  # the local directory containing test data files
   data_dir: ./testdata
+  # the local event info file
   event_info: info.json
+  # the local abstracts file
   abstracts: abstracts.json
+  # the local contributions file
   contribs: contribs.json
 
 

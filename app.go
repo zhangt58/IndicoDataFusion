@@ -38,8 +38,7 @@ func NewApp() *App {
 }
 
 func GetDefaultConfigPath() []string {
-
-	defaultPaths := []string{}
+	var defaultPaths []string
 	switch runtime.GOOS {
 	case "windows":
 		if appdata := os.Getenv("APPDATA"); appdata != "" {
@@ -131,6 +130,14 @@ func (a *App) GetAbstractByID(id int) (*backend.AbstractData, error) {
 	return a.handler.GetAbstractByID(a.ctx, id)
 }
 
+// GetAbstractsByState filters abstracts by their state
+func (a *App) GetAbstractsByState(state string) ([]backend.AbstractData, error) {
+	if a.handler == nil {
+		return nil, errors.Errorf("data handler not initialized")
+	}
+	return a.handler.GetAbstractsByState(a.ctx, state)
+}
+
 // GetContributionByID retrieves a specific contribution by ID
 func (a *App) GetContributionByID(id string) (*backend.ContributionData, error) {
 	if a.handler == nil {
@@ -139,26 +146,18 @@ func (a *App) GetContributionByID(id string) (*backend.ContributionData, error) 
 	return a.handler.GetContributionByID(a.ctx, id)
 }
 
-// FilterAbstractsByState filters abstracts by their state
-func (a *App) FilterAbstractsByState(state string) ([]backend.AbstractData, error) {
+// GetContributionsBySession filters contributions by session
+func (a *App) GetContributionsBySession(session string) ([]backend.ContributionData, error) {
 	if a.handler == nil {
 		return nil, errors.Errorf("data handler not initialized")
 	}
-	return a.handler.FilterAbstractsByState(a.ctx, state)
+	return a.handler.GetContributionsBySession(a.ctx, session)
 }
 
-// FilterContributionsBySession filters contributions by session
-func (a *App) FilterContributionsBySession(session string) ([]backend.ContributionData, error) {
+// GetContributionsByTrack filters contributions by track
+func (a *App) GetContributionsByTrack(track string) ([]backend.ContributionData, error) {
 	if a.handler == nil {
 		return nil, errors.Errorf("data handler not initialized")
 	}
-	return a.handler.FilterContributionsBySession(a.ctx, session)
-}
-
-// FilterContributionsByTrack filters contributions by track
-func (a *App) FilterContributionsByTrack(track string) ([]backend.ContributionData, error) {
-	if a.handler == nil {
-		return nil, errors.Errorf("data handler not initialized")
-	}
-	return a.handler.FilterContributionsByTrack(a.ctx, track)
+	return a.handler.GetContributionsByTrack(a.ctx, track)
 }

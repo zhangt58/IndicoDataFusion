@@ -1,11 +1,5 @@
 package backend
 
-import (
-	"encoding/json"
-	"fmt"
-	"os"
-)
-
 // DateInfo represents date and time information in Indico
 type DateInfo struct {
 	Date string `json:"date"`
@@ -104,96 +98,4 @@ type ContributionsAPIResponse struct {
 	Timestamp      int64                  `json:"ts"`
 	URL            string                 `json:"url"`
 	Results        []Conference           `json:"results"`
-}
-
-// GetContributionData reads contribution data from py/contribs.json file
-func (c *IndicoClient) GetContributionData() ([]ContributionData, error) {
-	// Read the contribs.json file from py directory
-	data, err := os.ReadFile("py/contribs.json")
-	if err != nil {
-		return nil, fmt.Errorf("failed to read py/contribs.json: %w", err)
-	}
-
-	// Parse the JSON data
-	var response ContributionsAPIResponse
-	if err := json.Unmarshal(data, &response); err != nil {
-		return nil, fmt.Errorf("failed to parse py/contribs.json: %w", err)
-	}
-
-	// Extract contributions from results
-	if len(response.Results) == 0 {
-		return nil, fmt.Errorf("no results found in contribs.json")
-	}
-
-	// The contributions are under results[0].contributions
-	contributions := response.Results[0].Contributions
-
-	return contributions, nil
-}
-
-// GetContributionByID retrieves a specific contribution by its ID
-func (c *IndicoClient) GetContributionByID(id string) (*ContributionData, error) {
-	contributions, err := c.GetContributionData()
-	if err != nil {
-		return nil, err
-	}
-
-	for _, contrib := range contributions {
-		if contrib.ID == id {
-			return &contrib, nil
-		}
-	}
-
-	return nil, fmt.Errorf("contribution with ID %s not found", id)
-}
-
-// GetContributionsBySession retrieves all contributions for a specific session
-func (c *IndicoClient) GetContributionsBySession(session string) ([]ContributionData, error) {
-	allContribs, err := c.GetContributionData()
-	if err != nil {
-		return nil, err
-	}
-
-	var sessionContribs []ContributionData
-	for _, contrib := range allContribs {
-		if contrib.Session == session {
-			sessionContribs = append(sessionContribs, contrib)
-		}
-	}
-
-	return sessionContribs, nil
-}
-
-// GetContributionsByTrack retrieves all contributions for a specific track
-func (c *IndicoClient) GetContributionsByTrack(track string) ([]ContributionData, error) {
-	allContribs, err := c.GetContributionData()
-	if err != nil {
-		return nil, err
-	}
-
-	var trackContribs []ContributionData
-	for _, contrib := range allContribs {
-		if contrib.Track == track {
-			trackContribs = append(trackContribs, contrib)
-		}
-	}
-
-	return trackContribs, nil
-}
-
-// GetContributionsByType retrieves all contributions of a specific type
-func (c *IndicoClient) GetContributionsByType(contribType string) ([]ContributionData, error) {
-	allContribs, err := c.GetContributionData()
-	if err != nil {
-		return nil, err
-	}
-
-	var typeContribs []ContributionData
-	for _, contrib := range allContribs {
-		if contrib.ContribType == contribType {
-			typeContribs = append(typeContribs, contrib)
-		}
-	}
-
-	return typeContribs, nil
 }

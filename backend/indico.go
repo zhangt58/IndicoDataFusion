@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	stdhtml "html"
 	"io"
 	"net/http"
 	"net/url"
@@ -40,114 +39,23 @@ func NewIndicoClient(baseURL string, eventID int, apiToken string) *IndicoClient
 	}
 }
 
-// GetEventInfo retrieves event information either from a local JSON file or via API.
-// If jsonFile is non-empty, it reads from that file. Otherwise, it fetches from the Indico API.
-// If detail is non-empty (only used with API), the query parameter `detail=<value>` will be sent.
-// Dates are converted to local timezone and returned as formatted strings.
-func (c *IndicoClient) GetEventInfo(jsonFile string) (*Event, error) {
-	var ev *Event
+// GetEventInfo retrieves event information via API.
+func (c *IndicoClient) GetEventInfo() (*Event, error) {
+	// Fetch from API
+	ctx := context.Background()
+	path := fmt.Sprintf("/export/event/%d.json", c.EventID)
+	q := url.Values{}
 
-	if jsonFile != "" {
-		// Read from local JSON file
-		data, err := os.ReadFile(jsonFile)
-		if err != nil {
-			return nil, fmt.Errorf("failed to read %s: %w", jsonFile, err)
-		}
-
-		// Parse JSON into a map to handle flexible date formats
-		var raw map[string]any
-		if err := json.Unmarshal(data, &raw); err != nil {
-			return nil, fmt.Errorf("failed to parse %s: %w", jsonFile, err)
-		}
-
-		ev = c.parseEventFromMap(raw)
-	} else {
-		// Fetch from API
-		ctx := context.Background()
-		path := fmt.Sprintf("/export/event/%d.json", c.EventID)
-		q := url.Values{}
-
-		var resp map[string]any
-		if err := c.doGet(ctx, path, q, &resp); err != nil {
-			return nil, err
-		}
-
-		// Extract "results" from the response map
-		v, ok := resp["results"]
-		if !ok || v == nil {
-			return nil, fmt.Errorf("missing results in response")
-		}
-
-		arr, ok := v.([]any)
-		if !ok {
-			return nil, fmt.Errorf("results is not an array, got %T", v)
-		}
-		if len(arr) == 0 {
-			return nil, fmt.Errorf("no results in response")
-		}
-		firstMap, ok := arr[0].(map[string]any)
-		if !ok {
-			return nil, fmt.Errorf("first result element is not an object: %T", arr[0])
-		}
-
-		ev = c.parseEventFromMap(firstMap)
+	var resp EventAPIResponse
+	if err := c.doGet(ctx, path, q, &resp); err != nil {
+		return nil, err
 	}
 
-	return ev, nil
-}
-
-// GetEventData is a convenience method that reads event info from event.json file
-func (c *IndicoClient) GetEventData() (*Event, error) {
-	return c.GetEventInfo("event.json")
-}
-
-// parseEventFromMap extracts event information from a map and converts dates to local timezone
-func (c *IndicoClient) parseEventFromMap(m map[string]any) *Event {
-	// helper to fetch string values from the map
-	get := func(key string) string {
-		if x, ok := m[key]; ok && x != nil {
-			switch s := x.(type) {
-			case string:
-				return s
-			default:
-				return fmt.Sprintf("%v", s)
-			}
-		}
-		return ""
+	if len(resp.Results) == 0 {
+		return nil, fmt.Errorf("no results in response")
 	}
 
-	desc := get("description")
-	// Unescape any HTML entities so Description contains original HTML tags.
-	desc = stdhtml.UnescapeString(desc)
-
-	ev := &Event{
-		ID:          get("id"),
-		Title:       get("title"),
-		Description: desc,
-		Location:    get("location"),
-		Address:     get("address"),
-		Category:    get("category"),
-	}
-
-	// parse startDate and endDate, convert to local timezone
-	localZone := time.Local
-
-	if raw, ok := m["startDate"]; ok && raw != nil {
-		if t, err := parseDateField(raw); err == nil {
-			// Convert to local timezone
-			localTime := t.In(localZone)
-			ev.StartDate = localTime.Format("2006-01-02 15:04 MST")
-		}
-	}
-	if raw, ok := m["endDate"]; ok && raw != nil {
-		if t, err := parseDateField(raw); err == nil {
-			// Convert to local timezone
-			localTime := t.In(localZone)
-			ev.EndDate = localTime.Format("2006-01-02 15:04 MST")
-		}
-	}
-
-	return ev
+	return &resp.Results[0], nil
 }
 
 func (c *IndicoClient) doGet(ctx context.Context, path string, query url.Values, out interface{}) error {
@@ -192,18 +100,6 @@ func (c *IndicoClient) doGet(ctx context.Context, path string, query url.Values,
 	return nil
 }
 
-// Event holds the essential information about an Indico event.
-type Event struct {
-	ID          string `json:"id"`
-	Title       string `json:"title"`
-	Description string `json:"description"`
-	StartDate   string `json:"startDate,omitempty"`
-	EndDate     string `json:"endDate,omitempty"`
-	Location    string `json:"location,omitempty"`
-	Address     string `json:"address,omitempty"`
-	Category    string `json:"category,omitempty"`
-}
-
 // helper: joinPaths ensures no duplicate slashes.
 func joinPaths(base, add string) string {
 	if len(base) == 0 {
@@ -218,7 +114,7 @@ func joinPaths(base, add string) string {
 	return base + add
 }
 
-// helper: trim trailing slash from base URL
+// StringsTrimRightSlash helper: trim trailing slash from base URL
 func StringsTrimRightSlash(s string) string {
 	for len(s) > 1 && s[len(s)-1] == '/' {
 		s = s[:len(s)-1]
