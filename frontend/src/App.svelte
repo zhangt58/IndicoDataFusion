@@ -107,7 +107,7 @@
     </button>
 
     <!-- Dark mode toggle provided by Flowbite (placed with contrib buttons) -->
-    <DarkMode class="flex items-center px-3 py-2 rounded bg-white/50 dark:bg-gray-800/50 border border-gray-200/60 dark:border-gray-700/60 shadow-md backdrop-blur-sm" />
+    <DarkMode class="flex items-center px-3 py-2 rounded dark:text-primary-600 bg-white/50 dark:bg-gray-800/50 border border-gray-200/60 dark:border-gray-700/60 shadow-md backdrop-blur-sm" />
 
     <button
       on:click={toggleSidebar}
@@ -116,8 +116,8 @@
       title="Toggle sidebar"
       type="button"
     >
-      <AlignJustifyOutline class="text-blue-500 dark:bg-gray-200"/>
-      <span class="text-sm font-semibold text-blue-500 dark:text-gray-200 whitespace-nowrap">IndicoDataFusion</span>
+      <AlignJustifyOutline class="text-blue-500 dark:text-blue-400"/>
+      <span class="text-sm font-semibold text-blue-500 dark:text-blue-400 whitespace-nowrap">IndicoDataFusion</span>
     </button>
   </div>
   {:else}
@@ -129,7 +129,7 @@
       title="Toggle sidebar"
       type="button"
     >
-      <AlignJustifyOutline class="text-blue-500 dark:bg-gray-200"/>
+      <AlignJustifyOutline class="text-blue-500 dark:text-blue-400"/>
     </button>
   </div>
   {/if}

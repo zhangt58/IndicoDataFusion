@@ -29,19 +29,19 @@
 {:else if error}
   <div class="p-6 text-center text-red-600">Failed to load contributions: {error}</div>
 {:else}
-  <div class="fixed bg-indigo-300 top-2 left-2 shadow-md px-2 py-1 rounded-sm flex items-center gap-2 z-10">
-    <h2 class="text-xl font-semibold text-gray-700 dark:text-gray-50">Contributions ({contributionData.length})</h2>
+  <div class="fixed bg-indigo-300 dark:bg-indigo-800 top-2 left-2 shadow-md px-2 py-1 rounded-sm flex items-center gap-2 z-10">
+    <h2 class="text-xl font-semibold text-gray-800 dark:text-gray-100">Contributions ({contributionData.length})</h2>
     <div class="flex gap-1 ml-2">
       <button
         onclick={() => viewMode = 'card'}
-        class="p-1.5 rounded transition-colors {viewMode === 'card' ? 'bg-indigo-500 text-white' : 'bg-white text-gray-600 hover:bg-indigo-100'}"
+        class="p-1.5 rounded transition-colors {viewMode === 'card' ? 'bg-indigo-400' : 'hover:bg-indigo-100'}"
         title="Card View"
       >
         <CreditCard size={18} />
       </button>
       <button
         onclick={() => viewMode = 'table'}
-        class="p-1.5 rounded transition-colors {viewMode === 'table' ? 'bg-indigo-500 text-white' : 'bg-white text-gray-600 hover:bg-indigo-100'}"
+        class="p-1.5 rounded transition-colors {viewMode === 'table' ? 'bg-indigo-400' : 'hover:bg-indigo-100'}"
         title="Table View"
       >
         <LayoutGrid size={18} />
