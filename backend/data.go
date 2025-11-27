@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"net/url"
 	"os"
 	"path/filepath"
 	"time"
@@ -87,15 +88,12 @@ func (h *DataSourceHandler) getInfoFromFile() (*Event, error) {
 		return nil, fmt.Errorf("failed to read %s: %w", filePath, err)
 	}
 
-	var raw map[string]any
-	if err := json.Unmarshal(data, &raw); err != nil {
+	var ev EventAPIResponse
+	if err := json.Unmarshal(data, &ev); err != nil {
 		return nil, fmt.Errorf("failed to parse %s: %w", filePath, err)
 	}
 
-	// Create a temporary client just for parsing
-	tempClient := &IndicoClient{}
-	ev := tempClient.parseEventFromMap(raw)
-	return ev, nil
+	return &ev.Results[0], nil
 }
 
 // getInfoFromAPI fetches event info from the Indico API.
@@ -104,7 +102,7 @@ func (h *DataSourceHandler) getInfoFromAPI(ctx context.Context) (*Event, error) 
 		return nil, fmt.Errorf("indico client not initialized")
 	}
 	log.Printf("Reading event info from Indico API\n")
-	return h.client.GetEventInfo("")
+	return h.client.GetEventInfo()
 }
 
 // GetAbstracts retrieves abstract data from the configured data source.
@@ -225,9 +223,12 @@ func (h *DataSourceHandler) getContributionsFromAPI(ctx context.Context) ([]Cont
 	// Construct the API path for contributions
 	path := fmt.Sprintf("/export/event/%d.json", h.client.EventID)
 
+	queryValues := url.Values{}
+	queryValues.Set("detail", "contributions")
+
 	// Fetch the contribution data
 	var response ContributionsAPIResponse
-	if err := h.client.doGet(ctx, path, nil, &response); err != nil {
+	if err := h.client.doGet(ctx, path, queryValues, &response); err != nil {
 		return nil, fmt.Errorf("failed to fetch contributions: %w", err)
 	}
 
@@ -270,8 +271,8 @@ func (h *DataSourceHandler) GetAbstractByID(ctx context.Context, id int) (*Abstr
 	return nil, fmt.Errorf("abstract with ID %d not found", id)
 }
 
-// FilterAbstractsByState filters abstracts by their state.
-func (h *DataSourceHandler) FilterAbstractsByState(ctx context.Context, state string) ([]AbstractData, error) {
+// GetAbstractsByState filters abstracts by their state.
+func (h *DataSourceHandler) GetAbstractsByState(ctx context.Context, state string) ([]AbstractData, error) {
 	abstracts, err := h.GetAbstracts(ctx)
 	if err != nil {
 		return nil, err
@@ -287,8 +288,8 @@ func (h *DataSourceHandler) FilterAbstractsByState(ctx context.Context, state st
 	return filtered, nil
 }
 
-// FilterContributionsBySession filters contributions by session.
-func (h *DataSourceHandler) FilterContributionsBySession(ctx context.Context, session string) ([]ContributionData, error) {
+// GetContributionsBySession filters contributions by session.
+func (h *DataSourceHandler) GetContributionsBySession(ctx context.Context, session string) ([]ContributionData, error) {
 	contributions, err := h.GetContributions(ctx)
 	if err != nil {
 		return nil, err
@@ -304,8 +305,8 @@ func (h *DataSourceHandler) FilterContributionsBySession(ctx context.Context, se
 	return filtered, nil
 }
 
-// FilterContributionsByTrack filters contributions by track.
-func (h *DataSourceHandler) FilterContributionsByTrack(ctx context.Context, track string) ([]ContributionData, error) {
+// GetContributionsByTrack filters contributions by track.
+func (h *DataSourceHandler) GetContributionsByTrack(ctx context.Context, track string) ([]ContributionData, error) {
 	contributions, err := h.GetContributions(ctx)
 	if err != nil {
 		return nil, err
