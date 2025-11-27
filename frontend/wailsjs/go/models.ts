@@ -425,3 +425,30 @@ export namespace backend {
 
 }
 
+export namespace main {
+	
+	export class AppInfo {
+	    name: string;
+	    version: string;
+	    author: string;
+	    company: string;
+	    authorEmail: string;
+	    buildDate: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new AppInfo(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.name = source["name"];
+	        this.version = source["version"];
+	        this.author = source["author"];
+	        this.company = source["company"];
+	        this.authorEmail = source["authorEmail"];
+	        this.buildDate = source["buildDate"];
+	    }
+	}
+
+}
+

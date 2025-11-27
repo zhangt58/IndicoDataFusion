@@ -14,6 +14,10 @@ export function GetAbstractsByState(arg1) {
   return window['go']['main']['App']['GetAbstractsByState'](arg1);
 }
 
+export function GetAppInfo() {
+  return window['go']['main']['App']['GetAppInfo']();
+}
+
 export function GetContributionByID(arg1) {
   return window['go']['main']['App']['GetContributionByID'](arg1);
 }
