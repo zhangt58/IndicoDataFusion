@@ -28,8 +28,10 @@ var (
 
 // App struct
 type App struct {
-	ctx     context.Context
-	handler *backend.DataSourceHandler
+	ctx           context.Context
+	handler       *backend.DataSourceHandler
+	configPath    string
+	configFromEnv bool
 }
 
 // NewApp creates a new App application struct
@@ -82,6 +84,9 @@ func (a *App) startup(ctx context.Context) {
 				break
 			}
 		}
+		a.configFromEnv = false
+	} else {
+		a.configFromEnv = true
 	}
 
 	if configPath == "" {
@@ -95,6 +100,7 @@ func (a *App) startup(ctx context.Context) {
 		os.Exit(1)
 	}
 	a.handler = handler
+	a.configPath = configPath
 	log.Printf("Data handler initialized from: %s\n", configPath)
 }
 
@@ -182,4 +188,50 @@ func (a *App) GetAppInfo() AppInfo {
 		AuthorEmail: AuthorEmail,
 		BuildDate:   BuildDate,
 	}
+}
+
+// GetConfigPath returns the current config path and whether it was from env.
+type ConfigPathInfo struct {
+	Path       string `json:"path"`
+	FromEnv    bool   `json:"fromEnv"`
+	EnvVarName string `json:"envVarName"`
+}
+
+func (a *App) GetConfigPath() ConfigPathInfo {
+	return ConfigPathInfo{Path: a.configPath, FromEnv: a.configFromEnv, EnvVarName: ConfEnvName}
+}
+
+// GetConfigYAML returns the current YAML content of the config file.
+func (a *App) GetConfigYAML() (string, error) {
+	if a.configPath == "" {
+		return "", errors.Errorf("config path not set")
+	}
+	b, err := os.ReadFile(a.configPath)
+	if err != nil {
+		return "", err
+	}
+	return string(b), nil
+}
+
+// ApplyConfigYAML saves the YAML to the config path and reloads the data handler.
+func (a *App) ApplyConfigYAML(yamlContent string) error {
+	if a.configPath == "" {
+		return errors.Errorf("config path not set")
+	}
+	// Validate by parsing first
+	cfg, err := backend.LoadConfigFromBytes([]byte(yamlContent))
+	if err != nil {
+		return errors.Wrap(err, "invalid config YAML")
+	}
+	// Marshal validated cfg back to YAML for normalized save
+	if err := backend.SaveConfig(a.configPath, cfg); err != nil {
+		return errors.Wrap(err, "failed to save config")
+	}
+	// Reload handler
+	h, err := backend.NewDataSourceHandlerFromConfigFile(a.configPath)
+	if err != nil {
+		return errors.Wrap(err, "failed to reload handler")
+	}
+	a.handler = h
+	return nil
 }

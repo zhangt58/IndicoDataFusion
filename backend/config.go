@@ -122,6 +122,11 @@ func LoadConfig(path string) (*Config, error) {
 	if err != nil {
 		return nil, err
 	}
+	return LoadConfigFromBytes(b)
+}
+
+// LoadConfigFromBytes reads and parses YAML content from bytes.
+func LoadConfigFromBytes(b []byte) (*Config, error) {
 	var rawConfig map[string]any
 	if err := yaml.Unmarshal(b, &rawConfig); err != nil {
 		return nil, err
