@@ -6,6 +6,7 @@
   import { BrowserOpenURL } from '../../wailsjs/runtime/runtime.js';
   import AboutTab from './AboutTab.svelte';
   import WindowTab from './WindowTab.svelte';
+  import ConfigurationTab from './ConfigurationTab.svelte';
 
   /** @type {boolean} */
   export let open = false;
@@ -60,6 +61,13 @@
       <WindowSolid class="w-4 h-4" />
       Window
     </button>
+    <button
+      type="button"
+      class="flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors {activeTab === 'config' ? 'text-blue-600 dark:text-blue-500 border-b-2 border-blue-600 dark:border-blue-500' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'}"
+      on:click={() => setTab('config')}
+    >
+      Configuration
+    </button>
   </div>
 
   <!-- Tab Content -->
@@ -77,6 +85,8 @@
       {/if}
     {:else if activeTab === 'window'}
       <WindowTab active={true} />
+    {:else if activeTab === 'config'}
+      <ConfigurationTab />
     {/if}
   </div>
 </Modal>
