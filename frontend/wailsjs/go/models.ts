@@ -449,6 +449,22 @@ export namespace main {
 	        this.buildDate = source["buildDate"];
 	    }
 	}
+	export class ConfigPathInfo {
+	    path: string;
+	    fromEnv: boolean;
+	    envVarName: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new ConfigPathInfo(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.path = source["path"];
+	        this.fromEnv = source["fromEnv"];
+	        this.envVarName = source["envVarName"];
+	    }
+	}
 
 }
 
