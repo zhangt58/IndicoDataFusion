@@ -1,11 +1,12 @@
 <script>
   import { onMount } from 'svelte';
   import { Modal } from 'flowbite-svelte';
-  import { InfoCircleSolid, WindowSolid } from 'flowbite-svelte-icons';
+  import { InfoCircleSolid, WindowSolid, CogOutline } from 'flowbite-svelte-icons';
   import { GetAppInfo } from '../../wailsjs/go/main/App';
   import { BrowserOpenURL } from '../../wailsjs/runtime/runtime.js';
   import AboutTab from './AboutTab.svelte';
   import WindowTab from './WindowTab.svelte';
+  import ConfigurationTab from './ConfigurationTab.svelte';
 
   /** @type {boolean} */
   export let open = false;
@@ -46,7 +47,7 @@
   <div class="flex border-b border-gray-200 dark:border-gray-700 mb-4">
     <button
       type="button"
-      class="flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors {activeTab === 'about' ? 'text-blue-600 dark:text-blue-500 border-b-2 border-blue-600 dark:border-blue-500' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'}"
+      class="flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors {activeTab === 'about' ? 'text-blue-600 dark:text-blue-500' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'}"
       on:click={() => setTab('about')}
     >
       <InfoCircleSolid class="w-4 h-4" />
@@ -54,11 +55,19 @@
     </button>
     <button
       type="button"
-      class="flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors {activeTab === 'window' ? 'text-blue-600 dark:text-blue-500 border-b-2 border-blue-600 dark:border-blue-500' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'}"
+      class="flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors {activeTab === 'window' ? 'text-blue-600 dark:text-blue-500' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'}"
       on:click={() => setTab('window')}
     >
       <WindowSolid class="w-4 h-4" />
       Window
+    </button>
+    <button
+      type="button"
+      class="flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors {activeTab === 'config' ? 'text-blue-600 dark:text-blue-500' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'}"
+      on:click={() => setTab('config')}
+    >
+      <CogOutline class="w-4 h-4" />
+      Configuration
     </button>
   </div>
 
@@ -68,7 +77,7 @@
       {#if loading}
         <div class="flex items-center justify-center p-8">
           <div class="text-center">
-            <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-500 mx-auto mb-4"></div>
+            <div class="animate-spin rounded-full h-12 w-12 border-indigo-500 mx-auto mb-4"></div>
             <p class="text-gray-600 dark:text-gray-400">Loading app info...</p>
           </div>
         </div>
@@ -77,6 +86,8 @@
       {/if}
     {:else if activeTab === 'window'}
       <WindowTab active={true} />
+    {:else if activeTab === 'config'}
+      <ConfigurationTab />
     {/if}
   </div>
 </Modal>

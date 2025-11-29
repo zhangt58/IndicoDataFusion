@@ -6,22 +6,22 @@
 </script>
 
 {#if appInfo}
-  <div class="space-y-6 p-4">
+  <div class="space-y-4 p-2">
     <!-- App Logo/Header -->
     <div class="text-center">
-      <div class="inline-flex items-center justify-center mb-4">
+      <div class="inline-flex items-center justify-center mb-1">
         <img
           src="/src/assets/images/icon.png"
           alt="{appInfo.name} Icon"
-          class="w-32 h-32 object-contain"
+          class="w-30 h-30 object-contain"
         />
       </div>
-      <h2 class="text-2xl font-bold text-gray-900 dark:text-white mb-2">{appInfo.name}</h2>
+      <h2 class="text-2xl font-bold text-gray-900 dark:text-white mb-1">{appInfo.name}</h2>
       <p class="text-sm text-gray-500 dark:text-gray-400">Aggregating Indico data into one desktop app</p>
     </div>
 
     <!-- Version Information -->
-    <div class="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 space-y-1">
+    <div class="bg-gray-50 dark:bg-gray-800 rounded-lg p-2 space-y-1">
       <div class="flex justify-between items-center py-2 border-b border-gray-200 dark:border-gray-700">
         <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Version</span>
         <span class="text-sm text-gray-600 dark:text-gray-400">{appInfo.version}</span>
@@ -33,7 +33,7 @@
     </div>
 
     <!-- Author Information -->
-    <div class="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4 space-y-1">
+    <div class="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-2 space-y-1">
       <div class="flex justify-between items-center py-2 border-b border-blue-200 dark:border-blue-800">
         <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Author</span>
         <span class="text-sm text-gray-600 dark:text-gray-400">{appInfo.author}</span>

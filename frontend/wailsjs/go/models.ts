@@ -214,6 +214,129 @@ export namespace backend {
 		    return a;
 		}
 	}
+	export class ConfigPathInfo {
+	    path: string;
+	    fromEnv: boolean;
+	    envVarName: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new ConfigPathInfo(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.path = source["path"];
+	        this.fromEnv = source["fromEnv"];
+	        this.envVarName = source["envVarName"];
+	    }
+	}
+	export class TestConfig {
+	    dataDir: string;
+	    eventInfo: string;
+	    abstracts: string;
+	    contribs: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new TestConfig(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.dataDir = source["dataDir"];
+	        this.eventInfo = source["eventInfo"];
+	        this.abstracts = source["abstracts"];
+	        this.contribs = source["contribs"];
+	    }
+	}
+	export class IndicoConfig {
+	    baseUrl: string;
+	    eventId: number;
+	    apiToken: string;
+	    timeout?: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new IndicoConfig(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.baseUrl = source["baseUrl"];
+	        this.eventId = source["eventId"];
+	        this.apiToken = source["apiToken"];
+	        this.timeout = source["timeout"];
+	    }
+	}
+	export class DataSource {
+	    name: string;
+	    type: string;
+	    indico?: IndicoConfig;
+	    test?: TestConfig;
+	
+	    static createFrom(source: any = {}) {
+	        return new DataSource(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.name = source["name"];
+	        this.type = source["type"];
+	        this.indico = this.convertValues(source["indico"], IndicoConfig);
+	        this.test = this.convertValues(source["test"], TestConfig);
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
+	export class ConfigDataUI {
+	    activeDataSourceName: string;
+	    dataSources: DataSource[];
+	    pathInfo: ConfigPathInfo;
+	
+	    static createFrom(source: any = {}) {
+	        return new ConfigDataUI(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.activeDataSourceName = source["activeDataSourceName"];
+	        this.dataSources = this.convertValues(source["dataSources"], DataSource);
+	        this.pathInfo = this.convertValues(source["pathInfo"], ConfigPathInfo);
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
+	
 	
 	export class Folder {
 	    _type: string;
@@ -374,6 +497,7 @@ export namespace backend {
 	
 	
 	
+	
 	export class Event {
 	    id: string;
 	    title: string;
@@ -418,6 +542,8 @@ export namespace backend {
 		    return a;
 		}
 	}
+	
+	
 	
 	
 	
