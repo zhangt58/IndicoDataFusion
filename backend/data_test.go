@@ -11,11 +11,12 @@ func TestNewDataSourceHandler(t *testing.T) {
 	// Test with Indico config
 	indicoDS := &DataSource{
 		Name: "indico",
+		Type: "indico",
 		Indico: &IndicoConfig{
 			BaseURL:  "https://example.com",
 			EventID:  123,
 			APIToken: "token",
-			Timeout:  Duration(10),
+			Timeout:  "10s",
 		},
 	}
 
@@ -33,6 +34,7 @@ func TestNewDataSourceHandler(t *testing.T) {
 	// Test with Test config
 	testDS := &DataSource{
 		Name: "test",
+		Type: "test",
 		Test: &TestConfig{
 			DataDir:   "./testdata",
 			EventInfo: "info.json",
@@ -172,11 +174,12 @@ func TestNewDataSourceHandlerFromConfig(t *testing.T) {
 	configPath := filepath.Join(dir, "config.yaml")
 
 	cfg := &Config{
-		Default: DefaultSection{
-			DataSource: "test",
+		ActiveDataSource: ActiveDataSource{
+			Use: "test",
 		},
 		DataSources: map[string]map[string]any{
 			"test": {
+				"indico":     false,
 				"data_dir":   "./testdata",
 				"event_info": "info.json",
 				"abstracts":  "abstracts.json",

@@ -191,14 +191,8 @@ func (a *App) GetAppInfo() AppInfo {
 }
 
 // GetConfigPath returns the current config path and whether it was from env.
-type ConfigPathInfo struct {
-	Path       string `json:"path"`
-	FromEnv    bool   `json:"fromEnv"`
-	EnvVarName string `json:"envVarName"`
-}
-
-func (a *App) GetConfigPath() ConfigPathInfo {
-	return ConfigPathInfo{Path: a.configPath, FromEnv: a.configFromEnv, EnvVarName: ConfEnvName}
+func (a *App) GetConfigPath() backend.ConfigPathInfo {
+	return backend.ConfigPathInfo{Path: a.configPath, FromEnv: a.configFromEnv, EnvVarName: ConfEnvName}
 }
 
 // GetConfigYAML returns the current YAML content of the config file.
@@ -227,6 +221,49 @@ func (a *App) ApplyConfigYAML(yamlContent string) error {
 	if err := backend.SaveConfig(a.configPath, cfg); err != nil {
 		return errors.Wrap(err, "failed to save config")
 	}
+	// Reload handler
+	h, err := backend.NewDataSourceHandlerFromConfigFile(a.configPath)
+	if err != nil {
+		return errors.Wrap(err, "failed to reload handler")
+	}
+	a.handler = h
+	return nil
+}
+
+// GetStructuredConfigUI returns the configuration in a structured format for the UI.
+func (a *App) GetStructuredConfigUI() (*backend.ConfigDataUI, error) {
+	if a.configPath == "" {
+		return nil, errors.Errorf("config path not set")
+	}
+
+	cfg, err := backend.LoadConfig(a.configPath)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to load config")
+	}
+
+	pathInfo := backend.ConfigPathInfo{
+		Path:       a.configPath,
+		FromEnv:    a.configFromEnv,
+		EnvVarName: ConfEnvName,
+	}
+
+	return backend.GetStructuredConfigUI(cfg, pathInfo), nil
+}
+
+// ApplyStructuredConfigUI applies the structured configuration from the UI.
+func (a *App) ApplyStructuredConfigUI(configData *backend.ConfigDataUI) error {
+	if a.configPath == "" {
+		return errors.Errorf("config path not set")
+	}
+
+	// Build the config structure
+	cfg := backend.BuildConfigFromStructuredUI(configData)
+
+	// Save the config
+	if err := backend.SaveConfig(a.configPath, cfg); err != nil {
+		return errors.Wrap(err, "failed to save config")
+	}
+
 	// Reload handler
 	h, err := backend.NewDataSourceHandlerFromConfigFile(a.configPath)
 	if err != nil {

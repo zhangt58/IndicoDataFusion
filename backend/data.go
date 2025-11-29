@@ -33,8 +33,10 @@ func NewDataSourceHandler(ds *DataSource) (*DataSourceHandler, error) {
 			ds.Indico.EventID,
 			ds.Indico.APIToken,
 		)
-		if ds.Indico.Timeout > 0 {
-			client.Timeout = time.Duration(ds.Indico.Timeout)
+		if ds.Indico.Timeout != "" {
+			if timeout, err := time.ParseDuration(ds.Indico.Timeout); err == nil {
+				client.Timeout = timeout
+			}
 		}
 		handler.client = client
 		handler.isTestMode = false
@@ -51,7 +53,7 @@ func NewDataSourceHandler(ds *DataSource) (*DataSourceHandler, error) {
 
 // NewDataSourceHandlerFromConfig creates a handler from a full Config using the default data source.
 func NewDataSourceHandlerFromConfig(cfg *Config) (*DataSourceHandler, error) {
-	ds, err := cfg.GetDefaultDataSource()
+	ds, err := cfg.GetActiveDataSource()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get default data source: %w", err)
 	}

@@ -39,17 +39,19 @@ func TestSaveLoadConfig(t *testing.T) {
 	path := filepath.Join(dir, "config.yaml")
 
 	cfg := &Config{
-		Default: DefaultSection{
-			DataSource: "test",
+		ActiveDataSource: ActiveDataSource{
+			Use: "test",
 		},
 		DataSources: map[string]map[string]any{
 			"indico": {
+				"indico":    true,
 				"base_url":  "https://example.test",
 				"api_token": "secret",
 				"event_id":  42,
 				"timeout":   "7s",
 			},
 			"test": {
+				"indico":     false,
 				"data_dir":   "./testdata",
 				"event_info": "info.json",
 				"abstracts":  "abstracts.json",
@@ -67,14 +69,17 @@ func TestSaveLoadConfig(t *testing.T) {
 		t.Fatalf("LoadConfig failed: %v", err)
 	}
 
-	if loaded.Default.DataSource != cfg.Default.DataSource {
-		t.Fatalf("Default.DataSource mismatch: got %q want %q", loaded.Default.DataSource, cfg.Default.DataSource)
+	if loaded.ActiveDataSource.Use != cfg.ActiveDataSource.Use {
+		t.Fatalf("DataSourceSection.Use mismatch: got %q want %q", loaded.ActiveDataSource.Use, cfg.ActiveDataSource.Use)
 	}
 
 	// Test GetDataSource for Indico
 	indicoDS, err := loaded.GetDataSource("indico")
 	if err != nil {
 		t.Fatalf("GetDataSource(indico) failed: %v", err)
+	}
+	if indicoDS.Type != "indico" {
+		t.Fatalf("Indico Type mismatch: got %q want %q", indicoDS.Type, "indico")
 	}
 	if indicoDS.Indico == nil {
 		t.Fatalf("expected Indico config, got nil")
@@ -85,14 +90,17 @@ func TestSaveLoadConfig(t *testing.T) {
 	if indicoDS.Indico.EventID != 42 {
 		t.Fatalf("Indico EventID mismatch: got %d want %d", indicoDS.Indico.EventID, 42)
 	}
-	if time.Duration(indicoDS.Indico.Timeout) != 7*time.Second {
-		t.Fatalf("Indico Timeout mismatch: got %v want %v", time.Duration(indicoDS.Indico.Timeout), 7*time.Second)
+	if indicoDS.Indico.Timeout != "7s" {
+		t.Fatalf("Indico Timeout mismatch: got %q want %q", indicoDS.Indico.Timeout, "7s")
 	}
 
 	// Test GetDataSource for Test
 	testDS, err := loaded.GetDataSource("test")
 	if err != nil {
 		t.Fatalf("GetDataSource(test) failed: %v", err)
+	}
+	if testDS.Type != "test" {
+		t.Fatalf("Test Type mismatch: got %q want %q", testDS.Type, "test")
 	}
 	if testDS.Test == nil {
 		t.Fatalf("expected Test config, got nil")
@@ -105,7 +113,7 @@ func TestSaveLoadConfig(t *testing.T) {
 	}
 
 	// Test GetDefaultDataSource
-	defaultDS, err := loaded.GetDefaultDataSource()
+	defaultDS, err := loaded.GetActiveDataSource()
 	if err != nil {
 		t.Fatalf("GetDefaultDataSource failed: %v", err)
 	}
@@ -125,14 +133,14 @@ func TestLoadRealConfig(t *testing.T) {
 		return
 	}
 
-	if cfg.Default.DataSource == "" {
-		t.Fatalf("Default.DataSource is empty")
+	if cfg.ActiveDataSource.Use == "" {
+		t.Fatalf("DataSourceSection.Use is empty")
 	}
 
-	t.Logf("Default data source: %s", cfg.Default.DataSource)
+	t.Logf("Default data source: %s", cfg.ActiveDataSource.Use)
 
 	// Try to get the default data source
-	ds, err := cfg.GetDefaultDataSource()
+	ds, err := cfg.GetActiveDataSource()
 	if err != nil {
 		t.Fatalf("GetDefaultDataSource failed: %v", err)
 	}

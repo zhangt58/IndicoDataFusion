@@ -30,38 +30,39 @@ func (d *Duration) UnmarshalText(text []byte) error {
 	return nil
 }
 
-// DefaultSection specifies which data source to use.
-type DefaultSection struct {
-	DataSource string `yaml:"data_source"`
+// ActiveDataSource specifies which data source to use.
+type ActiveDataSource struct {
+	Use string `yaml:"use"`
 }
 
 // IndicoConfig holds Indico API configuration.
 type IndicoConfig struct {
-	BaseURL  string   `yaml:"base_url"`
-	EventID  int      `yaml:"event_id"`
-	APIToken string   `yaml:"api_token"`
-	Timeout  Duration `yaml:"timeout,omitempty"`
+	BaseURL  string `yaml:"base_url" json:"baseUrl"`
+	EventID  int    `yaml:"event_id" json:"eventId"`
+	APIToken string `yaml:"api_token" json:"apiToken"`
+	Timeout  string `yaml:"timeout,omitempty" json:"timeout,omitempty"`
 }
 
 // TestConfig holds test/local data configuration.
 type TestConfig struct {
-	DataDir   string `yaml:"data_dir"`
-	EventInfo string `yaml:"event_info"`
-	Abstracts string `yaml:"abstracts"`
-	Contribs  string `yaml:"contribs"`
+	DataDir   string `yaml:"data_dir" json:"dataDir"`
+	EventInfo string `yaml:"event_info" json:"eventInfo"`
+	Abstracts string `yaml:"abstracts" json:"abstracts"`
+	Contribs  string `yaml:"contribs" json:"contribs"`
 }
 
 // DataSource represents a named data source configuration.
 type DataSource struct {
-	Name   string
-	Indico *IndicoConfig
-	Test   *TestConfig
+	Name   string        `json:"name"`
+	Type   string        `json:"type"` // "indico" or "test"
+	Indico *IndicoConfig `json:"indico,omitempty"`
+	Test   *TestConfig   `json:"test,omitempty"`
 }
 
 // Config holds the complete configuration with multiple data sources.
 type Config struct {
-	Default     DefaultSection            `yaml:"default"`
-	DataSources map[string]map[string]any `yaml:",inline"`
+	ActiveDataSource ActiveDataSource          `yaml:"data-source"`
+	DataSources      map[string]map[string]any `yaml:",inline"`
 }
 
 // GetDataSource retrieves a specific data source by name.
@@ -73,9 +74,19 @@ func (c *Config) GetDataSource(name string) (*DataSource, error) {
 
 	ds := &DataSource{Name: name}
 
-	// Try to parse as IndicoConfig
-	if baseURL, ok := rawData["base_url"].(string); ok {
-		ic := &IndicoConfig{BaseURL: baseURL}
+	// Check explicit indico field to determine type
+	isIndico := false
+	if indicoFlag, ok := rawData["indico"].(bool); ok {
+		isIndico = indicoFlag
+	}
+
+	if isIndico {
+		// Parse as IndicoConfig
+		ds.Type = "indico"
+		ic := &IndicoConfig{}
+		if baseURL, ok := rawData["base_url"].(string); ok {
+			ic.BaseURL = baseURL
+		}
 		if eventID, ok := rawData["event_id"].(int); ok {
 			ic.EventID = eventID
 		}
@@ -83,18 +94,16 @@ func (c *Config) GetDataSource(name string) (*DataSource, error) {
 			ic.APIToken = apiToken
 		}
 		if timeout, ok := rawData["timeout"].(string); ok {
-			var d Duration
-			if err := d.UnmarshalText([]byte(timeout)); err == nil {
-				ic.Timeout = d
-			}
+			ic.Timeout = timeout
 		}
 		ds.Indico = ic
-		return ds, nil
-	}
-
-	// Try to parse as TestConfig
-	if dataDir, ok := rawData["data_dir"].(string); ok {
-		tc := &TestConfig{DataDir: dataDir}
+	} else {
+		// Parse as TestConfig
+		ds.Type = "test"
+		tc := &TestConfig{}
+		if dataDir, ok := rawData["data_dir"].(string); ok {
+			tc.DataDir = dataDir
+		}
 		if eventInfo, ok := rawData["event_info"].(string); ok {
 			tc.EventInfo = eventInfo
 		}
@@ -105,15 +114,14 @@ func (c *Config) GetDataSource(name string) (*DataSource, error) {
 			tc.Contribs = contribs
 		}
 		ds.Test = tc
-		return ds, nil
 	}
 
-	return nil, os.ErrInvalid
+	return ds, nil
 }
 
-// GetDefaultDataSource retrieves the default data source.
-func (c *Config) GetDefaultDataSource() (*DataSource, error) {
-	return c.GetDataSource(c.Default.DataSource)
+// GetActiveDataSource retrieves the data source in use.
+func (c *Config) GetActiveDataSource() (*DataSource, error) {
+	return c.GetDataSource(c.ActiveDataSource.Use)
 }
 
 // LoadConfig reads and parses a YAML config file at path.
@@ -136,12 +144,12 @@ func LoadConfigFromBytes(b []byte) (*Config, error) {
 		DataSources: make(map[string]map[string]any),
 	}
 
-	// Extract default section
-	if defaultSection, ok := rawConfig["default"].(map[string]any); ok {
-		if dataSource, ok := defaultSection["data_source"].(string); ok {
-			cfg.Default.DataSource = dataSource
+	// Extract data-source section
+	if dataSourceSection, ok := rawConfig["data-source"].(map[string]any); ok {
+		if use, ok := dataSourceSection["use"].(string); ok {
+			cfg.ActiveDataSource.Use = use
 		}
-		delete(rawConfig, "default")
+		delete(rawConfig, "data-source")
 	}
 
 	// All remaining sections are data sources
@@ -181,4 +189,75 @@ func SaveConfig(path string, cfg *Config) error {
 		return err
 	}
 	return os.Rename(tmp, path)
+}
+
+// ConfigPathInfo holds information about the config file location.
+type ConfigPathInfo struct {
+	Path       string `json:"path"`
+	FromEnv    bool   `json:"fromEnv"`
+	EnvVarName string `json:"envVarName"`
+}
+
+// ConfigData represents the structured configuration for the UI.
+type ConfigDataUI struct {
+	ActiveDataSourceName string         `json:"activeDataSourceName"`
+	DataSources          []DataSource   `json:"dataSources"`
+	PathInfo             ConfigPathInfo `json:"pathInfo"`
+}
+
+// GetStructuredConfigUI converts a Config to structured format for the UI.
+func GetStructuredConfigUI(cfg *Config, pathInfo ConfigPathInfo) *ConfigDataUI {
+	configData := &ConfigDataUI{
+		ActiveDataSourceName: cfg.ActiveDataSource.Use,
+		DataSources:          make([]DataSource, 0, len(cfg.DataSources)),
+		PathInfo:             pathInfo,
+	}
+
+	// Use GetDataSource to build each entry
+	for name := range cfg.DataSources {
+		ds, err := cfg.GetDataSource(name)
+		if err != nil {
+			// skip invalid/unknown data sources
+			continue
+		}
+		// append a copy of the resolved DataSource
+		configData.DataSources = append(configData.DataSources, *ds)
+	}
+
+	return configData
+}
+
+// BuildConfigFromStructuredUI converts structured ConfigData back to Config.
+func BuildConfigFromStructuredUI(configData *ConfigDataUI) *Config {
+	cfg := &Config{
+		ActiveDataSource: ActiveDataSource{
+			Use: configData.ActiveDataSourceName,
+		},
+		DataSources: make(map[string]map[string]any),
+	}
+
+	// Convert each data source
+	for _, ds := range configData.DataSources {
+		rawData := make(map[string]any)
+
+		if ds.Type == "indico" && ds.Indico != nil {
+			rawData["indico"] = true
+			rawData["base_url"] = ds.Indico.BaseURL
+			rawData["event_id"] = ds.Indico.EventID
+			rawData["api_token"] = ds.Indico.APIToken
+			if ds.Indico.Timeout != "" {
+				rawData["timeout"] = ds.Indico.Timeout
+			}
+		} else if ds.Type == "test" && ds.Test != nil {
+			rawData["indico"] = false
+			rawData["data_dir"] = ds.Test.DataDir
+			rawData["event_info"] = ds.Test.EventInfo
+			rawData["abstracts"] = ds.Test.Abstracts
+			rawData["contribs"] = ds.Test.Contribs
+		}
+
+		cfg.DataSources[ds.Name] = rawData
+	}
+
+	return cfg
 }
