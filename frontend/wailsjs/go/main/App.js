@@ -6,6 +6,10 @@ export function ApplyConfigYAML(arg1) {
   return window['go']['main']['App']['ApplyConfigYAML'](arg1);
 }
 
+export function ApplyStructuredConfigUI(arg1) {
+  return window['go']['main']['App']['ApplyStructuredConfigUI'](arg1);
+}
+
 export function GetAbstractByID(arg1) {
   return window['go']['main']['App']['GetAbstractByID'](arg1);
 }
@@ -48,4 +52,8 @@ export function GetContributionsByTrack(arg1) {
 
 export function GetEventInfo() {
   return window['go']['main']['App']['GetEventInfo']();
+}
+
+export function GetStructuredConfigUI() {
+  return window['go']['main']['App']['GetStructuredConfigUI']();
 }

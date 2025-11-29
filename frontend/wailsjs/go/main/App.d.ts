@@ -5,6 +5,8 @@ import {main} from '../models';
 
 export function ApplyConfigYAML(arg1:string):Promise<void>;
 
+export function ApplyStructuredConfigUI(arg1:backend.ConfigDataUI):Promise<void>;
+
 export function GetAbstractByID(arg1:number):Promise<backend.AbstractData>;
 
 export function GetAbstracts():Promise<Array<backend.AbstractData>>;
@@ -13,7 +15,7 @@ export function GetAbstractsByState(arg1:string):Promise<Array<backend.AbstractD
 
 export function GetAppInfo():Promise<main.AppInfo>;
 
-export function GetConfigPath():Promise<main.ConfigPathInfo>;
+export function GetConfigPath():Promise<backend.ConfigPathInfo>;
 
 export function GetConfigYAML():Promise<string>;
 
@@ -26,3 +28,5 @@ export function GetContributionsBySession(arg1:string):Promise<Array<backend.Con
 export function GetContributionsByTrack(arg1:string):Promise<Array<backend.ContributionData>>;
 
 export function GetEventInfo():Promise<backend.Event>;
+
+export function GetStructuredConfigUI():Promise<backend.ConfigDataUI>;
