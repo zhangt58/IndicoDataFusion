@@ -54,9 +54,9 @@
   }
 </script>
 
-<div class="p-4 space-y-4 max-w-5xl mx-auto">
+<div class="p-2 space-y-2 max-w-5xl mx-auto">
   {#if loading}
-    <div class="flex items-center justify-center p-8">
+    <div class="flex items-center justify-center p-4">
       <div class="text-center">
         <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-500 mx-auto mb-4"></div>
         <p class="text-gray-600 dark:text-gray-400">Loading configuration...</p>
@@ -65,8 +65,8 @@
   {:else}
     <!-- Active Data Source Selector -->
     <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-4 border border-gray-200 dark:border-gray-700">
-      <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-3">Active Data Source</h3>
-      <div class="flex items-center gap-3">
+      <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">Active Data Source</h3>
+      <div class="flex items-center gap-2">
         <label for="active-source" class="text-sm font-medium text-gray-700 dark:text-gray-300">Select Data Source:</label>
         <select
           id="active-source"
@@ -78,13 +78,13 @@
           {/each}
         </select>
       </div>
-      <div class="mt-2">
+      <div class="mt-1">
         <span class="text-sm text-green-600 dark:text-green-400">Current Active: <strong>{currentActive}</strong></span>
       </div>
     </div>
 
     <!-- Data Sources -->
-    <div class="space-y-3">
+    <div class="space-y-2">
       <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100">Data Sources</h3>
 
       {#each configData.dataSources as dataSource (dataSource.name)}
@@ -93,7 +93,7 @@
           <button
             type="button"
             on:click={() => toggleSource(dataSource.name)}
-            class="w-full flex items-center justify-between p-4 hover:bg-gray-50 dark:hover:bg-gray-750 transition-colors"
+            class="w-full flex items-center justify-between p-2 hover:bg-gray-50 dark:hover:bg-gray-750 transition-colors"
           >
             <div class="flex items-center gap-3">
               <span class="text-base font-semibold text-gray-900 dark:text-gray-100">{dataSource.name}</span>
@@ -111,10 +111,10 @@
 
           <!-- Content -->
           {#if expandedSources[dataSource.name]}
-            <div class="px-4 pb-4 pt-2 border-t border-gray-200 dark:border-gray-700 space-y-3">
+            <div class="px-4 pb-4 pt-2 border-t border-gray-200 dark:border-gray-700 space-y-2">
               {#if dataSource.type === 'indico' && dataSource.indico}
                 <!-- Indico API Configuration -->
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
                   <div>
                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Base URL</label>
                     <input
@@ -155,7 +155,7 @@
                 </div>
               {:else if dataSource.type === 'test' && dataSource.test}
                 <!-- Test Data Configuration -->
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
                   <div class="md:col-span-2">
                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Data Directory</label>
                     <input
@@ -202,12 +202,12 @@
 
     <!-- Status Messages -->
     {#if applyError}
-      <div class="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-3">
+      <div class="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-2">
         <p class="text-sm text-red-600 dark:text-red-400">{applyError}</p>
       </div>
     {/if}
     {#if applySuccess}
-      <div class="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-3">
+      <div class="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-2">
         <p class="text-sm text-green-600 dark:text-green-400">{applySuccess}</p>
       </div>
     {/if}
@@ -216,11 +216,11 @@
     <div class="flex justify-end">
       <button
         type="button"
-        class="px-6 py-2 rounded-lg bg-indigo-600 text-white font-medium hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed dark:bg-indigo-500 dark:hover:bg-indigo-600 focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:ring-offset-2 transition-colors"
+        class="px-2 py-1.5 rounded-lg bg-indigo-600 text-white font-medium hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed dark:bg-indigo-500 dark:hover:bg-indigo-600 focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:ring-offset-2 transition-colors"
         on:click={apply}
         disabled={applying}
       >
-        {applying ? 'Applying...' : 'Apply Configuration'}
+        {applying ? 'Applying...' : 'Apply'}
       </button>
     </div>
 
