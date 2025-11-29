@@ -1,10 +1,11 @@
-# Sample configuration for the data source
+# Sample configuration for the data sources
 
-default:
-  data_source: test
+data-source:
+  # the data source def to be used
+  use: test-hiat25
 
-# must be indico
-indico:
+# the data source defines an actual Indico conference
+hiat25:
   # the base URL of the Indico server, e.g. https://indico.jacow.org
   base_url: <indico-base-url>
   # the event ID of Indico event, e.g. 82
@@ -13,9 +14,10 @@ indico:
   api_token: <your-token>
   # the request timeout duration
   timeout: 15s
+  # is indico API?
+  indico: true
 
-# extra data source for testing purposes
-test:
+test-hiat25:
   # the local directory containing test data files
   data_dir: ./testdata
   # the local event info file
@@ -24,7 +26,5 @@ test:
   abstracts: abstracts.json
   # the local contributions file
   contribs: contribs.json
-
-
-
-
+  # is indico API, defaults false
+  indico: false
