@@ -55,7 +55,7 @@ func NewDataSourceHandler(ds *DataSource) (*DataSourceHandler, error) {
 func NewDataSourceHandlerFromConfig(cfg *Config) (*DataSourceHandler, error) {
 	ds, err := cfg.GetActiveDataSource()
 	if err != nil {
-		return nil, fmt.Errorf("failed to get default data source: %w", err)
+		return nil, fmt.Errorf("failed to get active data source: %w", err)
 	}
 	return NewDataSourceHandler(ds)
 }
