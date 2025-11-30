@@ -59,9 +59,16 @@ type DataSource struct {
 	Test   *TestConfig   `json:"test,omitempty"`
 }
 
+// CacheConfig holds cache configuration.
+type CacheConfig struct {
+	TTL     string `yaml:"ttl,omitempty" json:"ttl,omitempty"`          // Time-to-live (e.g., "24h", "1h30m")
+	MaxSize string `yaml:"max_size,omitempty" json:"maxSize,omitempty"` // Max size (e.g., "100MB", "1GB")
+}
+
 // Config holds the complete configuration with multiple data sources.
 type Config struct {
 	ActiveDataSource ActiveDataSource          `yaml:"data-source"`
+	Cache            *CacheConfig              `yaml:"cache,omitempty"`
 	DataSources      map[string]map[string]any `yaml:",inline"`
 }
 
@@ -150,6 +157,18 @@ func LoadConfigFromBytes(b []byte) (*Config, error) {
 			cfg.ActiveDataSource.Use = use
 		}
 		delete(rawConfig, "data-source")
+	}
+
+	// Extract cache section
+	if cacheSection, ok := rawConfig["cache"].(map[string]any); ok {
+		cfg.Cache = &CacheConfig{}
+		if ttl, ok := cacheSection["ttl"].(string); ok {
+			cfg.Cache.TTL = ttl
+		}
+		if maxSize, ok := cacheSection["max_size"].(string); ok {
+			cfg.Cache.MaxSize = maxSize
+		}
+		delete(rawConfig, "cache")
 	}
 
 	// All remaining sections are data sources
