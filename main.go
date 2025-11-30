@@ -43,7 +43,8 @@ func main() {
 		AssetServer: &assetserver.Options{
 			Assets: assets,
 		},
-		OnStartup: app.startup,
+		OnStartup:  app.startup,
+		OnShutdown: app.shutdown,
 		Linux: &linux.Options{
 			Icon:                icon,
 			WindowIsTranslucent: true,
@@ -51,7 +52,7 @@ func main() {
 			ProgramName:         AppName,
 		},
 		Mac: &mac.Options{
-			TitleBar: mac.TitleBarDefault(),
+			TitleBar:             mac.TitleBarDefault(),
 			WebviewIsTransparent: false,
 			WindowIsTranslucent:  false,
 		},
