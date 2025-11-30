@@ -4,6 +4,15 @@ data-source:
   # the data source def to be used
   use: test-hiat25
 
+# cache configuration (optional)
+cache:
+  # Time-to-live for cache entries (e.g., "24h", "1h30m", "30m")
+  # Default: 24h
+  ttl: 24h
+  # Maximum cache size (e.g., "100MB", "1GB", "500MB")
+  # Default: 100MB
+  max_size: 100MB
+
 # the data source defines an actual Indico conference
 hiat25:
   # the base URL of the Indico server, e.g. https://indico.jacow.org
