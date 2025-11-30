@@ -1,17 +1,22 @@
 <script>
-  import { onMount } from 'svelte';
-  import { GetContributions } from '../../wailsjs/go/main/App';
-  import { LayoutGrid, CreditCard } from '@lucide/svelte';
+  import { onMount, onDestroy } from 'svelte';
+  import { GetContributions, IsTestMode } from '../../wailsjs/go/main/App';
+  import { EventsOn, EventsOff } from '../../wailsjs/runtime/runtime';
+  import { createRefreshHandler, createCacheEventListener } from '../utils/cacheUtils.js';
+  import { LayoutGrid, CreditCard, RefreshCw } from '@lucide/svelte';
   import ContributionCardView from './ContributionCardView.svelte';
   import ContributionTableView from './ContributionTableView.svelte';
 
   let loading = false;
+  let refreshing = false;
   let contributionData = [];
   let error = null;
   let viewMode = 'card'; // 'card' or 'table'
+  let isTestMode = false;
 
-  onMount(async () => {
+  async function loadData() {
     loading = true;
+    error = null;
     try {
       contributionData = (await GetContributions()) || [];
     } catch (e) {
@@ -21,6 +26,38 @@
     } finally {
       loading = false;
     }
+  }
+
+  // Create refresh handler using utility
+  const handleRefresh = createRefreshHandler(
+    'contributions',
+    (value) => { refreshing = value; },
+    (err) => { error = err; }
+  );
+
+  // Create event listener with double-load prevention
+  const handleCacheEvent = createCacheEventListener(
+    'contributions',
+    loadData,
+    (value) => { refreshing = value; }
+  );
+
+  onMount(async () => {
+    // Check if in test mode
+    try {
+      isTestMode = await IsTestMode();
+    } catch (e) {
+      console.error('Failed to check test mode', e);
+    }
+
+    await loadData();
+
+    // Listen for cache updates
+    EventsOn('cache:updated', (...data) => handleCacheEvent(...data));
+  });
+
+  onDestroy(() => {
+    EventsOff('cache:updated');
   });
 </script>
 
@@ -32,6 +69,16 @@
   <div class="fixed bg-indigo-300 dark:bg-indigo-800 top-2 left-2 shadow-md px-2 py-1 rounded-sm flex items-center gap-2 z-10">
     <h2 class="text-xl font-semibold text-gray-800 dark:text-gray-100">Contributions ({contributionData.length})</h2>
     <div class="flex gap-1 ml-2">
+      {#if !isTestMode}
+        <button
+          onclick={() => handleRefresh()}
+          disabled={refreshing}
+          class="p-1.5 rounded transition-colors hover:bg-indigo-100 disabled:opacity-50"
+          title="Refresh from API"
+        >
+          <RefreshCw size={18} class={refreshing ? 'animate-spin' : ''} />
+        </button>
+      {/if}
       <button
         onclick={() => viewMode = 'card'}
         class="p-1.5 rounded transition-colors {viewMode === 'card' ? 'bg-indigo-400' : 'hover:bg-indigo-100'}"

@@ -1,14 +1,20 @@
 <script>
-  import { onMount } from 'svelte';
-  import { GetEventInfo } from '../../wailsjs/go/main/App';
+  import { onMount, onDestroy } from 'svelte';
+  import { GetEventInfo, IsTestMode } from '../../wailsjs/go/main/App';
+  import { EventsOn, EventsOff } from '../../wailsjs/runtime/runtime';
   import { formatDate } from '../utils/dateUtils.js';
+  import { createRefreshHandler, createCacheEventListener } from '../utils/cacheUtils.js';
+  import { RefreshCw } from '@lucide/svelte';
 
   let loading = false;
+  let refreshing = false;
   let eventInfo = null;
   let error = null;
+  let isTestMode = false;
 
-  onMount(async () => {
+  async function loadData() {
     loading = true;
+    error = null;
     try {
       eventInfo = await GetEventInfo();
     } catch (e) {
@@ -17,6 +23,38 @@
     } finally {
       loading = false;
     }
+  }
+
+  // Create refresh handler using utility
+  const handleRefresh = createRefreshHandler(
+    'event_info',
+    (value) => { refreshing = value; },
+    (err) => { error = err; }
+  );
+
+  // Create event listener with double-load prevention
+  const handleCacheEvent = createCacheEventListener(
+    'event_info',
+    loadData,
+    (value) => { refreshing = value; }
+  );
+
+  onMount(async () => {
+    // Check if in test mode
+    try {
+      isTestMode = await IsTestMode();
+    } catch (e) {
+      console.error('Failed to check test mode', e);
+    }
+
+    await loadData();
+
+    // Listen for cache updates
+    EventsOn('cache:updated', (...data) => handleCacheEvent(...data));
+  });
+
+  onDestroy(() => {
+    EventsOff('cache:updated');
   });
 
   // Wrapper to handle 'N/A' for empty dates in EventInfo
@@ -33,11 +71,23 @@
   <div class="max-w-4xl mx-auto mt-8">
     <!-- Event Header -->
     <div class="bg-gradient-to-r from-indigo-500 to-purple-600 rounded-t-lg p-6 text-white">
-      <div class="flex items-center gap-2 mb-2">
-        <span class="px-3 py-1 bg-white/20 rounded-full text-sm font-medium">
-          {eventInfo.category || 'Conference'}
-        </span>
-        <span class="text-sm opacity-80">ID: {eventInfo.id}</span>
+      <div class="flex items-center justify-between mb-2">
+        <div class="flex items-center gap-2">
+          <span class="px-3 py-1 bg-white/20 rounded-full text-sm font-medium">
+            {eventInfo.category || 'Conference'}
+          </span>
+          <span class="text-sm opacity-80">ID: {eventInfo.id}</span>
+        </div>
+        {#if !isTestMode}
+          <button
+            onclick={() => handleRefresh()}
+            disabled={refreshing}
+            class="p-2 rounded-lg bg-white/20 hover:bg-white/30 transition-colors disabled:opacity-50"
+            title="Refresh from API"
+          >
+            <RefreshCw size={18} class={refreshing ? 'animate-spin' : ''} />
+          </button>
+        {/if}
       </div>
       <h1 class="text-2xl md:text-3xl font-bold">{eventInfo.title}</h1>
     </div>
