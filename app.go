@@ -5,12 +5,13 @@ import (
 	"log"
 	"os"
 	"path/filepath"
-	"runtime"
+	goruntime "runtime"
 	"time"
 
 	"IndicoDataFusion/backend"
 
 	"github.com/pkg/errors"
+	"github.com/wailsapp/wails/v2/pkg/runtime"
 )
 
 const (
@@ -41,7 +42,7 @@ func NewApp() *App {
 
 func GetDefaultConfigPath() []string {
 	var defaultPaths []string
-	switch runtime.GOOS {
+	switch goruntime.GOOS {
 	case "windows":
 		if appdata := os.Getenv("APPDATA"); appdata != "" {
 			defaultPaths = append(defaultPaths,
@@ -271,4 +272,76 @@ func (a *App) ApplyStructuredConfigUI(configData *backend.ConfigDataUI) error {
 	}
 	a.handler = h
 	return nil
+}
+
+// RefreshCache invalidates and refreshes a specific cache entry
+func (a *App) RefreshCache(key string) error {
+	if a.handler == nil {
+		return errors.Errorf("data handler not initialized")
+	}
+
+	if err := a.handler.RefreshCache(a.ctx, key); err != nil {
+		return errors.Wrap(err, "failed to refresh cache")
+	}
+
+	// Emit event to notify frontend
+	runtime.EventsEmit(a.ctx, "cache:updated", map[string]interface{}{
+		"key":    key,
+		"action": "refreshed",
+	})
+
+	return nil
+}
+
+// ClearCache removes all entries from cache and deletes the cache file
+func (a *App) ClearCache() error {
+	if a.handler == nil {
+		return errors.Errorf("data handler not initialized")
+	}
+
+	if err := a.handler.ClearCache(); err != nil {
+		return errors.Wrap(err, "failed to clear cache")
+	}
+
+	// Emit event to notify frontend
+	runtime.EventsEmit(a.ctx, "cache:updated", map[string]interface{}{
+		"action": "cleared",
+	})
+
+	return nil
+}
+
+// GetCacheStats returns cache statistics
+func (a *App) GetCacheStats() map[string]interface{} {
+	if a.handler == nil {
+		return map[string]interface{}{
+			"error": "data handler not initialized",
+		}
+	}
+	return a.handler.GetCacheStats()
+}
+
+// GetCacheKeys returns all available cache keys
+func (a *App) GetCacheKeys() []string {
+	if a.handler == nil {
+		return []string{}
+	}
+	return a.handler.GetCacheKeys()
+}
+
+// IsTestMode returns true if the current data source is test mode (local files)
+func (a *App) IsTestMode() bool {
+	if a.handler == nil {
+		return false
+	}
+	return a.handler.IsTestMode()
+}
+
+// shutdown is called when the app is shutting down
+func (a *App) shutdown(ctx context.Context) {
+	if a.handler != nil {
+		if err := a.handler.Shutdown(ctx); err != nil {
+			log.Printf("Error during shutdown: %v", err)
+		}
+	}
 }
