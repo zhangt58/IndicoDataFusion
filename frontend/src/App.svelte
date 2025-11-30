@@ -1,21 +1,19 @@
 <script>
-  import { onMount } from 'svelte';
-  import { BookSolid, BookOpenSolid, AlignJustifyOutline, HomeSolid, CogOutline } from 'flowbite-svelte-icons';
-  import './app.css';
+    import {onMount} from 'svelte';
+    import {AlignJustifyOutline, BookOpenSolid, BookSolid, CogOutline, HomeSolid} from 'flowbite-svelte-icons';
+    import {DarkMode} from 'flowbite-svelte';
+    import './app.css';
+    import {goto} from './router/index.js';
+    import LocalRouter from './router/Router.svelte';
+    import AbstractPage from './pages/AbstractPage.svelte';
+    import ContributionPage from './pages/ContributionPage.svelte';
+    import EventInfoPage from './pages/EventInfoPage.svelte';
+    import Settings from './components/Settings.svelte';
 
-  import { DarkMode } from 'flowbite-svelte';
+    let Router = LocalRouter;
 
-  import LocalRouter from './router/Router.svelte';
-  import { goto } from './router/index.js';
-  let Router = LocalRouter;
-
-  import EventInfo from './pages/EventInfo.svelte';
-  import AbstractPage from './pages/AbstractPage.svelte';
-  import ContributionPage from './pages/ContributionPage.svelte';
-  import Settings from './components/Settings.svelte';
-
-  const routes = {
-    '/': EventInfo,
+    const routes = {
+    '/': EventInfoPage,
     '/abstract': AbstractPage,
     '/contribution': ContributionPage
   };
