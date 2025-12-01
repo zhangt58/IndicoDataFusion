@@ -337,6 +337,14 @@ func (a *App) IsTestMode() bool {
 	return a.handler.IsTestMode()
 }
 
+// GetCacheEntries returns all cache entries with metadata
+func (a *App) GetCacheEntries() []*backend.CacheEntry {
+	if a.handler == nil {
+		return []*backend.CacheEntry{}
+	}
+	return a.handler.GetCacheEntries()
+}
+
 // shutdown is called when the app is shutting down
 func (a *App) shutdown(ctx context.Context) {
 	if a.handler != nil {

@@ -444,3 +444,43 @@ func (c *Cache) GetStats() map[string]interface{} {
 		"data_source_name": c.dataSourceName,
 	}
 }
+
+// GetAllEntriesWithMetadata returns metadata for all cache entries
+func (c *Cache) GetAllEntriesWithMetadata() []*CacheEntry {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+
+	prefix := ""
+	if c.dataSourceName != "" {
+		prefix = c.dataSourceName + ":"
+	}
+
+	entries := make([]*CacheEntry, 0, len(c.entries))
+	now := time.Now()
+
+	for fullKey, entry := range c.entries {
+		// Skip expired entries
+		if !entry.ExpiresAt.IsZero() && now.After(entry.ExpiresAt) {
+			continue
+		}
+
+		// Create a copy with the display key (without data source prefix)
+		displayKey := fullKey
+		if prefix != "" && len(fullKey) > len(prefix) && fullKey[:len(prefix)] == prefix {
+			displayKey = fullKey[len(prefix):]
+		}
+
+		// Create a copy of the entry with the display key
+		entryCopy := &CacheEntry{
+			Data:      nil, // Don't include data in metadata response
+			Timestamp: entry.Timestamp,
+			Key:       displayKey,
+			ExpiresAt: entry.ExpiresAt,
+			Size:      entry.Size,
+		}
+
+		entries = append(entries, entryCopy)
+	}
+
+	return entries
+}

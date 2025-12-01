@@ -36,6 +36,7 @@ func NewDataSourceHandlerWithCache(ds *DataSource, cacheConfig *CacheConfig) (*D
 	// Parse cache configuration
 	ttl := 24 * time.Hour               // Default: 24 hours
 	maxSize := int64(100 * 1024 * 1024) // Default: 100 MB
+	cacheDir := ""                      // Use default if not specified
 
 	if cacheConfig != nil {
 		if cacheConfig.TTL != "" {
@@ -52,10 +53,14 @@ func NewDataSourceHandlerWithCache(ds *DataSource, cacheConfig *CacheConfig) (*D
 				log.Printf("Warning: invalid cache max_size '%s', using default 100MB", cacheConfig.MaxSize)
 			}
 		}
+		if cacheConfig.CacheDir != "" {
+			cacheDir = cacheConfig.CacheDir
+		}
 	}
 
 	// Initialize cache
 	cache, err := NewCache(CacheOptions{
+		CacheDir:       cacheDir,
 		LoadOnStartup:  true,
 		TTL:            ttl,
 		MaxSize:        maxSize,
@@ -543,4 +548,12 @@ func (h *DataSourceHandler) GetCacheKeys() []string {
 // IsTestMode returns true if the data source is in test mode (local files)
 func (h *DataSourceHandler) IsTestMode() bool {
 	return h.isTestMode
+}
+
+// GetCacheEntries returns all cache entries with metadata
+func (h *DataSourceHandler) GetCacheEntries() []*CacheEntry {
+	if h.cache == nil {
+		return []*CacheEntry{}
+	}
+	return h.cache.GetAllEntriesWithMetadata()
 }
