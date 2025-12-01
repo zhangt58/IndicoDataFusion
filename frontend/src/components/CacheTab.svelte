@@ -211,22 +211,6 @@
       <div class="space-y-2">
         <div class="flex items-center justify-between">
           <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100">Cached Data</h3>
-          <button
-            type="button"
-            on:click={() => {
-              console.log('=== DEBUG: Cache Entries ===');
-              console.log('Cache entries (map):', cacheEntries);
-              console.log('Grouped entries:', groupedEntries);
-              console.log('Data sources:', Object.keys(cacheEntries || {}));
-              console.log('Expanded data sources:', expandedDataSources);
-              Object.entries(cacheEntries || {}).forEach(([ds, entries]) => {
-                console.log(`  ${ds}: ${entries.length} entries`);
-              });
-            }}
-            class="px-2 py-1 text-xs rounded bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600"
-          >
-            Debug to Console
-          </button>
         </div>
 
         {#each Object.entries(groupedEntries) as [dataSourceName, entries]}
@@ -240,16 +224,16 @@
               }}
               class="w-full flex items-center justify-between p-3 hover:bg-gray-50 dark:hover:bg-gray-750 transition-colors"
             >
-              <div class="flex items-center gap-3">
+              <span class="inline-flex items-center gap-3">
                 <span class="text-base font-semibold text-gray-900 dark:text-gray-100">{dataSourceName}</span>
                 <span class="px-2 py-0.5 text-xs rounded-full bg-indigo-100 dark:bg-indigo-900 text-indigo-800 dark:text-indigo-200">
                   {entries.length} {entries.length === 1 ? 'entry' : 'entries'}
                 </span>
-              </div>
-              <svg class="w-5 h-5 text-gray-500 dark:text-gray-400 transform transition-transform {expandedDataSources[dataSourceName] ? 'rotate-180' : ''}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
-              </svg>
-            </button>
+              </span>
+               <svg class="w-5 h-5 text-gray-500 dark:text-gray-400 transform transition-transform {expandedDataSources[dataSourceName] ? 'rotate-180' : ''}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+               </svg>
+             </button>
 
             <!-- Data Source Content -->
             {#if expandedDataSources[dataSourceName]}
@@ -369,5 +353,3 @@
     </div>
   </div>
 </Modal>
-
-
