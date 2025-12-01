@@ -1,28 +1,59 @@
 <script>
   import { onMount, onDestroy } from 'svelte';
   import { EventsOn, EventsOff } from '../../wailsjs/runtime/runtime';
-  import { GetCacheStats, GetCacheKeys, RefreshCache, ClearCache, IsTestMode } from '../../wailsjs/go/main/App';
+  import { GetCacheStats, GetCacheEntries, RefreshCache, ClearCache, IsTestMode } from '../../wailsjs/go/main/App';
   import { Modal } from 'flowbite-svelte';
 
   let cacheStats = null;
-  let cacheKeys = [];
+  let cacheEntries = [];
   let loading = true;
   let refreshing = {};
   let errorMsg = '';
   let successMsg = '';
   let isTestMode = false;
   let showClearConfirm = false;
+  let expandedDataSources = {};
 
   async function loadCacheInfo() {
     try {
       loading = true;
       cacheStats = await GetCacheStats();
-      cacheKeys = await GetCacheKeys();
+      cacheEntries = await GetCacheEntries();
+      console.log('Cache entries loaded:', cacheEntries);
+      console.log('Cache stats:', cacheStats);
+
+      // Auto-expand the first data source for debugging
+      if (cacheStats?.data_source_name) {
+        expandedDataSources[cacheStats.data_source_name] = true;
+        expandedDataSources = { ...expandedDataSources };
+      }
+
       loading = false;
     } catch (e) {
       errorMsg = `Failed to load cache info: ${e}`;
       loading = false;
     }
+  }
+
+  function formatTimestamp(timestamp) {
+    if (!timestamp) return 'N/A';
+    const date = new Date(timestamp);
+    return date.toLocaleString();
+  }
+
+  function formatTimeAgo(timestamp) {
+    if (!timestamp) return '';
+    const now = new Date();
+    const date = new Date(timestamp);
+    const seconds = Math.floor((now.getTime() - date.getTime()) / 1000);
+
+    if (seconds < 60) return `${seconds}s ago`;
+    const minutes = Math.floor(seconds / 60);
+    if (minutes < 60) return `${minutes}m ago`;
+    const hours = Math.floor(minutes / 60);
+    if (hours < 24) return `${hours}h ago`;
+    const days = Math.floor(hours / 24);
+    return `${days}d ago`;
   }
 
   onMount(async () => {
@@ -93,20 +124,37 @@
     };
     return labels[key] || key;
   }
+
+  function groupEntriesByDataSource() {
+    const grouped = {};
+    // Use the data source name from cache stats as the current data source
+    const dataSourceName = cacheStats?.data_source_name || 'unknown';
+
+    // All cache entries belong to the current data source
+    if (cacheEntries.length > 0) {
+      grouped[dataSourceName] = cacheEntries;
+      console.log('==== GROUPING DEBUG ====');
+      console.log('Data source name:', dataSourceName);
+      console.log('Number of entries:', cacheEntries.length);
+      console.log('cacheEntries array:', cacheEntries);
+      console.log('Each entry:');
+      cacheEntries.forEach((entry, idx) => {
+        console.log(`  [${idx}]:`, entry.key, entry.timestamp);
+      });
+      console.log('Grouped result:', grouped);
+      console.log('========================');
+    }
+
+    return grouped;
+  }
+
+  // Recalculate grouping when cacheStats or cacheEntries change
+  $: groupedEntries = cacheStats && cacheEntries ? groupEntriesByDataSource() : {};
 </script>
 
 <div class="p-2 space-y-2 max-w-5xl mx-auto">
-  <div class="flex items-center justify-between mb-2">
+  <div class="mb-2">
     <h2 class="text-2xl font-bold text-gray-900 dark:text-gray-100">Cache Management</h2>
-    <button
-      type="button"
-      on:click={loadCacheInfo}
-      class="px-3 py-2 rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
-    >
-      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-      </svg>
-    </button>
   </div>
 
   {#if loading}
@@ -169,47 +217,108 @@
       </div>
     </div>
 
-    <!-- Cached Data Entries -->
-    {#if cacheKeys.length > 0}
-      <div class="bg-white dark:bg-gray-800 rounded-lg shadow border border-gray-200 dark:border-gray-700">
-        <div class="p-2 border-b border-gray-200 dark:border-gray-700">
+    <!-- Test Mode Note -->
+    {#if isTestMode}
+      <div class="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3">
+        <p class="text-sm text-blue-800 dark:text-blue-300">
+          <strong>Note:</strong> Cached data is not available for test data sources. Test data is loaded directly from local files.
+        </p>
+      </div>
+    {/if}
+
+    <!-- Cached Data Entries (Grouped by Data Source) -->
+    {#if cacheEntries.length > 0}
+      <div class="space-y-2">
+        <div class="flex items-center justify-between">
           <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100">Cached Data</h3>
+          <button
+            type="button"
+            on:click={() => {
+              console.log('=== DEBUG: Cache Entries ===');
+              console.log('Total entries:', cacheEntries.length);
+              console.log('Entries array:', cacheEntries);
+              console.log('Grouped entries:', groupedEntries);
+              console.log('Expanded data sources:', expandedDataSources);
+            }}
+            class="px-2 py-1 text-xs rounded bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600"
+          >
+            Debug to Console
+          </button>
         </div>
-        <div class="divide-y divide-gray-200 dark:divide-gray-700">
-          {#each cacheKeys as key}
-            <div class="p-2 flex items-center justify-between hover:bg-gray-50 dark:hover:bg-gray-750">
+
+        {#each Object.entries(groupedEntries) as [dataSourceName, entries]}
+          <div class="bg-white dark:bg-gray-800 rounded-lg shadow border border-gray-200 dark:border-gray-700 overflow-hidden">
+            <!-- Data Source Header -->
+            <button
+              type="button"
+              on:click={() => {
+                expandedDataSources[dataSourceName] = !expandedDataSources[dataSourceName];
+                expandedDataSources = { ...expandedDataSources };
+              }}
+              class="w-full flex items-center justify-between p-3 hover:bg-gray-50 dark:hover:bg-gray-750 transition-colors"
+            >
               <div class="flex items-center gap-3">
-                <div class="w-2 h-2 bg-green-500 rounded-full"></div>
-                <div>
-                  <div class="font-medium text-gray-900 dark:text-gray-100">
-                    {getCacheKeyLabel(key)}
-                  </div>
-                  <div class="text-sm text-gray-500 dark:text-gray-400 font-mono">
-                    {key}
-                  </div>
+                <span class="text-base font-semibold text-gray-900 dark:text-gray-100">{dataSourceName}</span>
+                <span class="px-2 py-0.5 text-xs rounded-full bg-indigo-100 dark:bg-indigo-900 text-indigo-800 dark:text-indigo-200">
+                  {entries.length} {entries.length === 1 ? 'entry' : 'entries'}
+                </span>
+              </div>
+              <svg class="w-5 h-5 text-gray-500 dark:text-gray-400 transform transition-transform {expandedDataSources[dataSourceName] ? 'rotate-180' : ''}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+              </svg>
+            </button>
+
+            <!-- Data Source Content -->
+            {#if expandedDataSources[dataSourceName]}
+              <div class="border-t border-gray-200 dark:border-gray-700">
+                <div class="divide-y divide-gray-200 dark:divide-gray-700">
+                  {#each entries as entry (entry.key)}
+                    <div class="p-3 hover:bg-gray-50 dark:hover:bg-gray-750">
+                      <div class="flex items-start justify-between">
+                        <div class="flex items-start gap-3 flex-1">
+                          <div class="w-2 h-2 bg-green-500 rounded-full mt-2"></div>
+                          <div class="flex-1 min-w-0">
+                            <div class="font-medium text-gray-900 dark:text-gray-100">
+                              {getCacheKeyLabel(entry.key)}
+                            </div>
+                            <div class="text-sm text-gray-500 dark:text-gray-400 font-mono">
+                              {entry.key}
+                            </div>
+                            <div class="mt-1 space-y-0.5">
+                              <div class="text-xs text-gray-600 dark:text-gray-400">
+                                <span class="font-medium">Last Updated:</span> {formatTimestamp(entry.timestamp)}
+                                <span class="ml-2 text-gray-500 dark:text-gray-500">({formatTimeAgo(entry.timestamp)})</span>
+                              </div>
+                              {#if entry.expiresAt}
+                                <div class="text-xs text-gray-600 dark:text-gray-400">
+                                  <span class="font-medium">Expires:</span> {formatTimestamp(entry.expiresAt)}
+                                </div>
+                              {/if}
+                            </div>
+                          </div>
+                        </div>
+                        {#if !isTestMode}
+                          <div class="flex gap-2 ml-4">
+                            <button
+                              type="button"
+                              on:click={() => handleRefresh(entry.key)}
+                              disabled={refreshing[entry.key]}
+                              class="px-3 py-1.5 rounded bg-indigo-600 text-white text-sm hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors whitespace-nowrap"
+                            >
+                              {refreshing[entry.key] ? 'Refreshing...' : 'Refresh'}
+                            </button>
+                          </div>
+                        {/if}
+                      </div>
+                    </div>
+                  {/each}
                 </div>
               </div>
-              {#if !isTestMode}
-                <div class="flex gap-2">
-                  <button
-                    type="button"
-                    on:click={() => handleRefresh(key)}
-                    disabled={refreshing[key]}
-                    class="px-3 py-1.5 rounded bg-indigo-600 text-white text-sm hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                  >
-                    {refreshing[key] ? 'Refreshing...' : 'Refresh'}
-                  </button>
-                </div>
-              {:else}
-                <div class="text-sm text-gray-500 dark:text-gray-400">
-                  (Test data - no refresh needed)
-                </div>
-              {/if}
-            </div>
-          {/each}
-        </div>
+            {/if}
+          </div>
+        {/each}
       </div>
-    {:else}
+    {:else if !isTestMode}
       <div class="bg-gray-50 dark:bg-gray-800 rounded-lg p-8 text-center border border-gray-200 dark:border-gray-700">
         <svg class="w-16 h-16 mx-auto text-gray-400 dark:text-gray-500 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
@@ -247,20 +356,6 @@
         <p class="text-sm text-green-600 dark:text-green-400">{successMsg}</p>
       </div>
     {/if}
-
-    <!-- Help Information -->
-    <div class="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-2">
-      <h4 class="text-sm font-semibold text-blue-900 dark:text-blue-200 mb-2">About Cache</h4>
-      <div class="text-sm text-blue-800 dark:text-blue-300 space-y-1">
-        <p><strong>Refresh:</strong> Force updates the cache by fetching fresh data from the API immediately.</p>
-        <p><strong>Clear All:</strong> Removes the cache file completely. Cache will be rebuilt on next data access.</p>
-        <p><strong>TTL (Time-To-Live):</strong> Cache entries automatically expire after the configured duration.</p>
-        <p><strong>Size Limit:</strong> Oldest entries are automatically evicted when the cache reaches the size limit.</p>
-        <p><strong>Data Source:</strong> Cache keys include the data source name to avoid conflicts.</p>
-        <p><strong>Auto-Save:</strong> Cache is saved to disk after refreshes and on app shutdown.</p>
-        <p><strong>Location:</strong> Cache files are stored in <code>~/.cache/IndicoDataFusion/</code></p>
-      </div>
-    </div>
   {/if}
 </div>
 
@@ -292,12 +387,4 @@
   </div>
 </Modal>
 
-<style>
-  .dark .bg-gray-750 {
-    background-color: #2d3748;
-  }
-  .dark .hover\:bg-gray-750:hover {
-    background-color: #2d3748;
-  }
-</style>
 
