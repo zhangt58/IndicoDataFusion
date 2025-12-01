@@ -101,21 +101,25 @@ func NewDataSourceHandlerWithCache(ds *DataSource, cacheConfig *CacheConfig) (*D
 func parseSize(sizeStr string) (int64, error) {
 	sizeStr = strings.ToUpper(strings.TrimSpace(sizeStr))
 
-	multipliers := map[string]int64{
-		"B":  1,
-		"KB": 1024,
-		"MB": 1024 * 1024,
-		"GB": 1024 * 1024 * 1024,
+	// Check suffixes in order from longest to shortest to avoid "MB" matching "B"
+	suffixes := []struct {
+		suffix     string
+		multiplier int64
+	}{
+		{"GB", 1024 * 1024 * 1024},
+		{"MB", 1024 * 1024},
+		{"KB", 1024},
+		{"B", 1},
 	}
 
-	for suffix, multiplier := range multipliers {
-		if strings.HasSuffix(sizeStr, suffix) {
-			numStr := strings.TrimSpace(strings.TrimSuffix(sizeStr, suffix))
+	for _, s := range suffixes {
+		if strings.HasSuffix(sizeStr, s.suffix) {
+			numStr := strings.TrimSpace(strings.TrimSuffix(sizeStr, s.suffix))
 			var num float64
 			if _, err := fmt.Sscanf(numStr, "%f", &num); err != nil {
 				return 0, fmt.Errorf("invalid size format: %s", sizeStr)
 			}
-			return int64(num * float64(multiplier)), nil
+			return int64(num * float64(s.multiplier)), nil
 		}
 	}
 
