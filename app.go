@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	goruntime "runtime"
+	"strings"
 	"time"
 
 	"IndicoDataFusion/backend"
@@ -103,6 +104,8 @@ func (a *App) startup(ctx context.Context) {
 	a.handler = handler
 	a.configPath = configPath
 	log.Printf("Data handler initialized from: %s\n", configPath)
+
+	a.registerCacheCallbacks()
 }
 
 // GetEventInfo retrieves event information from the configured data source
@@ -228,6 +231,8 @@ func (a *App) ApplyConfigYAML(yamlContent string) error {
 		return errors.Wrap(err, "failed to reload handler")
 	}
 	a.handler = h
+
+	a.registerCacheCallbacks()
 	return nil
 }
 
@@ -271,6 +276,8 @@ func (a *App) ApplyStructuredConfigUI(configData *backend.ConfigDataUI) error {
 		return errors.Wrap(err, "failed to reload handler")
 	}
 	a.handler = h
+
+	a.registerCacheCallbacks()
 	return nil
 }
 
@@ -352,4 +359,37 @@ func (a *App) shutdown(ctx context.Context) {
 			log.Printf("Error during shutdown: %v", err)
 		}
 	}
+}
+
+// registerCacheCallbacks sets up the handler callbacks to forward cache delete/evict events to the frontend.
+func (a *App) registerCacheCallbacks() {
+	if a == nil || a.handler == nil {
+		return
+	}
+
+	a.handler.SetCacheOnDelete(func(fullKey string) {
+		displayKey := fullKey
+		if idx := strings.Index(fullKey, ":"); idx != -1 {
+			displayKey = fullKey[idx+1:]
+		}
+		log.Printf("App: cache onDelete callback received for %s (display %s)", fullKey, displayKey)
+		runtime.EventsEmit(a.ctx, "cache:updated", map[string]interface{}{
+			"key":    displayKey,
+			"action": "expired",
+		})
+		log.Printf("App: emitted cache:updated expired for %s", displayKey)
+	})
+
+	a.handler.SetCacheOnEvict(func(fullKey string) {
+		displayKey := fullKey
+		if idx := strings.Index(fullKey, ":"); idx != -1 {
+			displayKey = fullKey[idx+1:]
+		}
+		log.Printf("App: cache onEvict callback received for %s (display %s)", fullKey, displayKey)
+		runtime.EventsEmit(a.ctx, "cache:updated", map[string]interface{}{
+			"key":    displayKey,
+			"action": "evicted",
+		})
+		log.Printf("App: emitted cache:updated evicted for %s", displayKey)
+	})
 }

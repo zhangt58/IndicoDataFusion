@@ -32,6 +32,11 @@ type Cache struct {
 	saveQueue      chan string // Queue for async saves
 	stopChan       chan struct{}
 	dataSourceName string
+
+	// Callbacks invoked when an entry is deleted or evicted. These are optional and run
+	// asynchronously (called without holding cache locks).
+	onDelete func(fullKey string)
+	onEvict  func(fullKey string)
 }
 
 // CacheOptions configures cache behavior
@@ -91,7 +96,56 @@ func NewCache(opts CacheOptions) (*Cache, error) {
 	// Start async save worker
 	go cache.asyncSaveWorker()
 
+	// Start expiration worker to proactively remove expired entries and fire callbacks
+	go cache.expirationWorker()
+
 	return cache, nil
+}
+
+// expirationWorker periodically scans for expired entries and deletes them so onDelete callbacks fire.
+func (c *Cache) expirationWorker() {
+	ticker := time.NewTicker(5 * time.Second)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-ticker.C:
+			now := time.Now()
+			var expired []string
+			c.mu.Lock()
+			for fullKey, entry := range c.entries {
+				if !entry.ExpiresAt.IsZero() && now.After(entry.ExpiresAt) {
+					expired = append(expired, fullKey)
+				}
+			}
+
+			// Delete expired entries while holding lock
+			for _, fk := range expired {
+				if entry, exists := c.entries[fk]; exists {
+					c.currentSize -= entry.Size
+					delete(c.entries, fk)
+					log.Printf("expirationWorker: expired and deleted key %s", fk)
+				}
+			}
+			c.mu.Unlock()
+
+			// Invoke callbacks after releasing lock
+			if c.onDelete != nil && len(expired) > 0 {
+				for _, fk := range expired {
+					go func(fullKey string) {
+						defer func() {
+							if r := recover(); r != nil {
+								log.Printf("Recovered from panic in onDelete callback: %v", r)
+							}
+						}()
+						log.Printf("expirationWorker: invoking onDelete callback for %s", fullKey)
+						c.onDelete(fullKey)
+					}(fk)
+				}
+			}
+		case <-c.stopChan:
+			return
+		}
+	}
 }
 
 // asyncSaveWorker handles asynchronous saves to disk
@@ -146,10 +200,8 @@ func (c *Cache) Get(key string) (interface{}, bool) {
 		return nil, false
 	}
 
-	// Check if entry has expired
+	// Check if entry has expired - expirationWorker will handle deletion and notification
 	if !entry.ExpiresAt.IsZero() && time.Now().After(entry.ExpiresAt) {
-		// Entry expired, will be removed asynchronously
-		go c.Delete(key)
 		return nil, false
 	}
 
@@ -240,6 +292,17 @@ func (c *Cache) evictOldest() {
 			c.currentSize -= entry.Size
 			delete(c.entries, oldestKey)
 			log.Printf("Evicted cache entry: %s (age: %v)", oldestKey, time.Since(oldestTime))
+			// Fire evict callback asynchronously if provided
+			if c.onEvict != nil {
+				go func(k string) {
+					defer func() {
+						if r := recover(); r != nil {
+							log.Printf("Recovered from panic in onEvict callback: %v", r)
+						}
+					}()
+					c.onEvict(k)
+				}(oldestKey)
+			}
 		}
 	}
 }
@@ -493,4 +556,19 @@ func (c *Cache) GetAllEntriesWithMetadata() map[string][]*CacheEntry {
 	}
 
 	return grouped
+}
+
+// SetOnDelete registers a callback that will be called when an entry is deleted (including expired deletes).
+// The callback receives the full cache key (including data source prefix if present).
+func (c *Cache) SetOnDelete(cb func(fullKey string)) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.onDelete = cb
+}
+
+// SetOnEvict registers a callback that will be called when an entry is evicted due to size limits.
+func (c *Cache) SetOnEvict(cb func(fullKey string)) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.onEvict = cb
 }
