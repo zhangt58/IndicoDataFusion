@@ -61,8 +61,9 @@ type DataSource struct {
 
 // CacheConfig holds cache configuration.
 type CacheConfig struct {
-	TTL     string `yaml:"ttl,omitempty" json:"ttl,omitempty"`          // Time-to-live (e.g., "24h", "1h30m")
-	MaxSize string `yaml:"max_size,omitempty" json:"maxSize,omitempty"` // Max size (e.g., "100MB", "1GB")
+	TTL      string `yaml:"ttl,omitempty" json:"ttl,omitempty"`            // Time-to-live (e.g., "24h", "1h30m")
+	MaxSize  string `yaml:"max_size,omitempty" json:"maxSize,omitempty"`   // Max size (e.g., "100MB", "1GB")
+	CacheDir string `yaml:"cache_dir,omitempty" json:"cacheDir,omitempty"` // Custom cache directory path
 }
 
 // Config holds the complete configuration with multiple data sources.
@@ -168,6 +169,9 @@ func LoadConfigFromBytes(b []byte) (*Config, error) {
 		if maxSize, ok := cacheSection["max_size"].(string); ok {
 			cfg.Cache.MaxSize = maxSize
 		}
+		if cacheDir, ok := cacheSection["cache_dir"].(string); ok {
+			cfg.Cache.CacheDir = cacheDir
+		}
 		delete(rawConfig, "cache")
 	}
 
@@ -221,6 +225,7 @@ type ConfigPathInfo struct {
 type ConfigDataUI struct {
 	ActiveDataSourceName string         `json:"activeDataSourceName"`
 	DataSources          []DataSource   `json:"dataSources"`
+	Cache                *CacheConfig   `json:"cache,omitempty"`
 	PathInfo             ConfigPathInfo `json:"pathInfo"`
 }
 
@@ -229,6 +234,7 @@ func GetStructuredConfigUI(cfg *Config, pathInfo ConfigPathInfo) *ConfigDataUI {
 	configData := &ConfigDataUI{
 		ActiveDataSourceName: cfg.ActiveDataSource.Use,
 		DataSources:          make([]DataSource, 0, len(cfg.DataSources)),
+		Cache:                cfg.Cache,
 		PathInfo:             pathInfo,
 	}
 
@@ -252,6 +258,7 @@ func BuildConfigFromStructuredUI(configData *ConfigDataUI) *Config {
 		ActiveDataSource: ActiveDataSource{
 			Use: configData.ActiveDataSourceName,
 		},
+		Cache:       configData.Cache,
 		DataSources: make(map[string]map[string]any),
 	}
 
