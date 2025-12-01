@@ -2,7 +2,7 @@
   import { onMount, onDestroy } from 'svelte';
   import { GetAbstracts, IsTestMode } from '../../wailsjs/go/main/App';
   import { EventsOn, EventsOff } from '../../wailsjs/runtime/runtime';
-  import { createRefreshHandler, createCacheEventListener } from '../utils/cacheUtils.js';
+  import { createRefreshHandler, createCacheEventListener, isCacheKeyPresent } from '../utils/cacheUtils.js';
   import { LayoutGrid, CreditCard, RefreshCw } from '@lucide/svelte';
   import AbstractCardView from './AbstractCardView.svelte';
   import AbstractTableView from './AbstractTableView.svelte';
@@ -13,6 +13,7 @@
   let error = null;
   let viewMode = 'card'; // 'card' or 'table'
   let isTestMode = false;
+  let abstractCacheExpired = false;
 
   async function loadData() {
     loading = true;
@@ -25,6 +26,16 @@
       error = e;
     } finally {
       loading = false;
+    }
+  }
+
+  async function updateAbstractCacheStatus() {
+    try {
+      const present = await isCacheKeyPresent('abstracts');
+      abstractCacheExpired = !present;
+    } catch (e) {
+      console.error('Failed to check abstracts cache status', e);
+      abstractCacheExpired = true;
     }
   }
 
@@ -51,9 +62,15 @@
     }
 
     await loadData();
+    await updateAbstractCacheStatus();
 
     // Listen for cache updates
-    EventsOn('cache:updated', (...data) => handleCacheEvent(...data));
+    EventsOn('cache:updated', (...data) => {
+      const ev = (data && data.length ? data[0] : data) || {};
+      updateAbstractCacheStatus();
+      if (ev.action && ev.action === 'expired') return;
+      handleCacheEvent(ev);
+    });
   });
 
   onDestroy(() => {
@@ -70,14 +87,22 @@
     <h2 class="text-xl font-semibold text-gray-800 dark:text-gray-100">Abstracts ({abstractData.length})</h2>
     <div class="flex gap-1 ml-2">
       {#if !isTestMode}
-        <button
-          onclick={() => handleRefresh()}
-          disabled={refreshing}
-          class="p-1.5 rounded transition-colors hover:bg-sky-100 disabled:opacity-50"
-          title="Refresh from API"
-        >
-          <RefreshCw size={18} class={refreshing ? 'animate-spin' : ''} />
-        </button>
+        <div class="relative">
+          <button
+            onclick={() => handleRefresh()}
+            disabled={refreshing}
+            class="p-1.5 rounded transition-colors hover:bg-sky-100 disabled:opacity-50"
+            title={abstractCacheExpired ? "Cache expired - Click to refresh" : "Refresh from API"}
+          >
+            <RefreshCw size={18} class={refreshing ? 'animate-spin' : ''} />
+          </button>
+          {#if abstractCacheExpired && !refreshing}
+            <span class="absolute -top-1 -right-1 flex h-3 w-3">
+              <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+              <span class="relative inline-flex rounded-full h-3 w-3 bg-red-500" title="Cache expired"></span>
+            </span>
+          {/if}
+        </div>
       {/if}
       <button
         onclick={() => viewMode = 'card'}

@@ -1,5 +1,5 @@
 // Cache refresh utilities
-import { RefreshCache } from '../../wailsjs/go/main/App';
+import { RefreshCache, GetCacheEntries } from '../../wailsjs/go/main/App';
 
 /**
  * Creates a refresh handler for a specific cache key
@@ -25,6 +25,30 @@ export function createRefreshHandler(cacheKey, setRefreshing, setError) {
 }
 
 /**
+ * Checks whether a given cache key is present in any data-source group.
+ * Returns true when the key exists (i.e. cached and not expired), false otherwise.
+ * This wraps the frontend Wails API GetCacheEntries which returns a map of groups -> CacheEntry[]
+ */
+export async function isCacheKeyPresent(cacheKey) {
+  try {
+    const entriesMap = await GetCacheEntries();
+    for (const groupKey of Object.keys(entriesMap || {})) {
+      const group = entriesMap[groupKey];
+      if (!Array.isArray(group)) continue;
+      for (const entry of group) {
+        if (entry && entry.key === cacheKey) {
+          return true;
+        }
+      }
+    }
+    return false;
+  } catch (e) {
+    console.error('isCacheKeyPresent failed', e);
+    return false;
+  }
+}
+
+/**
  * Creates a cache event listener that prevents double loading
  * @param {string} cacheKey - The cache key to listen for
  * @param {Function} loadData - The function to call to reload data
@@ -35,21 +59,33 @@ export function createCacheEventListener(cacheKey, loadData, setRefreshing) {
   let isLoading = false; // Flag to prevent concurrent loads
 
   return async function handleCacheEvent(data) {
-    // Check if this event is for our cache key or a clear all action
-    if (data.key === cacheKey || data.action === 'cleared') {
-      // Prevent concurrent loads
-      if (isLoading) {
-        console.log(`Skipping redundant load for ${cacheKey} - already loading`);
-        return;
-      }
+    // data is expected to be an object like { key: "abstracts", action: "refreshed" }
+    const action = data && data.action ? data.action : null;
+    const key = data && data.key ? data.key : null;
 
-      isLoading = true;
-      try {
-        await loadData();
-        setRefreshing(false); // Clear refresh indicator
-      } finally {
-        isLoading = false;
-      }
+    // Only reload when the cache was explicitly refreshed for this key, or when cache was cleared.
+    // Do NOT auto-reload on expiration/eviction events (action === 'expired' or 'evicted').
+    const shouldReload = (action === 'refreshed' && key === cacheKey) || action === 'cleared';
+
+    if (!shouldReload) {
+      // If this event is not a user-triggered refresh/clear, ignore for loading purposes.
+      // Optionally, we might still want to clear the refreshing flag if action indicates failure —
+      // but in normal flows we only clear refreshing when a refresh completed (refreshed event).
+      return;
+    }
+
+    // Prevent concurrent loads
+    if (isLoading) {
+      console.log(`Skipping redundant load for ${cacheKey} - already loading`);
+      return;
+    }
+
+    isLoading = true;
+    try {
+      await loadData();
+      setRefreshing(false); // Clear refresh indicator
+    } finally {
+      isLoading = false;
     }
   };
 }

@@ -3,6 +3,7 @@
   import { GetContributions, IsTestMode } from '../../wailsjs/go/main/App';
   import { EventsOn, EventsOff } from '../../wailsjs/runtime/runtime';
   import { createRefreshHandler, createCacheEventListener } from '../utils/cacheUtils.js';
+  import { isCacheKeyPresent } from '../utils/cacheUtils.js';
   import { LayoutGrid, CreditCard, RefreshCw } from '@lucide/svelte';
   import ContributionCardView from './ContributionCardView.svelte';
   import ContributionTableView from './ContributionTableView.svelte';
@@ -13,6 +14,17 @@
   let error = null;
   let viewMode = 'card'; // 'card' or 'table'
   let isTestMode = false;
+  let contributionCacheExpired = false;
+
+  async function updateContributionCacheStatus() {
+    try {
+      const present = await isCacheKeyPresent('contributions');
+      contributionCacheExpired = !present;
+    } catch (e) {
+      console.error('Failed to check contributions cache status', e);
+      contributionCacheExpired = true;
+    }
+  }
 
   async function loadData() {
     loading = true;
@@ -51,9 +63,15 @@
     }
 
     await loadData();
+    await updateContributionCacheStatus();
 
     // Listen for cache updates
-    EventsOn('cache:updated', (...data) => handleCacheEvent(...data));
+    EventsOn('cache:updated', (...data) => {
+      const ev = (data && data.length ? data[0] : data) || {};
+      updateContributionCacheStatus();
+      if (ev.action && ev.action === 'expired') return;
+      handleCacheEvent(ev);
+    });
   });
 
   onDestroy(() => {
@@ -70,14 +88,22 @@
     <h2 class="text-xl font-semibold text-gray-800 dark:text-gray-100">Contributions ({contributionData.length})</h2>
     <div class="flex gap-1 ml-2">
       {#if !isTestMode}
-        <button
-          onclick={() => handleRefresh()}
-          disabled={refreshing}
-          class="p-1.5 rounded transition-colors hover:bg-indigo-100 disabled:opacity-50"
-          title="Refresh from API"
-        >
-          <RefreshCw size={18} class={refreshing ? 'animate-spin' : ''} />
-        </button>
+        <div class="relative">
+          <button
+            onclick={() => handleRefresh()}
+            disabled={refreshing}
+            class="p-1.5 rounded transition-colors hover:bg-indigo-100 disabled:opacity-50"
+            title={contributionCacheExpired ? "Cache expired - Click to refresh" : "Refresh from API"}
+          >
+            <RefreshCw size={18} class={refreshing ? 'animate-spin' : ''} />
+          </button>
+          {#if contributionCacheExpired && !refreshing}
+            <span class="absolute -top-1 -right-1 flex h-3 w-3">
+              <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+              <span class="relative inline-flex rounded-full h-3 w-3 bg-red-500" title="Cache expired"></span>
+            </span>
+          {/if}
+        </div>
       {/if}
       <button
         onclick={() => viewMode = 'card'}
