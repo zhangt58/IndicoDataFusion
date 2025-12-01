@@ -2,19 +2,18 @@
   import { onMount, onDestroy } from 'svelte';
   import { GetContributions, IsTestMode } from '../../wailsjs/go/main/App';
   import { EventsOn, EventsOff } from '../../wailsjs/runtime/runtime';
-  import { createRefreshHandler, createCacheEventListener, isCacheKeyPresent } from '../utils/cacheUtils.js';
+  import { createCachePage } from '../utils/cacheUtils.js';
   import { LayoutGrid, CreditCard, RefreshCw } from '@lucide/svelte';
   import ContributionCardView from './ContributionCardView.svelte';
   import ContributionTableView from './ContributionTableView.svelte';
 
   let loading = false;
   let refreshing = false;
+  let contributionData = [];
   let error = null;
   let viewMode = 'card';
   let isTestMode = false;
   let cacheExpired = false;
-
-  let contributionData = [];
 
   async function loadData() {
     loading = true;
@@ -30,26 +29,11 @@
     }
   }
 
-  async function updateCacheStatus() {
-    try {
-      const present = await isCacheKeyPresent('contributions');
-      cacheExpired = !present;
-    } catch (e) {
-      console.error('Failed to check cache status', e);
-      cacheExpired = true;
-    }
-  }
-
-  const handleRefresh = createRefreshHandler(
-    'contributions',
-    (value) => { refreshing = value; },
-    (err) => { error = err; }
-  );
-
-  const handleCacheEvent = createCacheEventListener(
+  const { handleRefresh, handleCacheEvent, updateCacheStatus } = createCachePage(
     'contributions',
     loadData,
-    (value) => { refreshing = value; }
+    (v) => { refreshing = v; },
+    (err) => { error = err; }
   );
 
   onMount(async () => {
@@ -60,11 +44,11 @@
     }
 
     await loadData();
-    await updateCacheStatus();
+    cacheExpired = await updateCacheStatus();
 
     EventsOn('cache:updated', (...data) => {
       const ev = (data && data.length ? data[0] : data) || {};
-      updateCacheStatus();
+      updateCacheStatus().then(v => cacheExpired = v);
       if (ev.action && ev.action === 'expired') return;
       handleCacheEvent(ev);
     });

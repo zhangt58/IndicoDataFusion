@@ -3,7 +3,7 @@
   import { GetEventInfo, IsTestMode } from '../../wailsjs/go/main/App';
   import { EventsOn, EventsOff } from '../../wailsjs/runtime/runtime';
   import { formatDate } from '../utils/dateUtils.js';
-  import { createRefreshHandler, createCacheEventListener, isCacheKeyPresent } from '../utils/cacheUtils.js';
+  import { createCachePage } from '../utils/cacheUtils.js';
   import { RefreshCw } from '@lucide/svelte';
 
   let loading = false;
@@ -27,26 +27,11 @@
     }
   }
 
-  async function updateCacheStatus() {
-    try {
-      const present = await isCacheKeyPresent('event_info');
-      cacheExpired = !present;
-    } catch (e) {
-      console.error('Failed to check cache status', e);
-      cacheExpired = true;
-    }
-  }
-
-  const handleRefresh = createRefreshHandler(
-    'event_info',
-    (value) => { refreshing = value; },
-    (err) => { error = err; }
-  );
-
-  const handleCacheEvent = createCacheEventListener(
+  const { handleRefresh, handleCacheEvent, updateCacheStatus } = createCachePage(
     'event_info',
     loadData,
-    (value) => { refreshing = value; }
+    (v) => { refreshing = v; },
+    (err) => { error = err; }
   );
 
   onMount(async () => {
@@ -57,11 +42,11 @@
     }
 
     await loadData();
-    await updateCacheStatus();
+    cacheExpired = await updateCacheStatus();
 
     EventsOn('cache:updated', (...data) => {
       const ev = (data && data.length ? data[0] : data) || {};
-      updateCacheStatus();
+      updateCacheStatus().then(v => cacheExpired = v);
       if (ev.action && ev.action === 'expired') return;
       handleCacheEvent(ev);
     });

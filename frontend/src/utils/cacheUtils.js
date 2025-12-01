@@ -90,3 +90,25 @@ export function createCacheEventListener(cacheKey, loadData, setRefreshing) {
   };
 }
 
+// Shared helper for cache-aware pages
+export function createCachePage(cacheKey, loadData, setRefreshing, setError) {
+  const handleRefresh = createRefreshHandler(cacheKey, setRefreshing, setError);
+  const handleCacheEvent = createCacheEventListener(cacheKey, loadData, setRefreshing);
+
+  async function updateCacheStatus() {
+    try {
+      const present = await isCacheKeyPresent(cacheKey);
+      return !present; // return true when expired
+    } catch (e) {
+      // Keep error logging minimal here; caller may log if needed
+      console.error('createCachePage.updateCacheStatus failed', e);
+      return true; // assume expired on error
+    }
+  }
+
+  return {
+    handleRefresh,
+    handleCacheEvent,
+    updateCacheStatus,
+  };
+}
