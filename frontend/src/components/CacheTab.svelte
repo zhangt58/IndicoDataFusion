@@ -5,7 +5,8 @@
   import { Modal } from 'flowbite-svelte';
 
   let cacheStats = null;
-  let cacheEntries = [];
+  /** @type {Record<string, any[]>} */
+  let cacheEntries = {};
   let loading = true;
   let refreshing = {};
   let errorMsg = '';
@@ -22,9 +23,11 @@
       console.log('Cache entries loaded:', cacheEntries);
       console.log('Cache stats:', cacheStats);
 
-      // Auto-expand the first data source for debugging
-      if (cacheStats?.data_source_name) {
-        expandedDataSources[cacheStats.data_source_name] = true;
+      // Auto-expand all data sources
+      if (cacheEntries && typeof cacheEntries === 'object') {
+        Object.keys(cacheEntries).forEach(dataSourceName => {
+          expandedDataSources[dataSourceName] = true;
+        });
         expandedDataSources = { ...expandedDataSources };
       }
 
@@ -125,31 +128,8 @@
     return labels[key] || key;
   }
 
-  function groupEntriesByDataSource() {
-    const grouped = {};
-    // Use the data source name from cache stats as the current data source
-    const dataSourceName = cacheStats?.data_source_name || 'unknown';
-
-    // All cache entries belong to the current data source
-    if (cacheEntries.length > 0) {
-      grouped[dataSourceName] = cacheEntries;
-      console.log('==== GROUPING DEBUG ====');
-      console.log('Data source name:', dataSourceName);
-      console.log('Number of entries:', cacheEntries.length);
-      console.log('cacheEntries array:', cacheEntries);
-      console.log('Each entry:');
-      cacheEntries.forEach((entry, idx) => {
-        console.log(`  [${idx}]:`, entry.key, entry.timestamp);
-      });
-      console.log('Grouped result:', grouped);
-      console.log('========================');
-    }
-
-    return grouped;
-  }
-
-  // Recalculate grouping when cacheStats or cacheEntries change
-  $: groupedEntries = cacheStats && cacheEntries ? groupEntriesByDataSource() : {};
+  // GetCacheEntries now returns a map grouped by data source, so we use it directly
+  $: groupedEntries = cacheEntries || {};
 </script>
 
 <div class="p-2 space-y-2 max-w-5xl mx-auto">
@@ -227,7 +207,7 @@
     {/if}
 
     <!-- Cached Data Entries (Grouped by Data Source) -->
-    {#if cacheEntries.length > 0}
+    {#if cacheEntries && Object.keys(cacheEntries).length > 0}
       <div class="space-y-2">
         <div class="flex items-center justify-between">
           <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100">Cached Data</h3>
@@ -235,10 +215,13 @@
             type="button"
             on:click={() => {
               console.log('=== DEBUG: Cache Entries ===');
-              console.log('Total entries:', cacheEntries.length);
-              console.log('Entries array:', cacheEntries);
+              console.log('Cache entries (map):', cacheEntries);
               console.log('Grouped entries:', groupedEntries);
+              console.log('Data sources:', Object.keys(cacheEntries || {}));
               console.log('Expanded data sources:', expandedDataSources);
+              Object.entries(cacheEntries || {}).forEach(([ds, entries]) => {
+                console.log(`  ${ds}: ${entries.length} entries`);
+              });
             }}
             class="px-2 py-1 text-xs rounded bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600"
           >
