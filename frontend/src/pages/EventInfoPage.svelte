@@ -3,16 +3,16 @@
   import { GetEventInfo, IsTestMode } from '../../wailsjs/go/main/App';
   import { EventsOn, EventsOff } from '../../wailsjs/runtime/runtime';
   import { formatDate } from '../utils/dateUtils.js';
-  import { createRefreshHandler, createCacheEventListener } from '../utils/cacheUtils.js';
-  import { isCacheKeyPresent } from '../utils/cacheUtils.js';
+  import { createRefreshHandler, createCacheEventListener, isCacheKeyPresent } from '../utils/cacheUtils.js';
   import { RefreshCw } from '@lucide/svelte';
 
   let loading = false;
   let refreshing = false;
-  let eventInfo = null;
   let error = null;
   let isTestMode = false;
-  let eventCacheExpired = false;
+  let cacheExpired = false;
+
+  let eventInfo = null;
 
   async function loadData() {
     loading = true;
@@ -27,14 +27,22 @@
     }
   }
 
-  // Create refresh handler using utility
+  async function updateCacheStatus() {
+    try {
+      const present = await isCacheKeyPresent('event_info');
+      cacheExpired = !present;
+    } catch (e) {
+      console.error('Failed to check cache status', e);
+      cacheExpired = true;
+    }
+  }
+
   const handleRefresh = createRefreshHandler(
     'event_info',
     (value) => { refreshing = value; },
     (err) => { error = err; }
   );
 
-  // Create event listener with double-load prevention
   const handleCacheEvent = createCacheEventListener(
     'event_info',
     loadData,
@@ -42,7 +50,6 @@
   );
 
   onMount(async () => {
-    // Check if in test mode
     try {
       isTestMode = await IsTestMode();
     } catch (e) {
@@ -50,12 +57,11 @@
     }
 
     await loadData();
-    await updateEventCacheStatus();
+    await updateCacheStatus();
 
-    // Listen for cache updates
     EventsOn('cache:updated', (...data) => {
       const ev = (data && data.length ? data[0] : data) || {};
-      updateEventCacheStatus();
+      updateCacheStatus();
       if (ev.action && ev.action === 'expired') return;
       handleCacheEvent(ev);
     });
@@ -65,15 +71,6 @@
     EventsOff('cache:updated');
   });
 
-  async function updateEventCacheStatus() {
-    try {
-      const present = await isCacheKeyPresent('event_info');
-      eventCacheExpired = !present;
-    } catch (e) {
-      console.error('Failed to check event_info cache status', e);
-      eventCacheExpired = true;
-    }
-  }
 
   // Wrapper to handle 'N/A' for empty dates in EventInfo
   function formatEventDate(dateInfo) {
@@ -102,11 +99,11 @@
               onclick={() => handleRefresh()}
               disabled={refreshing}
               class="p-2 rounded-lg bg-white/20 hover:bg-white/30 transition-colors disabled:opacity-50"
-              title={eventCacheExpired ? "Cache expired - Click to refresh" : "Refresh from API"}
+              title={cacheExpired ? "Cache expired - Click to refresh" : "Refresh from API"}
             >
               <RefreshCw size={18} class={refreshing ? 'animate-spin' : ''} />
             </button>
-            {#if eventCacheExpired && !refreshing}
+            {#if cacheExpired && !refreshing}
               <span class="absolute -top-1 -right-1 flex h-3 w-3">
                 <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
                 <span class="relative inline-flex rounded-full h-3 w-3 bg-red-500" title="Cache expired"></span>

@@ -2,29 +2,19 @@
   import { onMount, onDestroy } from 'svelte';
   import { GetContributions, IsTestMode } from '../../wailsjs/go/main/App';
   import { EventsOn, EventsOff } from '../../wailsjs/runtime/runtime';
-  import { createRefreshHandler, createCacheEventListener } from '../utils/cacheUtils.js';
-  import { isCacheKeyPresent } from '../utils/cacheUtils.js';
+  import { createRefreshHandler, createCacheEventListener, isCacheKeyPresent } from '../utils/cacheUtils.js';
   import { LayoutGrid, CreditCard, RefreshCw } from '@lucide/svelte';
   import ContributionCardView from './ContributionCardView.svelte';
   import ContributionTableView from './ContributionTableView.svelte';
 
   let loading = false;
   let refreshing = false;
-  let contributionData = [];
   let error = null;
-  let viewMode = 'card'; // 'card' or 'table'
+  let viewMode = 'card';
   let isTestMode = false;
-  let contributionCacheExpired = false;
+  let cacheExpired = false;
 
-  async function updateContributionCacheStatus() {
-    try {
-      const present = await isCacheKeyPresent('contributions');
-      contributionCacheExpired = !present;
-    } catch (e) {
-      console.error('Failed to check contributions cache status', e);
-      contributionCacheExpired = true;
-    }
-  }
+  let contributionData = [];
 
   async function loadData() {
     loading = true;
@@ -40,14 +30,22 @@
     }
   }
 
-  // Create refresh handler using utility
+  async function updateCacheStatus() {
+    try {
+      const present = await isCacheKeyPresent('contributions');
+      cacheExpired = !present;
+    } catch (e) {
+      console.error('Failed to check cache status', e);
+      cacheExpired = true;
+    }
+  }
+
   const handleRefresh = createRefreshHandler(
     'contributions',
     (value) => { refreshing = value; },
     (err) => { error = err; }
   );
 
-  // Create event listener with double-load prevention
   const handleCacheEvent = createCacheEventListener(
     'contributions',
     loadData,
@@ -55,7 +53,6 @@
   );
 
   onMount(async () => {
-    // Check if in test mode
     try {
       isTestMode = await IsTestMode();
     } catch (e) {
@@ -63,12 +60,11 @@
     }
 
     await loadData();
-    await updateContributionCacheStatus();
+    await updateCacheStatus();
 
-    // Listen for cache updates
     EventsOn('cache:updated', (...data) => {
       const ev = (data && data.length ? data[0] : data) || {};
-      updateContributionCacheStatus();
+      updateCacheStatus();
       if (ev.action && ev.action === 'expired') return;
       handleCacheEvent(ev);
     });
@@ -93,11 +89,11 @@
             onclick={() => handleRefresh()}
             disabled={refreshing}
             class="p-1.5 rounded transition-colors hover:bg-indigo-100 disabled:opacity-50"
-            title={contributionCacheExpired ? "Cache expired - Click to refresh" : "Refresh from API"}
+            title={cacheExpired ? "Cache expired - Click to refresh" : "Refresh from API"}
           >
             <RefreshCw size={18} class={refreshing ? 'animate-spin' : ''} />
           </button>
-          {#if contributionCacheExpired && !refreshing}
+          {#if cacheExpired && !refreshing}
             <span class="absolute -top-1 -right-1 flex h-3 w-3">
               <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
               <span class="relative inline-flex rounded-full h-3 w-3 bg-red-500" title="Cache expired"></span>

@@ -9,11 +9,12 @@
 
   let loading = false;
   let refreshing = false;
-  let abstractData = [];
   let error = null;
-  let viewMode = 'card'; // 'card' or 'table'
+  let viewMode = 'card';
   let isTestMode = false;
-  let abstractCacheExpired = false;
+  let cacheExpired = false;
+
+  let abstractData = [];
 
   async function loadData() {
     loading = true;
@@ -29,24 +30,22 @@
     }
   }
 
-  async function updateAbstractCacheStatus() {
+  async function updateCacheStatus() {
     try {
       const present = await isCacheKeyPresent('abstracts');
-      abstractCacheExpired = !present;
+      cacheExpired = !present;
     } catch (e) {
-      console.error('Failed to check abstracts cache status', e);
-      abstractCacheExpired = true;
+      console.error('Failed to check cache status', e);
+      cacheExpired = true;
     }
   }
 
-  // Create refresh handler using utility
   const handleRefresh = createRefreshHandler(
     'abstracts',
     (value) => { refreshing = value; },
     (err) => { error = err; }
   );
 
-  // Create event listener with double-load prevention
   const handleCacheEvent = createCacheEventListener(
     'abstracts',
     loadData,
@@ -54,7 +53,6 @@
   );
 
   onMount(async () => {
-    // Check if in test mode
     try {
       isTestMode = await IsTestMode();
     } catch (e) {
@@ -62,12 +60,11 @@
     }
 
     await loadData();
-    await updateAbstractCacheStatus();
+    await updateCacheStatus();
 
-    // Listen for cache updates
     EventsOn('cache:updated', (...data) => {
       const ev = (data && data.length ? data[0] : data) || {};
-      updateAbstractCacheStatus();
+      updateCacheStatus();
       if (ev.action && ev.action === 'expired') return;
       handleCacheEvent(ev);
     });
@@ -92,11 +89,11 @@
             onclick={() => handleRefresh()}
             disabled={refreshing}
             class="p-1.5 rounded transition-colors hover:bg-sky-100 disabled:opacity-50"
-            title={abstractCacheExpired ? "Cache expired - Click to refresh" : "Refresh from API"}
+            title={cacheExpired ? "Cache expired - Click to refresh" : "Refresh from API"}
           >
             <RefreshCw size={18} class={refreshing ? 'animate-spin' : ''} />
           </button>
-          {#if abstractCacheExpired && !refreshing}
+          {#if cacheExpired && !refreshing}
             <span class="absolute -top-1 -right-1 flex h-3 w-3">
               <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
               <span class="relative inline-flex rounded-full h-3 w-3 bg-red-500" title="Cache expired"></span>
