@@ -7,6 +7,8 @@ export function ApplyConfigYAML(arg1:string):Promise<void>;
 
 export function ApplyStructuredConfigUI(arg1:backend.ConfigDataUI):Promise<void>;
 
+export function ClearCache():Promise<void>;
+
 export function GetAbstractByID(arg1:number):Promise<backend.AbstractData>;
 
 export function GetAbstracts():Promise<Array<backend.AbstractData>>;
@@ -14,6 +16,12 @@ export function GetAbstracts():Promise<Array<backend.AbstractData>>;
 export function GetAbstractsByState(arg1:string):Promise<Array<backend.AbstractData>>;
 
 export function GetAppInfo():Promise<main.AppInfo>;
+
+export function GetCacheEntries():Promise<Record<string, Array<backend.CacheEntry>>>;
+
+export function GetCacheKeys():Promise<Array<string>>;
+
+export function GetCacheStats():Promise<Record<string, any>>;
 
 export function GetConfigPath():Promise<backend.ConfigPathInfo>;
 
@@ -30,3 +38,7 @@ export function GetContributionsByTrack(arg1:string):Promise<Array<backend.Contr
 export function GetEventInfo():Promise<backend.Event>;
 
 export function GetStructuredConfigUI():Promise<backend.ConfigDataUI>;
+
+export function IsTestMode():Promise<boolean>;
+
+export function RefreshCache(arg1:string):Promise<void>;

@@ -5,12 +5,14 @@ import (
 	"log"
 	"os"
 	"path/filepath"
-	"runtime"
+	goruntime "runtime"
+	"strings"
 	"time"
 
 	"IndicoDataFusion/backend"
 
 	"github.com/pkg/errors"
+	"github.com/wailsapp/wails/v2/pkg/runtime"
 )
 
 const (
@@ -41,7 +43,7 @@ func NewApp() *App {
 
 func GetDefaultConfigPath() []string {
 	var defaultPaths []string
-	switch runtime.GOOS {
+	switch goruntime.GOOS {
 	case "windows":
 		if appdata := os.Getenv("APPDATA"); appdata != "" {
 			defaultPaths = append(defaultPaths,
@@ -102,6 +104,8 @@ func (a *App) startup(ctx context.Context) {
 	a.handler = handler
 	a.configPath = configPath
 	log.Printf("Data handler initialized from: %s\n", configPath)
+
+	a.registerCacheCallbacks()
 }
 
 // GetEventInfo retrieves event information from the configured data source
@@ -227,6 +231,8 @@ func (a *App) ApplyConfigYAML(yamlContent string) error {
 		return errors.Wrap(err, "failed to reload handler")
 	}
 	a.handler = h
+
+	a.registerCacheCallbacks()
 	return nil
 }
 
@@ -270,5 +276,116 @@ func (a *App) ApplyStructuredConfigUI(configData *backend.ConfigDataUI) error {
 		return errors.Wrap(err, "failed to reload handler")
 	}
 	a.handler = h
+
+	a.registerCacheCallbacks()
 	return nil
+}
+
+// RefreshCache invalidates and refreshes a specific cache entry
+func (a *App) RefreshCache(key string) error {
+	if a.handler == nil {
+		return errors.Errorf("data handler not initialized")
+	}
+
+	if err := a.handler.RefreshCache(a.ctx, key); err != nil {
+		return errors.Wrap(err, "failed to refresh cache")
+	}
+
+	// Emit event to notify frontend
+	runtime.EventsEmit(a.ctx, "cache:updated", map[string]interface{}{
+		"key":    key,
+		"action": "refreshed",
+	})
+
+	return nil
+}
+
+// ClearCache removes all entries from cache and deletes the cache file
+func (a *App) ClearCache() error {
+	if a.handler == nil {
+		return errors.Errorf("data handler not initialized")
+	}
+
+	if err := a.handler.ClearCache(); err != nil {
+		return errors.Wrap(err, "failed to clear cache")
+	}
+
+	// Emit event to notify frontend
+	runtime.EventsEmit(a.ctx, "cache:updated", map[string]interface{}{
+		"action": "cleared",
+	})
+
+	return nil
+}
+
+// GetCacheStats returns cache statistics
+func (a *App) GetCacheStats() map[string]interface{} {
+	if a.handler == nil {
+		return map[string]interface{}{
+			"error": "data handler not initialized",
+		}
+	}
+	return a.handler.GetCacheStats()
+}
+
+// GetCacheKeys returns all available cache keys
+func (a *App) GetCacheKeys() []string {
+	if a.handler == nil {
+		return []string{}
+	}
+	return a.handler.GetCacheKeys()
+}
+
+// IsTestMode returns true if the current data source is test mode (local files)
+func (a *App) IsTestMode() bool {
+	if a.handler == nil {
+		return false
+	}
+	return a.handler.IsTestMode()
+}
+
+// GetCacheEntries returns all cache entries with metadata grouped by data source
+func (a *App) GetCacheEntries() map[string][]*backend.CacheEntry {
+	if a.handler == nil {
+		return make(map[string][]*backend.CacheEntry)
+	}
+	return a.handler.GetCacheEntries()
+}
+
+// shutdown is called when the app is shutting down
+func (a *App) shutdown(ctx context.Context) {
+	if a.handler != nil {
+		if err := a.handler.Shutdown(ctx); err != nil {
+			log.Printf("Error during shutdown: %v", err)
+		}
+	}
+}
+
+// registerCacheCallbacks sets up the handler callbacks to forward cache delete/evict events to the frontend.
+func (a *App) registerCacheCallbacks() {
+	if a == nil || a.handler == nil {
+		return
+	}
+
+	a.handler.SetCacheOnDelete(func(fullKey string) {
+		displayKey := fullKey
+		if idx := strings.Index(fullKey, ":"); idx != -1 {
+			displayKey = fullKey[idx+1:]
+		}
+		runtime.EventsEmit(a.ctx, "cache:updated", map[string]interface{}{
+			"key":    displayKey,
+			"action": "expired",
+		})
+	})
+
+	a.handler.SetCacheOnEvict(func(fullKey string) {
+		displayKey := fullKey
+		if idx := strings.Index(fullKey, ":"); idx != -1 {
+			displayKey = fullKey[idx+1:]
+		}
+		runtime.EventsEmit(a.ctx, "cache:updated", map[string]interface{}{
+			"key":    displayKey,
+			"action": "evicted",
+		})
+	})
 }

@@ -10,10 +10,19 @@
   let expandedSources = {};
   let currentActive = '';
   let selectedActive = '';
+  let showConfigFile = false;
 
   async function loadConfig() {
     try {
       configData = await GetStructuredConfigUI();
+      // Initialize cache config with defaults if not present
+      if (!configData.cache) {
+        configData.cache = {
+          ttl: '24h',
+          maxSize: '100MB',
+          cacheDir: ''
+        };
+      }
       // Initialize all sources as collapsed
       configData.dataSources.forEach(ds => {
         expandedSources[ds.name] = false;
@@ -84,11 +93,12 @@
     </div>
 
     <!-- Data Sources -->
-    <div class="space-y-2">
-      <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100">Data Sources</h3>
+    <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-4 border border-gray-200 dark:border-gray-700">
+      <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-3">Data Sources</h3>
+      <div class="space-y-2">
 
-      {#each configData.dataSources as dataSource (dataSource.name)}
-        <div class="bg-white dark:bg-gray-800 rounded-lg shadow border border-gray-200 dark:border-gray-700 overflow-hidden">
+        {#each configData.dataSources as dataSource (dataSource.name)}
+        <div class="bg-gray-50 dark:bg-gray-750 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
           <!-- Header -->
           <button
             type="button"
@@ -197,7 +207,54 @@
             </div>
           {/if}
         </div>
-      {/each}
+        {/each}
+      </div>
+    </div>
+
+    <!-- Cache Configuration -->
+    <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-4 border border-gray-200 dark:border-gray-700">
+      <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-3">Cache Configuration</h3>
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+        <div>
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            TTL (Time-To-Live)
+            <span class="text-xs text-gray-500 dark:text-gray-400 ml-1" title="How long cache entries stay valid before expiring">ⓘ</span>
+          </label>
+          <input
+            type="text"
+            bind:value={configData.cache.ttl}
+            placeholder="24h"
+            class="w-full rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          />
+          <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">e.g., 24h, 1h30m, 30m</p>
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            Max Size
+            <span class="text-xs text-gray-500 dark:text-gray-400 ml-1" title="Maximum cache size - oldest entries evicted when limit reached">ⓘ</span>
+          </label>
+          <input
+            type="text"
+            bind:value={configData.cache.maxSize}
+            placeholder="100MB"
+            class="w-full rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          />
+          <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">e.g., 100MB, 1GB, 500MB</p>
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            Cache Directory
+            <span class="text-xs text-gray-500 dark:text-gray-400 ml-1" title="Custom cache directory path (leave empty for default)">ⓘ</span>
+          </label>
+          <input
+            type="text"
+            bind:value={configData.cache.cacheDir}
+            placeholder="~/.cache/IndicoDataFusion"
+            class="w-full rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          />
+          <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Leave empty for default</p>
+        </div>
+      </div>
     </div>
 
     <!-- Status Messages -->
@@ -224,21 +281,32 @@
       </button>
     </div>
 
-    <!-- Configuration File Path Info -->
-    <div class="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
-      <h4 class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Configuration File</h4>
-      <div class="space-y-1">
-        <div class="flex flex-wrap items-center gap-2 text-sm">
-          <span class="font-medium text-gray-600 dark:text-gray-400">Path:</span>
-          <span class="text-gray-800 dark:text-gray-200 font-mono text-xs break-all">{configData.pathInfo?.path}</span>
+    <!-- Configuration File Path Info (Collapsible) -->
+    <div class="bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+      <button
+        type="button"
+        on:click={() => showConfigFile = !showConfigFile}
+        class="w-full flex items-center justify-between p-3 hover:bg-gray-100 dark:hover:bg-gray-750 transition-colors"
+      >
+        <h4 class="text-sm font-semibold text-gray-700 dark:text-gray-300">Configuration File</h4>
+        <svg class="w-5 h-5 text-gray-500 dark:text-gray-400 transform transition-transform {showConfigFile ? 'rotate-180' : ''}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+        </svg>
+      </button>
+      {#if showConfigFile}
+        <div class="px-4 pb-4 border-t border-gray-200 dark:border-gray-700 space-y-1">
+          <div class="flex flex-wrap items-center gap-2 text-sm pt-3">
+            <span class="font-medium text-gray-600 dark:text-gray-400">Path:</span>
+            <span class="text-gray-800 dark:text-gray-200 font-mono text-xs break-all">{configData.pathInfo?.path}</span>
+          </div>
+          <div class="flex items-center gap-2 text-xs">
+            <span class="text-gray-500 dark:text-gray-400">Source:</span>
+            <span class="px-2 py-0.5 rounded-full {configData.pathInfo?.fromEnv ? 'bg-purple-100 dark:bg-purple-900 text-purple-800 dark:text-purple-200' : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300'}">
+              {configData.pathInfo?.fromEnv ? `Environment (${configData.pathInfo?.envVarName})` : 'Default Location'}
+            </span>
+          </div>
         </div>
-        <div class="flex items-center gap-2 text-xs">
-          <span class="text-gray-500 dark:text-gray-400">Source:</span>
-          <span class="px-2 py-0.5 rounded-full {configData.pathInfo?.fromEnv ? 'bg-purple-100 dark:bg-purple-900 text-purple-800 dark:text-purple-200' : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300'}">
-            {configData.pathInfo?.fromEnv ? `Environment (${configData.pathInfo?.envVarName})` : 'Default Location'}
-          </span>
-        </div>
-      </div>
+      {/if}
     </div>
   {/if}
 </div>

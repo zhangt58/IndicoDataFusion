@@ -214,6 +214,22 @@ export namespace backend {
 		    return a;
 		}
 	}
+	export class CacheConfig {
+	    ttl?: string;
+	    maxSize?: string;
+	    cacheDir?: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new CacheConfig(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.ttl = source["ttl"];
+	        this.maxSize = source["maxSize"];
+	        this.cacheDir = source["cacheDir"];
+	    }
+	}
 	export class ConfigPathInfo {
 	    path: string;
 	    fromEnv: boolean;
@@ -305,6 +321,7 @@ export namespace backend {
 	export class ConfigDataUI {
 	    activeDataSourceName: string;
 	    dataSources: DataSource[];
+	    cache?: CacheConfig;
 	    pathInfo: ConfigPathInfo;
 	
 	    static createFrom(source: any = {}) {
@@ -315,6 +332,7 @@ export namespace backend {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.activeDataSourceName = source["activeDataSourceName"];
 	        this.dataSources = this.convertValues(source["dataSources"], DataSource);
+	        this.cache = this.convertValues(source["cache"], CacheConfig);
 	        this.pathInfo = this.convertValues(source["pathInfo"], ConfigPathInfo);
 	    }
 	

@@ -10,6 +10,10 @@ export function ApplyStructuredConfigUI(arg1) {
   return window['go']['main']['App']['ApplyStructuredConfigUI'](arg1);
 }
 
+export function ClearCache() {
+  return window['go']['main']['App']['ClearCache']();
+}
+
 export function GetAbstractByID(arg1) {
   return window['go']['main']['App']['GetAbstractByID'](arg1);
 }
@@ -24,6 +28,18 @@ export function GetAbstractsByState(arg1) {
 
 export function GetAppInfo() {
   return window['go']['main']['App']['GetAppInfo']();
+}
+
+export function GetCacheEntries() {
+  return window['go']['main']['App']['GetCacheEntries']();
+}
+
+export function GetCacheKeys() {
+  return window['go']['main']['App']['GetCacheKeys']();
+}
+
+export function GetCacheStats() {
+  return window['go']['main']['App']['GetCacheStats']();
 }
 
 export function GetConfigPath() {
@@ -56,4 +72,12 @@ export function GetEventInfo() {
 
 export function GetStructuredConfigUI() {
   return window['go']['main']['App']['GetStructuredConfigUI']();
+}
+
+export function IsTestMode() {
+  return window['go']['main']['App']['IsTestMode']();
+}
+
+export function RefreshCache(arg1) {
+  return window['go']['main']['App']['RefreshCache'](arg1);
 }

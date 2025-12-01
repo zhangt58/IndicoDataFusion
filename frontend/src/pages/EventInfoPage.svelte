@@ -1,14 +1,22 @@
 <script>
-  import { onMount } from 'svelte';
-  import { GetEventInfo } from '../../wailsjs/go/main/App';
+  import { onMount, onDestroy } from 'svelte';
+  import { GetEventInfo, IsTestMode } from '../../wailsjs/go/main/App';
+  import { EventsOn, EventsOff } from '../../wailsjs/runtime/runtime';
   import { formatDate } from '../utils/dateUtils.js';
+  import { createCachePage } from '../utils/cacheUtils.js';
+  import { RefreshCw } from '@lucide/svelte';
 
   let loading = false;
-  let eventInfo = null;
+  let refreshing = false;
   let error = null;
+  let isTestMode = false;
+  let cacheExpired = false;
 
-  onMount(async () => {
+  let eventInfo = null;
+
+  async function loadData() {
     loading = true;
+    error = null;
     try {
       eventInfo = await GetEventInfo();
     } catch (e) {
@@ -17,7 +25,37 @@
     } finally {
       loading = false;
     }
+  }
+
+  const { handleRefresh, handleCacheEvent, updateCacheStatus } = createCachePage(
+    'event_info',
+    loadData,
+    (v) => { refreshing = v; },
+    (err) => { error = err; }
+  );
+
+  onMount(async () => {
+    try {
+      isTestMode = await IsTestMode();
+    } catch (e) {
+      console.error('Failed to check test mode', e);
+    }
+
+    await loadData();
+    cacheExpired = await updateCacheStatus();
+
+    EventsOn('cache:updated', (...data) => {
+      const ev = (data && data.length ? data[0] : data) || {};
+      updateCacheStatus().then(v => cacheExpired = v);
+      if (ev.action && ev.action === 'expired') return;
+      handleCacheEvent(ev);
+    });
   });
+
+  onDestroy(() => {
+    EventsOff('cache:updated');
+  });
+
 
   // Wrapper to handle 'N/A' for empty dates in EventInfo
   function formatEventDate(dateInfo) {
@@ -33,11 +71,31 @@
   <div class="max-w-4xl mx-auto mt-8">
     <!-- Event Header -->
     <div class="bg-gradient-to-r from-indigo-500 to-purple-600 rounded-t-lg p-6 text-white">
-      <div class="flex items-center gap-2 mb-2">
-        <span class="px-3 py-1 bg-white/20 rounded-full text-sm font-medium">
-          {eventInfo.category || 'Conference'}
-        </span>
-        <span class="text-sm opacity-80">ID: {eventInfo.id}</span>
+      <div class="flex items-center justify-between mb-2">
+        <div class="flex items-center gap-2">
+          <span class="px-3 py-1 bg-white/20 rounded-full text-sm font-medium">
+            {eventInfo.category || 'Conference'}
+          </span>
+          <span class="text-sm opacity-80">ID: {eventInfo.id}</span>
+        </div>
+        {#if !isTestMode}
+          <div class="relative">
+            <button
+              onclick={() => handleRefresh()}
+              disabled={refreshing}
+              class="p-2 rounded-lg bg-white/20 hover:bg-white/30 transition-colors disabled:opacity-50"
+              title={cacheExpired ? "Cache expired - Click to refresh" : "Refresh from API"}
+            >
+              <RefreshCw size={18} class={refreshing ? 'animate-spin' : ''} />
+            </button>
+            {#if cacheExpired && !refreshing}
+              <span class="absolute -top-1 -right-1 flex h-3 w-3">
+                <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                <span class="relative inline-flex rounded-full h-3 w-3 bg-red-500" title="Cache expired"></span>
+              </span>
+            {/if}
+          </div>
+        {/if}
       </div>
       <h1 class="text-2xl md:text-3xl font-bold">{eventInfo.title}</h1>
     </div>

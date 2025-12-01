@@ -59,9 +59,17 @@ type DataSource struct {
 	Test   *TestConfig   `json:"test,omitempty"`
 }
 
+// CacheConfig holds cache configuration.
+type CacheConfig struct {
+	TTL      string `yaml:"ttl,omitempty" json:"ttl,omitempty"`            // Time-to-live (e.g., "24h", "1h30m")
+	MaxSize  string `yaml:"max_size,omitempty" json:"maxSize,omitempty"`   // Max size (e.g., "100MB", "1GB")
+	CacheDir string `yaml:"cache_dir,omitempty" json:"cacheDir,omitempty"` // Custom cache directory path
+}
+
 // Config holds the complete configuration with multiple data sources.
 type Config struct {
 	ActiveDataSource ActiveDataSource          `yaml:"data-source"`
+	Cache            *CacheConfig              `yaml:"cache,omitempty"`
 	DataSources      map[string]map[string]any `yaml:",inline"`
 }
 
@@ -152,6 +160,21 @@ func LoadConfigFromBytes(b []byte) (*Config, error) {
 		delete(rawConfig, "data-source")
 	}
 
+	// Extract cache section
+	if cacheSection, ok := rawConfig["cache"].(map[string]any); ok {
+		cfg.Cache = &CacheConfig{}
+		if ttl, ok := cacheSection["ttl"].(string); ok {
+			cfg.Cache.TTL = ttl
+		}
+		if maxSize, ok := cacheSection["max_size"].(string); ok {
+			cfg.Cache.MaxSize = maxSize
+		}
+		if cacheDir, ok := cacheSection["cache_dir"].(string); ok {
+			cfg.Cache.CacheDir = cacheDir
+		}
+		delete(rawConfig, "cache")
+	}
+
 	// All remaining sections are data sources
 	for name, val := range rawConfig {
 		if section, ok := val.(map[string]any); ok {
@@ -202,6 +225,7 @@ type ConfigPathInfo struct {
 type ConfigDataUI struct {
 	ActiveDataSourceName string         `json:"activeDataSourceName"`
 	DataSources          []DataSource   `json:"dataSources"`
+	Cache                *CacheConfig   `json:"cache,omitempty"`
 	PathInfo             ConfigPathInfo `json:"pathInfo"`
 }
 
@@ -210,6 +234,7 @@ func GetStructuredConfigUI(cfg *Config, pathInfo ConfigPathInfo) *ConfigDataUI {
 	configData := &ConfigDataUI{
 		ActiveDataSourceName: cfg.ActiveDataSource.Use,
 		DataSources:          make([]DataSource, 0, len(cfg.DataSources)),
+		Cache:                cfg.Cache,
 		PathInfo:             pathInfo,
 	}
 
@@ -233,6 +258,7 @@ func BuildConfigFromStructuredUI(configData *ConfigDataUI) *Config {
 		ActiveDataSource: ActiveDataSource{
 			Use: configData.ActiveDataSourceName,
 		},
+		Cache:       configData.Cache,
 		DataSources: make(map[string]map[string]any),
 	}
 

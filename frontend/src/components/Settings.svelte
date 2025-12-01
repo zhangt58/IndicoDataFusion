@@ -1,12 +1,13 @@
 <script>
   import { onMount } from 'svelte';
   import { Modal } from 'flowbite-svelte';
-  import { InfoCircleSolid, WindowSolid, CogOutline } from 'flowbite-svelte-icons';
+  import { InfoCircleSolid, WindowSolid, CogOutline, DatabaseSolid } from 'flowbite-svelte-icons';
   import { GetAppInfo } from '../../wailsjs/go/main/App';
   import { BrowserOpenURL } from '../../wailsjs/runtime/runtime.js';
   import AboutTab from './AboutTab.svelte';
   import WindowTab from './WindowTab.svelte';
   import ConfigurationTab from './ConfigurationTab.svelte';
+  import CacheTab from './CacheTab.svelte';
 
   /** @type {boolean} */
   export let open = false;
@@ -69,6 +70,14 @@
       <CogOutline class="w-4 h-4" />
       Configuration
     </button>
+    <button
+      type="button"
+      class="flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors {activeTab === 'cache' ? 'text-blue-600 dark:text-blue-500' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'}"
+      on:click={() => setTab('cache')}
+    >
+      <DatabaseSolid class="w-4 h-4" />
+      Cache
+    </button>
   </div>
 
   <!-- Tab Content -->
@@ -88,6 +97,8 @@
       <WindowTab active={true} />
     {:else if activeTab === 'config'}
       <ConfigurationTab />
+    {:else if activeTab === 'cache'}
+      <CacheTab />
     {/if}
   </div>
 </Modal>
