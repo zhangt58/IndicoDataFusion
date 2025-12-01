@@ -337,10 +337,10 @@ func (a *App) IsTestMode() bool {
 	return a.handler.IsTestMode()
 }
 
-// GetCacheEntries returns all cache entries with metadata
-func (a *App) GetCacheEntries() []*backend.CacheEntry {
+// GetCacheEntries returns all cache entries with metadata grouped by data source
+func (a *App) GetCacheEntries() map[string][]*backend.CacheEntry {
 	if a.handler == nil {
-		return []*backend.CacheEntry{}
+		return make(map[string][]*backend.CacheEntry)
 	}
 	return a.handler.GetCacheEntries()
 }

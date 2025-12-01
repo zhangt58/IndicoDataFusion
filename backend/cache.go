@@ -13,11 +13,12 @@ import (
 
 // CacheEntry represents a cached item with metadata
 type CacheEntry struct {
-	Data      interface{} `json:"data"`
-	Timestamp time.Time   `json:"timestamp"`
-	Key       string      `json:"key"`
-	ExpiresAt time.Time   `json:"expires_at"`
-	Size      int64       `json:"size"` // Approximate size in bytes
+	Data           interface{} `json:"data"`
+	Timestamp      time.Time   `json:"timestamp"`
+	Key            string      `json:"key"`
+	ExpiresAt      time.Time   `json:"expires_at"`
+	Size           int64       `json:"size"` // Approximate size in bytes
+	DataSourceName string      `json:"data_source_name"`
 }
 
 // Cache provides thread-safe in-memory and disk-backed caching
@@ -207,11 +208,12 @@ func (c *Cache) Set(key string, data interface{}) {
 
 	// Create new entry
 	entry := &CacheEntry{
-		Data:      data,
-		Timestamp: time.Now(),
-		Key:       fullKey,
-		ExpiresAt: expiresAt,
-		Size:      dataSize,
+		Data:           data,
+		Timestamp:      time.Now(),
+		Key:            fullKey,
+		ExpiresAt:      expiresAt,
+		Size:           dataSize,
+		DataSourceName: c.dataSourceName,
 	}
 
 	c.entries[fullKey] = entry
@@ -445,17 +447,12 @@ func (c *Cache) GetStats() map[string]interface{} {
 	}
 }
 
-// GetAllEntriesWithMetadata returns metadata for all cache entries
-func (c *Cache) GetAllEntriesWithMetadata() []*CacheEntry {
+// GetAllEntriesWithMetadata returns metadata for all cache entries grouped by data source
+func (c *Cache) GetAllEntriesWithMetadata() map[string][]*CacheEntry {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 
-	prefix := ""
-	if c.dataSourceName != "" {
-		prefix = c.dataSourceName + ":"
-	}
-
-	entries := make([]*CacheEntry, 0, len(c.entries))
+	grouped := make(map[string][]*CacheEntry)
 	now := time.Now()
 
 	for fullKey, entry := range c.entries {
@@ -464,23 +461,36 @@ func (c *Cache) GetAllEntriesWithMetadata() []*CacheEntry {
 			continue
 		}
 
-		// Create a copy with the display key (without data source prefix)
+		// Determine the data source name
+		dataSourceName := entry.DataSourceName
+		if dataSourceName == "" {
+			// Fallback to extracting from key if not set
+			if c.dataSourceName != "" {
+				dataSourceName = c.dataSourceName
+			} else {
+				dataSourceName = "unknown"
+			}
+		}
+
+		// Strip data source prefix from key for display
 		displayKey := fullKey
-		if prefix != "" && len(fullKey) > len(prefix) && fullKey[:len(prefix)] == prefix {
+		prefix := dataSourceName + ":"
+		if len(fullKey) > len(prefix) && fullKey[:len(prefix)] == prefix {
 			displayKey = fullKey[len(prefix):]
 		}
 
 		// Create a copy of the entry with the display key
 		entryCopy := &CacheEntry{
-			Data:      nil, // Don't include data in metadata response
-			Timestamp: entry.Timestamp,
-			Key:       displayKey,
-			ExpiresAt: entry.ExpiresAt,
-			Size:      entry.Size,
+			Data:           nil, // Don't include data in metadata response
+			Timestamp:      entry.Timestamp,
+			Key:            displayKey,
+			ExpiresAt:      entry.ExpiresAt,
+			Size:           entry.Size,
+			DataSourceName: dataSourceName,
 		}
 
-		entries = append(entries, entryCopy)
+		grouped[dataSourceName] = append(grouped[dataSourceName], entryCopy)
 	}
 
-	return entries
+	return grouped
 }

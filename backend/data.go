@@ -554,10 +554,10 @@ func (h *DataSourceHandler) IsTestMode() bool {
 	return h.isTestMode
 }
 
-// GetCacheEntries returns all cache entries with metadata
-func (h *DataSourceHandler) GetCacheEntries() []*CacheEntry {
+// GetCacheEntries returns all cache entries with metadata grouped by data source
+func (h *DataSourceHandler) GetCacheEntries() map[string][]*CacheEntry {
 	if h.cache == nil {
-		return []*CacheEntry{}
+		return make(map[string][]*CacheEntry)
 	}
 	return h.cache.GetAllEntriesWithMetadata()
 }
