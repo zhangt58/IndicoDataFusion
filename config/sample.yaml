@@ -12,6 +12,8 @@ cache:
   # Maximum cache size (e.g., "100MB", "1GB", "500MB")
   # Default: 100MB
   max_size: 100MB
+  # Custom cache directory path (leave empty for default: ~/.cache/IndicoDataFusion)
+  # cache_dir: /path/to/custom/cache
 
 # the data source defines an actual Indico conference
 hiat25:
