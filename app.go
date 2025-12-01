@@ -372,12 +372,10 @@ func (a *App) registerCacheCallbacks() {
 		if idx := strings.Index(fullKey, ":"); idx != -1 {
 			displayKey = fullKey[idx+1:]
 		}
-		log.Printf("App: cache onDelete callback received for %s (display %s)", fullKey, displayKey)
 		runtime.EventsEmit(a.ctx, "cache:updated", map[string]interface{}{
 			"key":    displayKey,
 			"action": "expired",
 		})
-		log.Printf("App: emitted cache:updated expired for %s", displayKey)
 	})
 
 	a.handler.SetCacheOnEvict(func(fullKey string) {
@@ -385,11 +383,9 @@ func (a *App) registerCacheCallbacks() {
 		if idx := strings.Index(fullKey, ":"); idx != -1 {
 			displayKey = fullKey[idx+1:]
 		}
-		log.Printf("App: cache onEvict callback received for %s (display %s)", fullKey, displayKey)
 		runtime.EventsEmit(a.ctx, "cache:updated", map[string]interface{}{
 			"key":    displayKey,
 			"action": "evicted",
 		})
-		log.Printf("App: emitted cache:updated evicted for %s", displayKey)
 	})
 }

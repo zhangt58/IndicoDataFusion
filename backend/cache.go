@@ -123,13 +123,13 @@ func (c *Cache) expirationWorker() {
 				if entry, exists := c.entries[fk]; exists {
 					c.currentSize -= entry.Size
 					delete(c.entries, fk)
-					log.Printf("expirationWorker: expired and deleted key %s", fk)
 				}
 			}
 			c.mu.Unlock()
 
 			// Invoke callbacks after releasing lock
 			if c.onDelete != nil && len(expired) > 0 {
+				log.Printf("expirationWorker: expired %d entries", len(expired))
 				for _, fk := range expired {
 					go func(fullKey string) {
 						defer func() {
@@ -137,7 +137,6 @@ func (c *Cache) expirationWorker() {
 								log.Printf("Recovered from panic in onDelete callback: %v", r)
 							}
 						}()
-						log.Printf("expirationWorker: invoking onDelete callback for %s", fullKey)
 						c.onDelete(fullKey)
 					}(fk)
 				}
