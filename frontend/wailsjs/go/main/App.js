@@ -30,6 +30,10 @@ export function GetAppInfo() {
   return window['go']['main']['App']['GetAppInfo']();
 }
 
+export function GetCacheEntries() {
+  return window['go']['main']['App']['GetCacheEntries']();
+}
+
 export function GetCacheKeys() {
   return window['go']['main']['App']['GetCacheKeys']();
 }

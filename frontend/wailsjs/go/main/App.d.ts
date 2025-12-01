@@ -17,6 +17,8 @@ export function GetAbstractsByState(arg1:string):Promise<Array<backend.AbstractD
 
 export function GetAppInfo():Promise<main.AppInfo>;
 
+export function GetCacheEntries():Promise<Array<backend.CacheEntry>>;
+
 export function GetCacheKeys():Promise<Array<string>>;
 
 export function GetCacheStats():Promise<Record<string, any>>;
