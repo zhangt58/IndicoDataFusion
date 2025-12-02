@@ -14,6 +14,10 @@ export function ClearCache() {
   return window['go']['main']['App']['ClearCache']();
 }
 
+export function DetermineConfigPath(arg1) {
+  return window['go']['main']['App']['DetermineConfigPath'](arg1);
+}
+
 export function GetAbstractByID(arg1) {
   return window['go']['main']['App']['GetAbstractByID'](arg1);
 }
