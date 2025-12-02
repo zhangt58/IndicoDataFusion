@@ -2,7 +2,7 @@
 
 data-source:
   # the data source def to be used
-  use: test-hiat25
+  use: test-data
 
 # cache configuration (optional)
 cache:
@@ -15,8 +15,8 @@ cache:
   # Custom cache directory path (leave empty for default: ~/.cache/IndicoDataFusion)
   # cache_dir: /path/to/custom/cache
 
-# the data source defines an actual Indico conference
-hiat25:
+# the data source defines an actual Indico conference: <conference-name>
+api1:
   # the base URL of the Indico server, e.g. https://indico.jacow.org
   base_url: <indico-base-url>
   # the event ID of Indico event, e.g. 82
@@ -28,7 +28,14 @@ hiat25:
   # is indico API?
   indico: true
 
-test-hiat25:
+api2:
+  base_url: <indico-base-url>
+  event_id: <event-id>
+  api_token: <your-token>
+  timeout: 15s
+  indico: true
+
+test-data:
   # the local directory containing test data files
   data_dir: ./testdata
   # the local event info file
