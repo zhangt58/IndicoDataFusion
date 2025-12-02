@@ -13,6 +13,42 @@
   let currentActiveIndex = 0;
   let selectedActiveIndex = 0;
   let showConfigFile = false;
+  // name validation errors keyed by data-source index
+  let nameErrors = {};
+
+  // Validate data source names: non-empty and unique
+  function validateNames() {
+    nameErrors = {};
+    if (!configData || !Array.isArray(configData.dataSources)) return;
+    const counts = {};
+    // First pass: trim names and count occurrences
+    configData.dataSources.forEach((ds, i) => {
+      // Normalize name by trimming whitespace and write back so UI shows normalized value
+      const rawName = (ds && ds.name) ? String(ds.name) : '';
+      const name = rawName.trim();
+      if (ds) ds.name = name;
+      // store trimmed name back into configData
+
+      if (!name) {
+        nameErrors[i] = 'Name cannot be empty';
+      } else {
+        counts[name] = (counts[name] || 0) + 1;
+      }
+    });
+    // find duplicates
+    configData.dataSources.forEach((ds, i) => {
+      const name = (ds && ds.name) ? String(ds.name).trim() : '';
+      if (name && counts[name] > 1) {
+        nameErrors[i] = 'Name must be unique';
+      }
+    });
+  }
+
+  // Re-validate whenever configData changes
+  $: if (configData) validateNames();
+
+  // Derived flag used to disable Apply when there are name validation errors
+  $: hasNameErrors = Object.values(nameErrors).some(Boolean);
 
   async function loadConfig() {
     try {
@@ -29,6 +65,9 @@
       (configData.dataSources || []).forEach((ds, i) => {
         expandedSources[i] = false;
       });
+
+      // ensure names are validated for the loaded config
+      validateNames();
 
       // find active index from name provided by backend; default to 0
       selectedActiveIndex = (configData.dataSources || []).findIndex(ds => ds.name === configData.activeDataSourceName);
@@ -52,6 +91,13 @@
     applySuccess = '';
     applying = true;
     try {
+      // validate before applying
+      validateNames();
+      if (Object.values(nameErrors).some(Boolean)) {
+        applyError = 'Please fix data source name errors before applying.';
+        applying = false;
+        return;
+      }
       // Ensure backend activeDataSourceName is set from the currently selected index
       if (configData && configData.dataSources && configData.dataSources[selectedActiveIndex]) {
         configData.activeDataSourceName = configData.dataSources[selectedActiveIndex].name;
@@ -117,11 +163,15 @@
                 id={`ds-name-${i}`}
                 type="text"
                 bind:value={dataSource.name}
+                on:input={validateNames}
                 placeholder="Data source name"
                 title="Edit data source name"
                 aria-label={`Data source name ${i}`}
                 class="text-xl md:text-lg font-semibold text-gray-900 dark:text-gray-100 bg-transparent border-b-2 border-transparent focus:border-indigo-500 px-1 py-0.5 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-sm transition-colors placeholder-gray-400 cursor-text"
               />
+              {#if nameErrors[i]}
+                <span class="ml-2 text-red-500 text-xs font-medium" title={nameErrors[i]}>{nameErrors[i]}</span>
+              {/if}
               <!-- pencil icon to indicate editability -->
               <svg aria-hidden="true" class="w-4 h-4 text-gray-400 ml-1" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <path d="M12 20h9" />
@@ -232,6 +282,10 @@
                   </div>
                 </div>
               {/if}
+              <!-- Error message for data source name -->
+              {#if nameErrors[i]}
+                <div class="text-red-500 text-sm mt-1">{nameErrors[i]}</div>
+              {/if}
             </div>
           {/if}
         </div>
@@ -306,7 +360,7 @@
         type="button"
         class="px-2 py-1.5 rounded-lg bg-indigo-600 text-white font-medium hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed dark:bg-indigo-500 dark:hover:bg-indigo-600 focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:ring-offset-2 transition-colors"
         on:click={apply}
-        disabled={applying}
+        disabled={applying || hasNameErrors}
       >
         {applying ? 'Applying...' : 'Apply'}
       </button>
