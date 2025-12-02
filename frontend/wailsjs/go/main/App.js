@@ -14,6 +14,10 @@ export function ClearCache() {
   return window['go']['main']['App']['ClearCache']();
 }
 
+export function DeleteCacheEntry(arg1) {
+  return window['go']['main']['App']['DeleteCacheEntry'](arg1);
+}
+
 export function DetermineConfigPath(arg1) {
   return window['go']['main']['App']['DetermineConfigPath'](arg1);
 }
