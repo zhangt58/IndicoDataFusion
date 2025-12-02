@@ -1,5 +1,5 @@
 // Cache refresh utilities
-import { RefreshCache, GetCacheEntries } from '../../wailsjs/go/main/App';
+import { RefreshCache } from '../../wailsjs/go/main/App';
 
 /**
  * Creates a refresh handler for a specific cache key
@@ -22,59 +22,6 @@ export function createRefreshHandler(cacheKey, setRefreshing, setError) {
     }
     // Note: refreshing flag will be cleared by the event listener
   };
-}
-
-/**
- * Checks whether a given cache key is present in any data-source group.
- * Returns true when the key exists (even if expired), false otherwise.
- *
- * This wraps the frontend Wails API GetCacheEntries which returns a map of groups -> CacheEntry[]
- */
-export async function isCacheKeyPresent(cacheKey) {
-  try {
-    const entriesMap = await GetCacheEntries();
-    for (const groupKey of Object.keys(entriesMap || {})) {
-      const group = entriesMap[groupKey];
-      if (!Array.isArray(group)) continue;
-      for (const entry of group) {
-        if (entry && entry.key === cacheKey) {
-          return true;
-        }
-      }
-    }
-    return false;
-  } catch (e) {
-    console.error('isCacheKeyPresent failed', e);
-    return false;
-  }
-}
-
-/**
- * Checks whether a given cache key has expired.
- * Returns true if the key exists and is expired, false otherwise.
- */
-export async function isCacheKeyExpired(cacheKey) {
-  try {
-    const entriesMap = await GetCacheEntries();
-    for (const groupKey of Object.keys(entriesMap || {})) {
-      const group = entriesMap[groupKey];
-      if (!Array.isArray(group)) continue;
-      for (const entry of group) {
-        if (entry && entry.key === cacheKey) {
-          // Check if expiresAt is in the past
-          if (entry.expiresAt) {
-            const expiryDate = new Date(entry.expiresAt);
-            return expiryDate < new Date();
-          }
-          return false;
-        }
-      }
-    }
-    return false; // Key not found or no expiry
-  } catch (e) {
-    console.error('isCacheKeyExpired failed', e);
-    return true; // Assume expired on error
-  }
 }
 
 /**
@@ -126,19 +73,8 @@ export function createCachePage(cacheKey, loadData, setRefreshing, setError) {
   const handleRefresh = createRefreshHandler(cacheKey, setRefreshing, setError);
   const handleCacheEvent = createCacheEventListener(cacheKey, loadData, setRefreshing);
 
-  async function updateCacheStatus() {
-    try {
-      return await isCacheKeyExpired(cacheKey); // return true when expired
-    } catch (e) {
-      // Keep error logging minimal here; caller may log if needed
-      console.error('createCachePage.updateCacheStatus failed', e);
-      return true; // assume expired on error
-    }
-  }
-
   return {
     handleRefresh,
     handleCacheEvent,
-    updateCacheStatus,
   };
 }
