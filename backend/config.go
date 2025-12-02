@@ -216,9 +216,7 @@ func SaveConfig(path string, cfg *Config) error {
 
 // ConfigPathInfo holds information about the config file location.
 type ConfigPathInfo struct {
-	Path       string `json:"path"`
-	FromEnv    bool   `json:"fromEnv"`
-	EnvVarName string `json:"envVarName"`
+	Path string `json:"path"`
 }
 
 // ConfigData represents the structured configuration for the UI.
