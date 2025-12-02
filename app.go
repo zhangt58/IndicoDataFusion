@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	_ "embed"
 	"log"
 	"os"
 	"path/filepath"
@@ -14,6 +15,9 @@ import (
 	"github.com/pkg/errors"
 	"github.com/wailsapp/wails/v2/pkg/runtime"
 )
+
+//go:embed config/sample.yaml
+var embeddedSample []byte
 
 const (
 	AppName     = "IndicoDataFusion"
@@ -30,10 +34,9 @@ var (
 
 // App struct
 type App struct {
-	ctx           context.Context
-	handler       *backend.DataSourceHandler
-	configPath    string
-	configFromEnv bool
+	ctx        context.Context
+	handler    *backend.DataSourceHandler
+	configPath string
 }
 
 // NewApp creates a new App application struct
@@ -71,28 +74,88 @@ func GetDefaultConfigPath() []string {
 	return defaultPaths
 }
 
-// startup is called when the app starts. The context is saved
-// so we can call the runtime methods
-func (a *App) startup(ctx context.Context) {
-	a.ctx = ctx
-
-	// Initialize the data source handler from config
-	// Check for config path from environment variable first
-	configPath := os.Getenv(ConfEnvName)
-	if configPath == "" {
-		for _, path := range GetDefaultConfigPath() {
-			if _, err := os.Stat(path); err == nil {
-				configPath = path
-				break
-			}
-		}
-		a.configFromEnv = false
-	} else {
-		a.configFromEnv = true
+// DetermineConfigPath encapsulates the logic to choose or create a configuration file path.
+// Priority: explicit flagPath > existing default paths (GetDefaultConfigPath) > attempt to create default from config/sample.yaml or a placeholder.
+// Returns the chosen path (or empty string if none could be created).
+func (a *App) DetermineConfigPath(flagPath string) string {
+	// 1) If environment variable explicitly specifies a config path, use it.
+	// Note: intentionally accept the value as-is (caller decides if it's valid).
+	if env := os.Getenv("INDICO_DATA_FUSION_CONFIG_PATH"); env != "" {
+		log.Printf("Using config path from env: %s", env)
+		return env
 	}
 
+	// 2) If explicit flag provided, use it
+	if flagPath != "" {
+		return flagPath
+	}
+
+	// 3) Look for an existing default config
+	for _, p := range GetDefaultConfigPath() {
+		if _, err := os.Stat(p); err == nil {
+			return p
+		}
+	}
+
+	// 4) No existing default – attempt to create one
+	defaultPaths := GetDefaultConfigPath()
+	var target string
+	if len(defaultPaths) > 0 {
+		target = defaultPaths[0]
+	} else if home, err := os.UserHomeDir(); err == nil {
+		target = filepath.Join(home, ".config", AppName, "config.yaml")
+	} else {
+		target = "config.yaml"
+	}
+
+	// Ensure parent dir exists
+	if err := os.MkdirAll(filepath.Dir(target), 0755); err != nil {
+		log.Printf("Warning: failed to create config dir: %v", err)
+	}
+
+	// Prefer writing from embedded sample if available
+	if len(embeddedSample) > 0 {
+		if err := os.WriteFile(target, embeddedSample, 0644); err != nil {
+			log.Printf("Failed to write embedded default config to %s: %v", target, err)
+		} else {
+			log.Printf("Created default config at %s from embedded sample", target)
+			return target
+		}
+	} else {
+		// Fallback: if for some reason embedding is not present, try file system sample
+		samplePath := "config/sample.yaml"
+		if b, err := os.ReadFile(samplePath); err == nil {
+			if werr := os.WriteFile(target, b, 0644); werr != nil {
+				log.Printf("Failed to write default config to %s: %v", target, werr)
+			} else {
+				log.Printf("Created default config at %s from sample file", target)
+				return target
+			}
+		} else {
+			log.Printf("Sample file not found at %s: %v", samplePath, err)
+		}
+	}
+
+	// If sample not available or write failed, write a placeholder
+	placeholder := []byte("# IndicoDataFusion default configuration\n")
+	if perr := os.WriteFile(target, placeholder, 0644); perr == nil {
+		log.Printf("Created placeholder config at %s", target)
+		return target
+	} else {
+		log.Printf("Failed to create placeholder config at %s: %v", target, perr)
+	}
+
+	// If creation failed, return empty string
+	return ""
+}
+
+// startup is called when the app starts. It now requires an explicit config path
+// to be provided by the caller.
+func (a *App) startup(ctx context.Context, configPath string) {
+	a.ctx = ctx
+
 	if configPath == "" {
-		log.Printf("Error: no config file path specified (%s not set and no default available)\n", ConfEnvName)
+		log.Printf("Error: no config file path specified (startup requires an explicit path)")
 		os.Exit(1)
 	}
 
@@ -196,7 +259,7 @@ func (a *App) GetAppInfo() AppInfo {
 
 // GetConfigPath returns the current config path and whether it was from env.
 func (a *App) GetConfigPath() backend.ConfigPathInfo {
-	return backend.ConfigPathInfo{Path: a.configPath, FromEnv: a.configFromEnv, EnvVarName: ConfEnvName}
+	return backend.ConfigPathInfo{Path: a.configPath}
 }
 
 // GetConfigYAML returns the current YAML content of the config file.
@@ -248,9 +311,7 @@ func (a *App) GetStructuredConfigUI() (*backend.ConfigDataUI, error) {
 	}
 
 	pathInfo := backend.ConfigPathInfo{
-		Path:       a.configPath,
-		FromEnv:    a.configFromEnv,
-		EnvVarName: ConfEnvName,
+		Path: a.configPath,
 	}
 
 	return backend.GetStructuredConfigUI(cfg, pathInfo), nil

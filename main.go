@@ -1,11 +1,11 @@
 package main
 
 import (
+	"context"
 	"embed"
 	"flag"
-	"os"
+	"fmt"
 
-	"github.com/labstack/gommon/log"
 	"github.com/wailsapp/wails/v2"
 	"github.com/wailsapp/wails/v2/pkg/options"
 	"github.com/wailsapp/wails/v2/pkg/options/assetserver"
@@ -24,15 +24,14 @@ func main() {
 	// Create an instance of the app structure
 	app := NewApp()
 
-	// Load configuration path
+	// Load configuration path (optional)
 	cfgPath := flag.String("config", "", "path to config yaml")
 	flag.Parse()
 
-	if cfgPathEnv := os.Getenv(ConfEnvName); cfgPathEnv != "" {
-		log.Printf("Using config path from env: %s", cfgPathEnv)
-	} else {
-		// Store config path for later use in startup
-		os.Setenv(ConfEnvName, *cfgPath)
+	// Determine which config path to use (flag > existing default > create from sample)
+	chosenConfig := app.DetermineConfigPath(*cfgPath)
+	if chosenConfig == "" {
+		fmt.Printf("No config path determined; startup will require an explicit path\n")
 	}
 
 	// Create application with options
@@ -43,7 +42,8 @@ func main() {
 		AssetServer: &assetserver.Options{
 			Assets: assets,
 		},
-		OnStartup:  app.startup,
+		// startup called with explicit config path (no env)
+		OnStartup:  func(ctx context.Context) { app.startup(ctx, chosenConfig) },
 		OnShutdown: app.shutdown,
 		Linux: &linux.Options{
 			Icon:                icon,

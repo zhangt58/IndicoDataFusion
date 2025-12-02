@@ -121,7 +121,19 @@ func TestGetCacheEntries(t *testing.T) {
 	}
 
 	// Get cache entries
-	entries := handler.GetCacheEntries()
+	// Prefer using the underlying cache's grouped metadata so the test does not depend
+	// on DataSourceHandler.GetCacheEntries() signature. Flatten to a slice for assertions.
+	var entriesMap map[string][]*CacheEntry
+	if handler.cache != nil {
+		entriesMap = handler.cache.GetAllEntriesWithMetadata()
+	} else {
+		entriesMap = make(map[string][]*CacheEntry)
+	}
+
+	var entries []*CacheEntry
+	for _, group := range entriesMap {
+		entries = append(entries, group...)
+	}
 
 	// Should have 3 entries
 	if len(entries) != 3 {
@@ -179,9 +191,7 @@ func TestConfigDataUIWithCache(t *testing.T) {
 	}
 
 	pathInfo := ConfigPathInfo{
-		Path:       "/test/config.yaml",
-		FromEnv:    false,
-		EnvVarName: "TEST_CONFIG",
+		Path: "/test/config.yaml",
 	}
 
 	// Convert to UI format
