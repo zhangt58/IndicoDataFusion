@@ -361,6 +361,25 @@ func (a *App) RefreshCache(key string) error {
 	return nil
 }
 
+// DeleteCacheEntry removes a specific entry from cache
+func (a *App) DeleteCacheEntry(key string) error {
+	if a.handler == nil {
+		return errors.Errorf("data handler not initialized")
+	}
+
+	if err := a.handler.DeleteCacheEntry(key); err != nil {
+		return errors.Wrap(err, "failed to delete cache entry")
+	}
+
+	// Emit event to notify frontend
+	runtime.EventsEmit(a.ctx, "cache:updated", map[string]interface{}{
+		"key":    key,
+		"action": "deleted",
+	})
+
+	return nil
+}
+
 // ClearCache removes all entries from cache and deletes the cache file
 func (a *App) ClearCache() error {
 	if a.handler == nil {

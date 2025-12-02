@@ -96,8 +96,8 @@ func NewCache(opts CacheOptions) (*Cache, error) {
 	// Start async save worker
 	go cache.asyncSaveWorker()
 
-	// Start expiration worker to proactively remove expired entries and fire callbacks
-	go cache.expirationWorker()
+	// Note: Expiration worker is disabled - expired entries are kept in cache
+	// and only deleted manually or on refresh. Users are notified of expired data.
 
 	return cache, nil
 }
@@ -188,7 +188,7 @@ func (c *Cache) makeCacheKey(key string) string {
 	return key
 }
 
-// Get retrieves a value from cache
+// Get retrieves a value from cache, returning data even if expired
 func (c *Cache) Get(key string) (interface{}, bool) {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
@@ -199,15 +199,12 @@ func (c *Cache) Get(key string) (interface{}, bool) {
 		return nil, false
 	}
 
-	// Check if entry has expired - expirationWorker will handle deletion and notification
-	if !entry.ExpiresAt.IsZero() && time.Now().After(entry.ExpiresAt) {
-		return nil, false
-	}
-
+	// Return data even if expired - caller can check expiry status separately
 	return entry.Data, true
 }
 
 // GetWithMetadata retrieves a cache entry with its metadata
+// Returns the entry even if expired
 func (c *Cache) GetWithMetadata(key string) (*CacheEntry, bool) {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
@@ -215,16 +212,30 @@ func (c *Cache) GetWithMetadata(key string) (*CacheEntry, bool) {
 	fullKey := c.makeCacheKey(key)
 	entry, exists := c.entries[fullKey]
 
-	// Check if entry has expired
-	if exists && !entry.ExpiresAt.IsZero() && time.Now().After(entry.ExpiresAt) {
-		return nil, false
+	return entry, exists
+}
+
+// IsExpired checks if a cache entry has expired
+func (c *Cache) IsExpired(key string) bool {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+
+	fullKey := c.makeCacheKey(key)
+	entry, exists := c.entries[fullKey]
+	if !exists {
+		return false
 	}
 
-	return entry, exists
+	return !entry.ExpiresAt.IsZero() && time.Now().After(entry.ExpiresAt)
 }
 
 // Set stores a value in cache
 func (c *Cache) Set(key string, data interface{}) {
+	c.setInternal(key, data, true)
+}
+
+// setInternal is the internal implementation of Set with option to skip disk save
+func (c *Cache) setInternal(key string, data interface{}, saveToDisk bool) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
@@ -270,8 +281,10 @@ func (c *Cache) Set(key string, data interface{}) {
 	c.entries[fullKey] = entry
 	c.currentSize += dataSize
 
-	// Queue async save after successful set
-	go c.queueSave()
+	// Queue async save only if requested
+	if saveToDisk {
+		go c.queueSave()
+	}
 }
 
 // evictOldest removes the oldest cache entry (must be called with lock held)
@@ -328,6 +341,7 @@ func (c *Cache) Clear() {
 }
 
 // Keys returns all cache keys (without data source prefix)
+// Includes expired entries
 func (c *Cache) Keys() []string {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
@@ -339,12 +353,7 @@ func (c *Cache) Keys() []string {
 	}
 
 	for k := range c.entries {
-		// Skip expired entries
-		if entry, exists := c.entries[k]; exists {
-			if !entry.ExpiresAt.IsZero() && time.Now().After(entry.ExpiresAt) {
-				continue
-			}
-		}
+		// Include all entries, even expired ones
 
 		// Strip data source prefix if present
 		if prefix != "" && len(k) > len(prefix) && k[:len(prefix)] == prefix {
@@ -434,24 +443,23 @@ func (c *Cache) loadFromDisk() error {
 		return nil // Don't fail - just start with empty cache
 	}
 
-	// Filter out expired entries and recalculate size
+	// Load all entries including expired ones and recalculate size
 	c.entries = make(map[string]*CacheEntry)
 	c.currentSize = 0
 	now := time.Now()
 	expiredCount := 0
 
 	for key, entry := range entries {
-		// Skip expired entries
+		// Count expired entries but keep them
 		if !entry.ExpiresAt.IsZero() && now.After(entry.ExpiresAt) {
 			expiredCount++
-			continue
 		}
 
 		c.entries[key] = entry
 		c.currentSize += entry.Size
 	}
 
-	log.Printf("Cache loaded from disk: %d entries (%d expired, removed)", len(c.entries), expiredCount)
+	log.Printf("Cache loaded from disk: %d entries (%d expired but kept)", len(c.entries), expiredCount)
 	return nil
 }
 
@@ -510,18 +518,15 @@ func (c *Cache) GetStats() map[string]interface{} {
 }
 
 // GetAllEntriesWithMetadata returns metadata for all cache entries grouped by data source
+// Includes expired entries so they can be displayed and managed in the UI
 func (c *Cache) GetAllEntriesWithMetadata() map[string][]*CacheEntry {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 
 	grouped := make(map[string][]*CacheEntry)
-	now := time.Now()
 
 	for fullKey, entry := range c.entries {
-		// Skip expired entries
-		if !entry.ExpiresAt.IsZero() && now.After(entry.ExpiresAt) {
-			continue
-		}
+		// Include all entries, even expired ones
 
 		// Determine the data source name
 		dataSourceName := entry.DataSourceName
