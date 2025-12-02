@@ -71,7 +71,7 @@
 <!-- Custom Title Bar for frameless window -->
 <TitleBar />
 
-<div class="flex min-h-screen pt-12"> <!-- padding-top to clear fixed titlebar (h-10) -->
+<div class="flex min-h-screen pt-12" style="overflow: hidden;"> <!-- padding-top to clear fixed titlebar (h-12) and hide body scroll -->
 
   {#if isSidebarOpen}
   <!-- horizontal quick buttons left of the toggle -->
@@ -151,7 +151,10 @@
 
 
 <div class="flex-1 p-6">
-  <svelte:component this={Router} {routes} />
+  <!-- Make the page content scroll inside the area below the fixed titlebar -->
+  <div class="w-full h-full" style="height: calc(100vh - 3rem); overflow: auto;">
+    <svelte:component this={Router} {routes} />
+  </div>
 </div>
 </div>
 
