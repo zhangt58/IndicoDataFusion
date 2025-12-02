@@ -7,9 +7,11 @@
   let applying = false;
   let applyError = '';
   let applySuccess = '';
+  // expandedSources keyed by data-source index to avoid problems when renaming
   let expandedSources = {};
-  let currentActive = '';
-  let selectedActive = '';
+  // track active selection by index so we can rename sources safely
+  let currentActiveIndex = 0;
+  let selectedActiveIndex = 0;
   let showConfigFile = false;
 
   async function loadConfig() {
@@ -23,12 +25,15 @@
           cacheDir: ''
         };
       }
-      // Initialize all sources as collapsed
-      configData.dataSources.forEach(ds => {
-        expandedSources[ds.name] = false;
+      // Initialize all sources as collapsed (by index)
+      (configData.dataSources || []).forEach((ds, i) => {
+        expandedSources[i] = false;
       });
-      selectedActive = configData.activeDataSourceName;
-      currentActive = configData.activeDataSourceName;
+
+      // find active index from name provided by backend; default to 0
+      selectedActiveIndex = (configData.dataSources || []).findIndex(ds => ds.name === configData.activeDataSourceName);
+      if (selectedActiveIndex < 0) selectedActiveIndex = 0;
+      currentActiveIndex = selectedActiveIndex;
       loading = false;
     } catch (e) {
       loading = false;
@@ -38,8 +43,8 @@
 
   onMount(loadConfig);
 
-  function toggleSource(name) {
-    expandedSources[name] = !expandedSources[name];
+  function toggleSource(index) {
+    expandedSources[index] = !expandedSources[index];
   }
 
   async function apply() {
@@ -47,19 +52,18 @@
     applySuccess = '';
     applying = true;
     try {
-      configData.activeDataSourceName = selectedActive;
+      // Ensure backend activeDataSourceName is set from the currently selected index
+      if (configData && configData.dataSources && configData.dataSources[selectedActiveIndex]) {
+        configData.activeDataSourceName = configData.dataSources[selectedActiveIndex].name;
+      }
       await ApplyStructuredConfigUI(configData);
-      currentActive = selectedActive;
+      currentActiveIndex = selectedActiveIndex;
       applySuccess = 'Configuration applied successfully';
     } catch (e) {
       applyError = `Failed to apply configuration: ${e}`;
     } finally {
       applying = false;
     }
-  }
-
-  function getDataSourceNames() {
-    return configData?.dataSources.map(ds => ds.name) || [];
   }
 </script>
 
@@ -79,16 +83,16 @@
         <label for="active-source" class="text-sm font-medium text-gray-700 dark:text-gray-300">Select Data Source:</label>
         <select
           id="active-source"
-          bind:value={selectedActive}
+          bind:value={selectedActiveIndex}
           class="flex-1 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
         >
-          {#each getDataSourceNames() as sourceName}
-            <option value={sourceName}>{sourceName}</option>
+          {#each configData.dataSources as ds, i}
+            <option value={i}>{ds.name}</option>
           {/each}
         </select>
       </div>
       <div class="mt-1">
-        <span class="text-sm text-green-600 dark:text-green-400">Current Active: <strong>{currentActive}</strong></span>
+        <span class="text-sm text-green-600 dark:text-green-400">Current Active: <strong>{configData.dataSources?.[currentActiveIndex]?.name}</strong></span>
       </div>
     </div>
 
@@ -97,37 +101,54 @@
       <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-3">Data Sources</h3>
       <div class="space-y-2">
 
-        {#each configData.dataSources as dataSource (dataSource.name)}
+        {#each configData.dataSources as dataSource, i (i)}
         <div class="bg-gray-50 dark:bg-gray-750 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
           <!-- Header -->
-          <button
-            type="button"
-            on:click={() => toggleSource(dataSource.name)}
+          <div
+            role="button"
+            tabindex="0"
+            on:click={() => toggleSource(i)}
+            on:keydown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleSource(i); } }}
             class="w-full flex items-center justify-between p-2 hover:bg-gray-50 dark:hover:bg-gray-750 transition-colors"
           >
-            <div class="flex items-center gap-3">
-              <span class="text-base font-semibold text-gray-900 dark:text-gray-100">{dataSource.name}</span>
+            <span class="flex items-center gap-3">
+              <!-- Make the name editable -->
+              <input
+                id={`ds-name-${i}`}
+                type="text"
+                bind:value={dataSource.name}
+                placeholder="Data source name"
+                title="Edit data source name"
+                aria-label={`Data source name ${i}`}
+                class="text-xl md:text-lg font-semibold text-gray-900 dark:text-gray-100 bg-transparent border-b-2 border-transparent focus:border-indigo-500 px-1 py-0.5 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-sm transition-colors placeholder-gray-400 cursor-text"
+              />
+              <!-- pencil icon to indicate editability -->
+              <svg aria-hidden="true" class="w-4 h-4 text-gray-400 ml-1" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 20h9" />
+                <path d="M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4 12.5-12.5z" />
+              </svg>
               <span class="px-2 py-0.5 text-xs rounded-full {dataSource.type === 'indico' ? 'bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200' : 'bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200'}">
                 {dataSource.type === 'indico' ? 'API' : 'Test Data'}
               </span>
-              {#if currentActive === dataSource.name}
+              {#if currentActiveIndex === i}
                 <span class="px-2 py-0.5 text-xs rounded-full bg-indigo-100 dark:bg-indigo-900 text-indigo-800 dark:text-indigo-200">Active</span>
               {/if}
-            </div>
-            <svg class="w-5 h-5 text-gray-500 dark:text-gray-400 transform transition-transform {expandedSources[dataSource.name] ? 'rotate-180' : ''}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            </span>
+            <svg class="w-5 h-5 text-gray-500 dark:text-gray-400 transform transition-transform {expandedSources[i] ? 'rotate-180' : ''}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
             </svg>
-          </button>
+          </div>
 
           <!-- Content -->
-          {#if expandedSources[dataSource.name]}
+          {#if expandedSources[i]}
             <div class="px-4 pb-4 pt-2 border-t border-gray-200 dark:border-gray-700 space-y-2">
               {#if dataSource.type === 'indico' && dataSource.indico}
                 <!-- Indico API Configuration -->
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
                   <div>
-                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Base URL</label>
+                    <label for={`ds-${i}-baseUrl`} class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Base URL</label>
                     <input
+                      id={`ds-${i}-baseUrl`}
                       type="text"
                       bind:value={dataSource.indico.baseUrl}
                       placeholder="https://indico.example.org"
@@ -135,8 +156,9 @@
                     />
                   </div>
                   <div>
-                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Event ID</label>
+                    <label for={`ds-${i}-eventId`} class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Event ID</label>
                     <input
+                      id={`ds-${i}-eventId`}
                       type="number"
                       bind:value={dataSource.indico.eventId}
                       placeholder="123"
@@ -144,8 +166,9 @@
                     />
                   </div>
                   <div class="md:col-span-2">
-                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">API Token</label>
+                    <label for={`ds-${i}-apiToken`} class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">API Token</label>
                     <input
+                      id={`ds-${i}-apiToken`}
                       type="password"
                       bind:value={dataSource.indico.apiToken}
                       placeholder="indp_..."
@@ -153,8 +176,9 @@
                     />
                   </div>
                   <div>
-                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Timeout</label>
+                    <label for={`ds-${i}-timeout`} class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Timeout</label>
                     <input
+                      id={`ds-${i}-timeout`}
                       type="text"
                       bind:value={dataSource.indico.timeout}
                       placeholder="15s"
@@ -167,8 +191,9 @@
                 <!-- Test Data Configuration -->
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
                   <div class="md:col-span-2">
-                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Data Directory</label>
+                    <label for={`ds-${i}-test-dataDir`} class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Data Directory</label>
                     <input
+                      id={`ds-${i}-test-dataDir`}
                       type="text"
                       bind:value={dataSource.test.dataDir}
                       placeholder="./testdata"
@@ -176,8 +201,9 @@
                     />
                   </div>
                   <div>
-                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Event Info File</label>
+                    <label for={`ds-${i}-test-eventInfo`} class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Event Info File</label>
                     <input
+                      id={`ds-${i}-test-eventInfo`}
                       type="text"
                       bind:value={dataSource.test.eventInfo}
                       placeholder="info.json"
@@ -185,8 +211,9 @@
                     />
                   </div>
                   <div>
-                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Abstracts File</label>
+                    <label for={`ds-${i}-test-abstracts`} class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Abstracts File</label>
                     <input
+                      id={`ds-${i}-test-abstracts`}
                       type="text"
                       bind:value={dataSource.test.abstracts}
                       placeholder="abstracts.json"
@@ -194,8 +221,9 @@
                     />
                   </div>
                   <div>
-                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Contributions File</label>
+                    <label for={`ds-${i}-test-contribs`} class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Contributions File</label>
                     <input
+                      id={`ds-${i}-test-contribs`}
                       type="text"
                       bind:value={dataSource.test.contribs}
                       placeholder="contribs.json"
@@ -216,11 +244,12 @@
       <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-3">Cache Configuration</h3>
       <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
         <div>
-          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+          <label for="cache-ttl" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
             TTL (Time-To-Live)
             <span class="text-xs text-gray-500 dark:text-gray-400 ml-1" title="How long cache entries stay valid before expiring">ⓘ</span>
           </label>
           <input
+            id="cache-ttl"
             type="text"
             bind:value={configData.cache.ttl}
             placeholder="24h"
@@ -229,11 +258,12 @@
           <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">e.g., 24h, 1h30m, 30m</p>
         </div>
         <div>
-          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+          <label for="cache-maxsize" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
             Max Size
             <span class="text-xs text-gray-500 dark:text-gray-400 ml-1" title="Maximum cache size - oldest entries evicted when limit reached">ⓘ</span>
           </label>
           <input
+            id="cache-maxsize"
             type="text"
             bind:value={configData.cache.maxSize}
             placeholder="100MB"
@@ -242,11 +272,12 @@
           <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">e.g., 100MB, 1GB, 500MB</p>
         </div>
         <div>
-          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+          <label for="cache-dir" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
             Cache Directory
             <span class="text-xs text-gray-500 dark:text-gray-400 ml-1" title="Custom cache directory path (leave empty for default)">ⓘ</span>
           </label>
           <input
+            id="cache-dir"
             type="text"
             bind:value={configData.cache.cacheDir}
             placeholder="~/.cache/IndicoDataFusion"
@@ -283,27 +314,23 @@
 
     <!-- Configuration File Path Info (Collapsible) -->
     <div class="bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
-      <button
-        type="button"
+      <div
+        role="button"
+        tabindex="0"
         on:click={() => showConfigFile = !showConfigFile}
+        on:keydown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); showConfigFile = !showConfigFile; } }}
         class="w-full flex items-center justify-between p-3 hover:bg-gray-100 dark:hover:bg-gray-750 transition-colors"
       >
         <h4 class="text-sm font-semibold text-gray-700 dark:text-gray-300">Configuration File</h4>
         <svg class="w-5 h-5 text-gray-500 dark:text-gray-400 transform transition-transform {showConfigFile ? 'rotate-180' : ''}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
         </svg>
-      </button>
+      </div>
       {#if showConfigFile}
         <div class="px-4 pb-4 border-t border-gray-200 dark:border-gray-700 space-y-1">
           <div class="flex flex-wrap items-center gap-2 text-sm pt-3">
             <span class="font-medium text-gray-600 dark:text-gray-400">Path:</span>
-            <span class="text-gray-800 dark:text-gray-200 font-mono text-xs break-all">{configData.pathInfo?.path}</span>
-          </div>
-          <div class="flex items-center gap-2 text-xs">
-            <span class="text-gray-500 dark:text-gray-400">Source:</span>
-            <span class="px-2 py-0.5 rounded-full {configData.pathInfo?.fromEnv ? 'bg-purple-100 dark:bg-purple-900 text-purple-800 dark:text-purple-200' : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300'}">
-              {configData.pathInfo?.fromEnv ? `Environment (${configData.pathInfo?.envVarName})` : 'Default Location'}
-            </span>
+            <span class="text-gray-800 dark:text-gray-200 font-mono text-xs break-all">{configData.pathInfo?.path || configData.path || 'Not set'}</span>
           </div>
         </div>
       {/if}
