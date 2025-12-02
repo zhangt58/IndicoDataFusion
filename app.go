@@ -441,13 +441,13 @@ func (a *App) shutdown(ctx context.Context) {
 	}
 }
 
-// registerCacheCallbacks sets up the handler callbacks to forward cache delete/evict events to the frontend.
+// registerCacheCallbacks sets up the handler callbacks to forward cache expiry/evict events to the frontend.
 func (a *App) registerCacheCallbacks() {
 	if a == nil || a.handler == nil {
 		return
 	}
 
-	a.handler.SetCacheOnDelete(func(fullKey string) {
+	a.handler.SetCacheOnExpiry(func(fullKey string) {
 		displayKey := fullKey
 		if idx := strings.Index(fullKey, ":"); idx != -1 {
 			displayKey = fullKey[idx+1:]

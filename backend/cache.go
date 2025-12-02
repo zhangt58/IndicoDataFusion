@@ -11,6 +11,13 @@ import (
 	"time"
 )
 
+var (
+	// EXPIRY_POLL_INTERVAL Interval for checking expired entries
+	EXPIRY_POLL_INTERVAL = 10 * time.Second
+	// LAST_NOTIFIED_MIN_INTERVAL Minimum interval between expiry notifications for the same entry
+	LAST_NOTIFIED_MIN_INTERVAL = 1 * time.Second
+)
+
 // CacheEntry represents a cached item with metadata
 type CacheEntry struct {
 	Data           interface{} `json:"data"`
@@ -19,6 +26,7 @@ type CacheEntry struct {
 	ExpiresAt      time.Time   `json:"expires_at"`
 	Size           int64       `json:"size"` // Approximate size in bytes
 	DataSourceName string      `json:"data_source_name"`
+	LastNotified   time.Time   `json:"last_notified,omitempty"`
 }
 
 // Cache provides thread-safe in-memory and disk-backed caching
@@ -33,9 +41,9 @@ type Cache struct {
 	stopChan       chan struct{}
 	dataSourceName string
 
-	// Callbacks invoked when an entry is deleted or evicted. These are optional and run
+	// Callbacks invoked when an entry is expired or evicted. These are optional and run
 	// asynchronously (called without holding cache locks).
-	onDelete func(fullKey string)
+	onExpiry func(fullKey string)
 	onEvict  func(fullKey string)
 }
 
@@ -96,51 +104,60 @@ func NewCache(opts CacheOptions) (*Cache, error) {
 	// Start async save worker
 	go cache.asyncSaveWorker()
 
-	// Note: Expiration worker is disabled - expired entries are kept in cache
-	// and only deleted manually or on refresh. Users are notified of expired data.
+	// Start expiry notification worker - notifies about expired entries without deleting them
+	go cache.expiryNotificationWorker()
 
 	return cache, nil
 }
 
-// expirationWorker periodically scans for expired entries and deletes them so onDelete callbacks fire.
-func (c *Cache) expirationWorker() {
-	ticker := time.NewTicker(5 * time.Second)
+// expiryNotificationWorker periodically checks for expired entries and fires callbacks WITHOUT deleting them.
+// This allows the UI to be notified about expired cache while keeping the data available.
+func (c *Cache) expiryNotificationWorker() {
+	// Helper function to check and notify expired entries
+	checkAndNotify := func() {
+		now := time.Now()
+		var newlyExpired []string
+
+		c.mu.Lock()
+		for fullKey, entry := range c.entries {
+			// Check if expired and not yet notified (or notified more than 1 minute ago)
+			if !entry.ExpiresAt.IsZero() && now.After(entry.ExpiresAt) {
+				// Only notify if we haven't notified yet, or it's been more than 2 seconds
+				if entry.LastNotified.IsZero() || now.Sub(entry.LastNotified) > LAST_NOTIFIED_MIN_INTERVAL {
+					newlyExpired = append(newlyExpired, fullKey)
+					entry.LastNotified = now
+				}
+			}
+		}
+		c.mu.Unlock()
+
+		// Invoke callbacks for newly expired entries
+		if c.onExpiry != nil && len(newlyExpired) > 0 {
+			log.Printf("expiryNotificationWorker: %d entries expired (not deleted, data still available)", len(newlyExpired))
+			for _, fk := range newlyExpired {
+				go func(fullKey string) {
+					defer func() {
+						if r := recover(); r != nil {
+							log.Printf("Recovered from panic in onDelete callback: %v", r)
+						}
+					}()
+					c.onExpiry(fullKey)
+				}(fk)
+			}
+		}
+	}
+
+	// Check immediately on startup for already-expired entries
+	checkAndNotify()
+
+	// Then continue checking periodically
+	ticker := time.NewTicker(EXPIRY_POLL_INTERVAL) // Check every 10 seconds
 	defer ticker.Stop()
+
 	for {
 		select {
 		case <-ticker.C:
-			now := time.Now()
-			var expired []string
-			c.mu.Lock()
-			for fullKey, entry := range c.entries {
-				if !entry.ExpiresAt.IsZero() && now.After(entry.ExpiresAt) {
-					expired = append(expired, fullKey)
-				}
-			}
-
-			// Delete expired entries while holding lock
-			for _, fk := range expired {
-				if entry, exists := c.entries[fk]; exists {
-					c.currentSize -= entry.Size
-					delete(c.entries, fk)
-				}
-			}
-			c.mu.Unlock()
-
-			// Invoke callbacks after releasing lock
-			if c.onDelete != nil && len(expired) > 0 {
-				log.Printf("expirationWorker: expired %d entries", len(expired))
-				for _, fk := range expired {
-					go func(fullKey string) {
-						defer func() {
-							if r := recover(); r != nil {
-								log.Printf("Recovered from panic in onDelete callback: %v", r)
-							}
-						}()
-						c.onDelete(fullKey)
-					}(fk)
-				}
-			}
+			checkAndNotify()
 		case <-c.stopChan:
 			return
 		}
@@ -562,12 +579,13 @@ func (c *Cache) GetAllEntriesWithMetadata() map[string][]*CacheEntry {
 	return grouped
 }
 
-// SetOnDelete registers a callback that will be called when an entry is deleted (including expired deletes).
+// SetOnExpiry registers a callback that will be called when an entry expires.
 // The callback receives the full cache key (including data source prefix if present).
-func (c *Cache) SetOnDelete(cb func(fullKey string)) {
+// Note: This does NOT delete the entry, it only notifies about expiry.
+func (c *Cache) SetOnExpiry(cb func(fullKey string)) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	c.onDelete = cb
+	c.onExpiry = cb
 }
 
 // SetOnEvict registers a callback that will be called when an entry is evicted due to size limits.

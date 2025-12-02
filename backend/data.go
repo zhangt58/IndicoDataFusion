@@ -627,12 +627,13 @@ func (h *DataSourceHandler) GetCacheEntries() map[string][]*CacheEntry {
 	return h.cache.GetAllEntriesWithMetadata()
 }
 
-// SetCacheOnDelete allows higher-level code (e.g., App) to register a callback when cache entries are deleted/expired.
-func (h *DataSourceHandler) SetCacheOnDelete(cb func(fullKey string)) {
+// SetCacheOnExpiry allows higher-level code (e.g., App) to register a callback when cache entries expire.
+// Note: This does NOT delete the entry, it only notifies about expiry.
+func (h *DataSourceHandler) SetCacheOnExpiry(cb func(fullKey string)) {
 	if h.cache == nil {
 		return
 	}
-	h.cache.SetOnDelete(cb)
+	h.cache.SetOnExpiry(cb)
 }
 
 // SetCacheOnEvict allows higher-level code to register a callback when cache entries are evicted due to size.
