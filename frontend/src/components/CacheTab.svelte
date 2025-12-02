@@ -1,7 +1,7 @@
 <script>
   import { onMount, onDestroy } from 'svelte';
   import { EventsOn, EventsOff } from '../../wailsjs/runtime/runtime';
-  import { GetCacheStats, GetCacheEntries, RefreshCache, ClearCache, IsTestMode } from '../../wailsjs/go/main/App';
+  import { GetCacheStats, GetCacheEntries, RefreshCache, ClearCache, DeleteCacheEntry, IsTestMode } from '../../wailsjs/go/main/App';
   import { Modal } from 'flowbite-svelte';
 
   let cacheStats = null;
@@ -94,6 +94,19 @@
       errorMsg = `Failed to refresh ${key}: ${e}`;
     } finally {
       refreshing[key] = false;
+    }
+  }
+
+  async function handleDeleteEntry(key) {
+    errorMsg = '';
+    successMsg = '';
+    try {
+      await DeleteCacheEntry(key);
+      successMsg = `Cache entry deleted: ${key}`;
+      setTimeout(() => { successMsg = ''; }, 3000);
+      await loadCacheInfo();
+    } catch (e) {
+      errorMsg = `Failed to delete ${key}: ${e}`;
     }
   }
 
@@ -240,10 +253,11 @@
               <div class="border-t border-gray-200 dark:border-gray-700">
                 <div class="divide-y divide-gray-200 dark:divide-gray-700">
                   {#each entries as entry (entry.key)}
+                    {@const isExpired = entry.expiresAt && new Date(entry.expiresAt) < new Date()}
                     <div class="p-3 hover:bg-gray-50 dark:hover:bg-gray-750">
                       <div class="flex items-start justify-between">
                         <div class="flex items-start gap-3 flex-1">
-                          <div class="w-2 h-2 bg-green-500 rounded-full mt-2"></div>
+                          <div class="w-2 h-2 {isExpired ? 'bg-red-500' : 'bg-green-500'} rounded-full mt-2"></div>
                           <div class="flex-1 min-w-0">
                             <div class="font-medium text-gray-900 dark:text-gray-100">
                               {getCacheKeyLabel(entry.key)}
@@ -257,8 +271,11 @@
                                 <span class="ml-2 text-gray-500 dark:text-gray-500">({formatTimeAgo(entry.timestamp)})</span>
                               </div>
                               {#if entry.expiresAt}
-                                <div class="text-xs text-gray-600 dark:text-gray-400">
-                                  <span class="font-medium">Expires:</span> {formatTimestamp(entry.expiresAt)}
+                                <div class="text-xs {isExpired ? 'text-red-600 dark:text-red-400' : 'text-gray-600 dark:text-gray-400'}">
+                                  <span class="font-medium">{isExpired ? 'Expired:' : 'Expires:'}</span> {formatTimestamp(entry.expiresAt)}
+                                  {#if isExpired}
+                                    <span class="ml-2 px-2 py-0.5 bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 rounded text-xs font-semibold">EXPIRED</span>
+                                  {/if}
                                 </div>
                               {/if}
                             </div>
@@ -271,8 +288,17 @@
                               on:click={() => handleRefresh(entry.key)}
                               disabled={refreshing[entry.key]}
                               class="px-3 py-1.5 rounded bg-indigo-600 text-white text-sm hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors whitespace-nowrap"
+                              title="Refresh from API"
                             >
                               {refreshing[entry.key] ? 'Refreshing...' : 'Refresh'}
+                            </button>
+                            <button
+                              type="button"
+                              on:click={() => handleDeleteEntry(entry.key)}
+                              class="px-3 py-1.5 rounded bg-red-600 text-white text-sm hover:bg-red-700 transition-colors whitespace-nowrap"
+                              title="Delete this cache entry"
+                            >
+                              Delete
                             </button>
                           </div>
                         {/if}

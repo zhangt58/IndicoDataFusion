@@ -26,7 +26,8 @@ export function createRefreshHandler(cacheKey, setRefreshing, setError) {
 
 /**
  * Checks whether a given cache key is present in any data-source group.
- * Returns true when the key exists (i.e. cached and not expired), false otherwise.
+ * Returns true when the key exists (even if expired), false otherwise.
+ *
  * This wraps the frontend Wails API GetCacheEntries which returns a map of groups -> CacheEntry[]
  */
 export async function isCacheKeyPresent(cacheKey) {
@@ -49,6 +50,34 @@ export async function isCacheKeyPresent(cacheKey) {
 }
 
 /**
+ * Checks whether a given cache key has expired.
+ * Returns true if the key exists and is expired, false otherwise.
+ */
+export async function isCacheKeyExpired(cacheKey) {
+  try {
+    const entriesMap = await GetCacheEntries();
+    for (const groupKey of Object.keys(entriesMap || {})) {
+      const group = entriesMap[groupKey];
+      if (!Array.isArray(group)) continue;
+      for (const entry of group) {
+        if (entry && entry.key === cacheKey) {
+          // Check if expiresAt is in the past
+          if (entry.expiresAt) {
+            const expiryDate = new Date(entry.expiresAt);
+            return expiryDate < new Date();
+          }
+          return false;
+        }
+      }
+    }
+    return false; // Key not found or no expiry
+  } catch (e) {
+    console.error('isCacheKeyExpired failed', e);
+    return true; // Assume expired on error
+  }
+}
+
+/**
  * Creates a cache event listener that prevents double loading
  * @param {string} cacheKey - The cache key to listen for
  * @param {Function} loadData - The function to call to reload data
@@ -63,12 +92,14 @@ export function createCacheEventListener(cacheKey, loadData, setRefreshing) {
     const action = data && data.action ? data.action : null;
     const key = data && data.key ? data.key : null;
 
-    // Only reload when the cache was explicitly refreshed for this key, or when cache was cleared.
+    // Only reload when the cache was explicitly refreshed/deleted for this key, or when cache was cleared.
     // Do NOT auto-reload on expiration/eviction events (action === 'expired' or 'evicted').
-    const shouldReload = (action === 'refreshed' && key === cacheKey) || action === 'cleared';
+    const shouldReload = (action === 'refreshed' && key === cacheKey) ||
+                        (action === 'deleted' && key === cacheKey) ||
+                        action === 'cleared';
 
     if (!shouldReload) {
-      // If this event is not a user-triggered refresh/clear, ignore for loading purposes.
+      // If this event is not a user-triggered refresh/clear/delete, ignore for loading purposes.
       // Optionally, we might still want to clear the refreshing flag if action indicates failure —
       // but in normal flows we only clear refreshing when a refresh completed (refreshed event).
       return;
@@ -97,8 +128,7 @@ export function createCachePage(cacheKey, loadData, setRefreshing, setError) {
 
   async function updateCacheStatus() {
     try {
-      const present = await isCacheKeyPresent(cacheKey);
-      return !present; // return true when expired
+      return await isCacheKeyExpired(cacheKey); // return true when expired
     } catch (e) {
       // Keep error logging minimal here; caller may log if needed
       console.error('createCachePage.updateCacheStatus failed', e);
