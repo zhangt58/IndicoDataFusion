@@ -1,5 +1,5 @@
 <script>
-    import {onMount} from 'svelte';
+    import {onMount, onDestroy} from 'svelte';
     import {AlignJustifyOutline, BookOpenSolid, BookSolid, CogOutline, HomeSolid} from 'flowbite-svelte-icons';
     import {DarkMode} from 'flowbite-svelte';
     import './app.css';
@@ -53,6 +53,18 @@
   function toggleSettings() {
     settingsOpen = !settingsOpen;
   }
+
+  function openSettingsHandler() {
+    settingsOpen = true;
+  }
+
+  onMount(() => {
+    window.addEventListener('open:settings', openSettingsHandler);
+  });
+
+  onDestroy(() => {
+    window.removeEventListener('open:settings', openSettingsHandler);
+  });
 </script>
 
 <div class="flex min-h-screen">
