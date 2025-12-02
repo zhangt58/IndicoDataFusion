@@ -150,9 +150,9 @@
 
 
 
-<div class="flex-1 p-6 pr-2">
+<div class="flex-1 p-6 pr-2 overflow-auto">
   <!-- Make the page content scroll inside the area below the fixed titlebar -->
-  <div class="w-full h-full pr-5 pb-8" style="height: calc(100vh - 5rem); overflow: auto;"> <!-- Added padding-right to move the scrollbar -->
+  <div class="w-full pr-5 pb-6">
     <svelte:component this={Router} {routes} />
   </div>
 </div>
