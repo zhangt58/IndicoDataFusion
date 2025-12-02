@@ -6,6 +6,7 @@
   import { LayoutGrid, CreditCard, RefreshCw } from '@lucide/svelte';
   import ContributionCardView from './ContributionCardView.svelte';
   import ContributionTableView from './ContributionTableView.svelte';
+  import LoadErrorHint from './LoadErrorHint.svelte';
 
   let loading = false;
   let refreshing = false;
@@ -62,7 +63,7 @@
 {#if loading}
   <div class="p-6 text-center">Loading contributions...</div>
 {:else if error}
-  <div class="p-6 text-center text-red-600">Failed to load contributions: {error}</div>
+  <LoadErrorHint {error} message="Failed to load contributions." />
 {:else}
   <div class="fixed bg-indigo-300 dark:bg-indigo-800 top-2 left-2 shadow-md px-2 py-1 rounded-sm flex items-center gap-2 z-10">
     <h2 class="text-xl font-semibold text-gray-800 dark:text-gray-100">Contributions ({contributionData.length})</h2>

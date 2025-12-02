@@ -5,10 +5,12 @@
   import { formatDate } from '../utils/dateUtils.js';
   import { createCachePage } from '../utils/cacheUtils.js';
   import { RefreshCw } from '@lucide/svelte';
+  import LoadErrorHint from './LoadErrorHint.svelte';
 
   let loading = false;
   let refreshing = false;
   let error = null;
+  let errorString = null;
   let isTestMode = false;
   let cacheExpired = false;
 
@@ -22,6 +24,7 @@
     } catch (e) {
       console.error('GetEventInfo failed', e);
       error = e;
+      errorString = "Failed to load event information.";
     } finally {
       loading = false;
     }
@@ -66,7 +69,7 @@
 {#if loading}
   <div class="p-6 text-center">Loading event information...</div>
 {:else if error}
-  <div class="p-6 text-center text-red-600">Failed to load event information: {error}</div>
+  <LoadErrorHint {error} message={errorString} title="Failed to load event information" />
 {:else if eventInfo}
   <div class="max-w-4xl mx-auto mt-8">
     <!-- Event Header -->
