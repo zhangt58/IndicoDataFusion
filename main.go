@@ -5,6 +5,7 @@ import (
 	"embed"
 	"flag"
 	"fmt"
+	"runtime"
 
 	"github.com/wailsapp/wails/v2"
 	"github.com/wailsapp/wails/v2/pkg/options"
@@ -34,11 +35,14 @@ func main() {
 		fmt.Printf("No config path determined; startup will require an explicit path\n")
 	}
 
+	isMacOS := runtime.GOOS == "darwin"
+
 	// Create application with options
 	err := wails.Run(&options.App{
-		Title:  AppName,
-		Width:  1280,
-		Height: 800,
+		Title:     AppName,
+		Width:     1280,
+		Height:    800,
+		Frameless: !isMacOS,
 		AssetServer: &assetserver.Options{
 			Assets: assets,
 		},
