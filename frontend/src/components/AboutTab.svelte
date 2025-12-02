@@ -1,4 +1,6 @@
 <script>
+  import iconImage from '../assets/images/icon.png';
+
   /** @type {{ name: string, version: string, author: string, company: string, buildDate: string } | null } */
   export let appInfo = null;
   /** @type {(e?: any) => void} */
@@ -11,7 +13,7 @@
     <div class="text-center">
       <div class="inline-flex items-center justify-center mb-1">
         <img
-          src="/src/assets/images/icon.png"
+          src={ iconImage }
           alt="{appInfo.name} Icon"
           class="w-30 h-30 object-contain"
         />
