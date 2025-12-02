@@ -65,7 +65,7 @@
 {:else if error}
   <LoadErrorHint {error} message="Failed to load abstracts." />
 {:else}
-  <div class="fixed bg-sky-300 dark:bg-sky-800 top-2 left-2 shadow-md px-2 py-1 rounded-sm flex items-center gap-2 z-10">
+  <div class="fixed bg-sky-300 dark:bg-sky-800 top-12 left-2 shadow-md px-2 py-1 rounded-sm flex items-center gap-2 z-10">
     <h2 class="text-xl font-semibold text-gray-800 dark:text-gray-100">Abstracts ({abstractData.length})</h2>
     <div class="flex gap-1 ml-2">
       {#if !isTestMode}
