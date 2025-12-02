@@ -9,6 +9,7 @@
     import ContributionPage from './pages/ContributionPage.svelte';
     import EventInfoPage from './pages/EventInfoPage.svelte';
     import Settings from './components/Settings.svelte';
+    import TitleBar from './components/TitleBar.svelte';
 
     let Router = LocalRouter;
 
@@ -67,11 +68,14 @@
   });
 </script>
 
-<div class="flex min-h-screen">
+<!-- Custom Title Bar for frameless window -->
+<TitleBar />
+
+<div class="flex min-h-screen pt-12" style="overflow: hidden; height: 100vh;"> <!-- Ensure the outer container takes full viewport height -->
 
   {#if isSidebarOpen}
   <!-- horizontal quick buttons left of the toggle -->
-  <div class="fixed top-2 right-4 z-50 flex items-center gap-2 animate-slide-in">
+  <div class="fixed top-12 right-4 z-40 flex items-center gap-2 animate-slide-in"> <!-- z-40 so titlebar (z-50) remains on top -->
     <button
       on:click={() => quickGoto('/')}
       class="flex items-center gap-2 bg-white/50 dark:bg-gray-800/50 border border-gray-200/60 dark:border-gray-700/60 rounded px-3 py-2 text-sm shadow-sm hover:bg-white/70 transition-all duration-200 hover:scale-105"
@@ -131,7 +135,7 @@
     </button>
   </div>
   {:else}
-  <div class="fixed top-2 right-4 z-50 flex items-center gap-2 animate-fade-in">
+  <div class="fixed top-12 right-4 z-40 flex items-center gap-2 animate-fade-in">
     <button
       on:click={toggleSidebar}
       class="pointer-events-auto bg-white/60 dark:bg-gray-800/60 border border-gray-200/70 dark:border-gray-700/60 rounded px-3 py-2 shadow-md backdrop-blur-sm hover:bg-white/70 transition-all duration-200 hover:scale-110 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
@@ -146,8 +150,11 @@
 
 
 
-<div class="flex-1 p-6">
-  <svelte:component this={Router} {routes} />
+<div class="flex-1 p-6 pr-2 overflow-auto">
+  <!-- Make the page content scroll inside the area below the fixed titlebar -->
+  <div class="w-full pr-5 pb-6">
+    <svelte:component this={Router} {routes} />
+  </div>
 </div>
 </div>
 

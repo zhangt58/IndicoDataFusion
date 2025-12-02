@@ -55,6 +55,9 @@
     html, body {
         height: 100%;
         margin: 0;
+        -webkit-border-radius: 12px;
+        border-radius: 12px;
+        overflow: hidden;
     }
 
     /* Light theme background */
@@ -67,5 +70,13 @@
     .dark, html.dark {
         background-color: #0f172a; /* slate-900 */
         color-scheme: dark;
+    }
+
+    #app {
+        border-radius: 12px;
+        overflow: hidden;
+        background-color: inherit;
+        -webkit-border-radius: 12px;
+        position: relative;
     }
 }
