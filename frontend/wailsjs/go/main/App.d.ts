@@ -9,6 +9,8 @@ export function ApplyStructuredConfigUI(arg1:backend.ConfigDataUI):Promise<void>
 
 export function ClearCache():Promise<void>;
 
+export function DeleteCacheEntry(arg1:string):Promise<void>;
+
 export function DetermineConfigPath(arg1:string):Promise<string>;
 
 export function GetAbstractByID(arg1:number):Promise<backend.AbstractData>;

@@ -354,8 +354,29 @@ func (a *App) RefreshCache(key string) error {
 
 	// Emit event to notify frontend
 	runtime.EventsEmit(a.ctx, "cache:updated", map[string]interface{}{
-		"key":    key,
-		"action": "refreshed",
+		"key":              key,
+		"action":           "refreshed",
+		"data_source_name": a.handler.GetDataSourceName(),
+	})
+
+	return nil
+}
+
+// DeleteCacheEntry removes a specific entry from cache
+func (a *App) DeleteCacheEntry(key string) error {
+	if a.handler == nil {
+		return errors.Errorf("data handler not initialized")
+	}
+
+	if err := a.handler.DeleteCacheEntry(key); err != nil {
+		return errors.Wrap(err, "failed to delete cache entry")
+	}
+
+	// Emit event to notify frontend
+	runtime.EventsEmit(a.ctx, "cache:updated", map[string]interface{}{
+		"key":              key,
+		"action":           "deleted",
+		"data_source_name": a.handler.GetDataSourceName(),
 	})
 
 	return nil
@@ -422,31 +443,37 @@ func (a *App) shutdown(ctx context.Context) {
 	}
 }
 
-// registerCacheCallbacks sets up the handler callbacks to forward cache delete/evict events to the frontend.
+// registerCacheCallbacks sets up the handler callbacks to forward cache expiry/evict events to the frontend.
 func (a *App) registerCacheCallbacks() {
 	if a == nil || a.handler == nil {
 		return
 	}
 
-	a.handler.SetCacheOnDelete(func(fullKey string) {
+	a.handler.SetCacheOnExpiry(func(fullKey string) {
 		displayKey := fullKey
+		dataSourceName := ""
 		if idx := strings.Index(fullKey, ":"); idx != -1 {
+			dataSourceName = fullKey[:idx]
 			displayKey = fullKey[idx+1:]
 		}
 		runtime.EventsEmit(a.ctx, "cache:updated", map[string]interface{}{
-			"key":    displayKey,
-			"action": "expired",
+			"key":              displayKey,
+			"action":           "expired",
+			"data_source_name": dataSourceName,
 		})
 	})
 
 	a.handler.SetCacheOnEvict(func(fullKey string) {
 		displayKey := fullKey
+		dataSourceName := ""
 		if idx := strings.Index(fullKey, ":"); idx != -1 {
+			dataSourceName = fullKey[:idx]
 			displayKey = fullKey[idx+1:]
 		}
 		runtime.EventsEmit(a.ctx, "cache:updated", map[string]interface{}{
-			"key":    displayKey,
-			"action": "evicted",
+			"key":              displayKey,
+			"action":           "evicted",
+			"data_source_name": dataSourceName,
 		})
 	})
 }

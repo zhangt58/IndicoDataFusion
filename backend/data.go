@@ -161,10 +161,28 @@ func (h *DataSourceHandler) GetInfo(ctx context.Context) (*Event, error) {
 	// Check cache first in API mode
 	if h.cache != nil {
 		if cached, found := h.cache.Get("event_info"); found {
-			log.Printf("Using cached event info")
+			log.Printf("Using cached event info (type: %T)", cached)
+			// Try direct type assertion first
 			if event, ok := cached.(*Event); ok {
+				log.Printf("Successfully retrieved event info from cache")
 				return event, nil
 			}
+			// Type assertion failed - likely due to JSON unmarshaling
+			// Try to convert via JSON re-marshaling
+			log.Printf("Direct type assertion failed, attempting JSON conversion...")
+			jsonData, err := json.Marshal(cached)
+			if err == nil {
+				var event Event
+				if err := json.Unmarshal(jsonData, &event); err == nil {
+					log.Printf("Successfully converted event info from cache via JSON")
+					return &event, nil
+				}
+			}
+			// Conversion failed - cache data corrupted, delete and refetch
+			log.Printf("Warning: cached event_info has wrong type and conversion failed (expected *Event, got %T), deleting and refetching", cached)
+			h.cache.Delete("event_info")
+		} else {
+			log.Printf("No cached event_info found for this data source")
 		}
 	}
 
@@ -221,10 +239,28 @@ func (h *DataSourceHandler) GetAbstracts(ctx context.Context) ([]AbstractData, e
 	// Check cache first in API mode
 	if h.cache != nil {
 		if cached, found := h.cache.Get("abstracts"); found {
-			log.Printf("Using cached abstracts")
+			log.Printf("Using cached abstracts (type: %T)", cached)
+			// Try direct type assertion first
 			if abstracts, ok := cached.([]AbstractData); ok {
+				log.Printf("Successfully retrieved %d abstracts from cache", len(abstracts))
 				return abstracts, nil
 			}
+			// Type assertion failed - likely due to JSON unmarshaling
+			// Try to convert via JSON re-marshaling
+			log.Printf("Direct type assertion failed, attempting JSON conversion...")
+			jsonData, err := json.Marshal(cached)
+			if err == nil {
+				var abstracts []AbstractData
+				if err := json.Unmarshal(jsonData, &abstracts); err == nil {
+					log.Printf("Successfully converted %d abstracts from cache via JSON", len(abstracts))
+					return abstracts, nil
+				}
+			}
+			// Conversion failed - cache data corrupted, delete and refetch
+			log.Printf("Warning: cached abstracts has wrong type and conversion failed (expected []AbstractData, got %T), deleting and refetching", cached)
+			h.cache.Delete("abstracts")
+		} else {
+			log.Printf("No cached abstracts found for this data source")
 		}
 	}
 
@@ -317,10 +353,28 @@ func (h *DataSourceHandler) GetContributions(ctx context.Context) ([]Contributio
 	// Check cache first in API mode
 	if h.cache != nil {
 		if cached, found := h.cache.Get("contributions"); found {
-			log.Printf("Using cached contributions")
+			log.Printf("Using cached contributions (type: %T)", cached)
+			// Try direct type assertion first
 			if contribs, ok := cached.([]ContributionData); ok {
+				log.Printf("Successfully retrieved %d contributions from cache", len(contribs))
 				return contribs, nil
 			}
+			// Type assertion failed - likely due to JSON unmarshaling
+			// Try to convert via JSON re-marshaling
+			log.Printf("Direct type assertion failed, attempting JSON conversion...")
+			jsonData, err := json.Marshal(cached)
+			if err == nil {
+				var contribs []ContributionData
+				if err := json.Unmarshal(jsonData, &contribs); err == nil {
+					log.Printf("Successfully converted %d contributions from cache via JSON", len(contribs))
+					return contribs, nil
+				}
+			}
+			// Conversion failed - cache data corrupted, delete and refetch
+			log.Printf("Warning: cached contributions has wrong type and conversion failed (expected []ContributionData, got %T), deleting and refetching", cached)
+			h.cache.Delete("contributions")
+		} else {
+			log.Printf("No cached contributions found for this data source")
 		}
 	}
 
@@ -510,6 +564,17 @@ func (h *DataSourceHandler) RefreshCache(ctx context.Context, key string) error 
 	return nil
 }
 
+// DeleteCacheEntry removes a specific entry from cache
+func (h *DataSourceHandler) DeleteCacheEntry(key string) error {
+	if h.cache == nil {
+		return fmt.Errorf("cache not initialized")
+	}
+
+	h.cache.Delete(key)
+	log.Printf("Cache entry deleted: %s", key)
+	return nil
+}
+
 // ClearCache removes all entries from cache and deletes the cache file
 func (h *DataSourceHandler) ClearCache() error {
 	if h.cache == nil {
@@ -554,6 +619,14 @@ func (h *DataSourceHandler) IsTestMode() bool {
 	return h.isTestMode
 }
 
+// GetDataSourceName returns the name of the data source
+func (h *DataSourceHandler) GetDataSourceName() string {
+	if h.config == nil {
+		return ""
+	}
+	return h.config.Name
+}
+
 // GetCacheEntries returns all cache entries with metadata grouped by data source
 func (h *DataSourceHandler) GetCacheEntries() map[string][]*CacheEntry {
 	if h.cache == nil {
@@ -562,12 +635,13 @@ func (h *DataSourceHandler) GetCacheEntries() map[string][]*CacheEntry {
 	return h.cache.GetAllEntriesWithMetadata()
 }
 
-// SetCacheOnDelete allows higher-level code (e.g., App) to register a callback when cache entries are deleted/expired.
-func (h *DataSourceHandler) SetCacheOnDelete(cb func(fullKey string)) {
+// SetCacheOnExpiry allows higher-level code (e.g., App) to register a callback when cache entries expire.
+// Note: This does NOT delete the entry, it only notifies about expiry.
+func (h *DataSourceHandler) SetCacheOnExpiry(cb func(fullKey string)) {
 	if h.cache == nil {
 		return
 	}
-	h.cache.SetOnDelete(cb)
+	h.cache.SetOnExpiry(cb)
 }
 
 // SetCacheOnEvict allows higher-level code to register a callback when cache entries are evicted due to size.

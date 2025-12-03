@@ -30,7 +30,7 @@
     }
   }
 
-  const { handleRefresh, handleCacheEvent, updateCacheStatus } = createCachePage(
+  const { handleRefresh, handleCacheEvent } = createCachePage(
     'contributions',
     loadData,
     (v) => { refreshing = v; },
@@ -45,12 +45,21 @@
     }
 
     await loadData();
-    cacheExpired = await updateCacheStatus();
 
     EventsOn('cache:updated', (...data) => {
       const ev = (data && data.length ? data[0] : data) || {};
-      updateCacheStatus().then(v => cacheExpired = v);
-      if (ev.action && ev.action === 'expired') return;
+
+      // Handle expired notification from backend goroutine
+      if (ev.action === 'expired' && ev.key === 'contributions') {
+        cacheExpired = true;
+        return;
+      }
+
+      // Handle refresh/delete/clear actions
+      if (ev.action === 'refreshed' && ev.key === 'contributions') {
+        cacheExpired = false;
+      }
+
       handleCacheEvent(ev);
     });
   });
