@@ -354,8 +354,9 @@ func (a *App) RefreshCache(key string) error {
 
 	// Emit event to notify frontend
 	runtime.EventsEmit(a.ctx, "cache:updated", map[string]interface{}{
-		"key":    key,
-		"action": "refreshed",
+		"key":              key,
+		"action":           "refreshed",
+		"data_source_name": a.handler.GetDataSourceName(),
 	})
 
 	return nil
@@ -373,8 +374,9 @@ func (a *App) DeleteCacheEntry(key string) error {
 
 	// Emit event to notify frontend
 	runtime.EventsEmit(a.ctx, "cache:updated", map[string]interface{}{
-		"key":    key,
-		"action": "deleted",
+		"key":              key,
+		"action":           "deleted",
+		"data_source_name": a.handler.GetDataSourceName(),
 	})
 
 	return nil
@@ -449,23 +451,29 @@ func (a *App) registerCacheCallbacks() {
 
 	a.handler.SetCacheOnExpiry(func(fullKey string) {
 		displayKey := fullKey
+		dataSourceName := ""
 		if idx := strings.Index(fullKey, ":"); idx != -1 {
+			dataSourceName = fullKey[:idx]
 			displayKey = fullKey[idx+1:]
 		}
 		runtime.EventsEmit(a.ctx, "cache:updated", map[string]interface{}{
-			"key":    displayKey,
-			"action": "expired",
+			"key":              displayKey,
+			"action":           "expired",
+			"data_source_name": dataSourceName,
 		})
 	})
 
 	a.handler.SetCacheOnEvict(func(fullKey string) {
 		displayKey := fullKey
+		dataSourceName := ""
 		if idx := strings.Index(fullKey, ":"); idx != -1 {
+			dataSourceName = fullKey[:idx]
 			displayKey = fullKey[idx+1:]
 		}
 		runtime.EventsEmit(a.ctx, "cache:updated", map[string]interface{}{
-			"key":    displayKey,
-			"action": "evicted",
+			"key":              displayKey,
+			"action":           "evicted",
+			"data_source_name": dataSourceName,
 		})
 	})
 }

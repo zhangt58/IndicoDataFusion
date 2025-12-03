@@ -619,6 +619,14 @@ func (h *DataSourceHandler) IsTestMode() bool {
 	return h.isTestMode
 }
 
+// GetDataSourceName returns the name of the data source
+func (h *DataSourceHandler) GetDataSourceName() string {
+	if h.config == nil {
+		return ""
+	}
+	return h.config.Name
+}
+
 // GetCacheEntries returns all cache entries with metadata grouped by data source
 func (h *DataSourceHandler) GetCacheEntries() map[string][]*CacheEntry {
 	if h.cache == nil {
