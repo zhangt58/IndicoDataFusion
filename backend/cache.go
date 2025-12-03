@@ -133,7 +133,7 @@ func (c *Cache) expiryNotificationWorker() {
 
 		// Invoke callbacks for newly expired entries
 		if c.onExpiry != nil && len(newlyExpired) > 0 {
-			log.Printf("expiryNotificationWorker: %d entries expired (not deleted, data still available)", len(newlyExpired))
+			log.Printf("expiryNotificationWorker: %d entries expired: %v\n", len(newlyExpired), newlyExpired)
 			for _, fk := range newlyExpired {
 				go func(fullKey string) {
 					defer func() {
