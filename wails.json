@@ -1,13 +1,13 @@
 {
   "$schema": "https://wails.io/schemas/config.v2.json",
   "name": "IndicoDataFusion",
-  "outputfilename": "IndicoDataFusion",
+  "outputfilename": "idf",
   "frontend:install": "npm install",
   "frontend:build": "npm run build",
   "frontend:dev:watcher": "npm run dev",
   "frontend:dev:serverUrl": "auto",
   "author": {
-    "name": "copilot-swe-agent[bot]",
-    "email": "198982749+Copilot@users.noreply.github.com"
+    "name": "Tong Zhang",
+    "email": "zhangt58@users.noreply.github.com"
   }
 }
