@@ -20,13 +20,14 @@
       loading = true;
       cacheStats = await GetCacheStats();
       cacheEntries = await GetCacheEntries();
-      console.log('Cache entries loaded:', cacheEntries);
-      console.log('Cache stats:', cacheStats);
 
-      // Auto-expand all data sources
+      // Only expand the active data source
       if (cacheEntries && typeof cacheEntries === 'object') {
+        const activeDataSource = cacheStats?.data_source_name;
+        expandedDataSources = {};
         Object.keys(cacheEntries).forEach(dataSourceName => {
-          expandedDataSources[dataSourceName] = true;
+          // Only expand if it's the active data source
+          expandedDataSources[dataSourceName] = (dataSourceName === activeDataSource);
         });
         expandedDataSources = { ...expandedDataSources };
       }
@@ -67,13 +68,10 @@
       console.error('Failed to check test mode', e);
     }
 
-    loadCacheInfo();
+    await loadCacheInfo();
 
     // Listen for cache update events from backend
-    EventsOn('cache:updated', (data) => {
-      console.log('Cache updated:', data);
-      successMsg = `Cache ${data.action}: ${data.key || 'all'}`;
-      setTimeout(() => { successMsg = ''; }, 3000);
+    EventsOn('cache:updated', () => {
       loadCacheInfo();
     });
   });
@@ -141,8 +139,81 @@
     return labels[key] || key;
   }
 
-  // GetCacheEntries now returns a map grouped by data source, so we use it directly
-  $: groupedEntries = cacheEntries || {};
+  // Reactive transform: compute per-entry expiry flags so template can rely on reactive fields
+  $: groupedEntries = (() => {
+    const out = {};
+    if (!cacheEntries || typeof cacheEntries !== 'object') return out;
+
+    function parseRawExpiry(raw) {
+      if (raw == null) return { raw: null, date: null };
+      // Already a Date
+      if (raw instanceof Date) return { raw, date: raw };
+      // String (ISO/RFC3339)
+      if (typeof raw === 'string') {
+        const d = new Date(raw);
+        return { raw, date: isNaN(d.getTime()) ? null : d };
+      }
+      // Number (seconds or milliseconds)
+      if (typeof raw === 'number') {
+        let ms = raw;
+        // if it looks like seconds (10 digits), convert to ms
+        if (raw > 0 && raw < 1e12) ms = raw * 1000;
+        const d = new Date(ms);
+        return { raw, date: isNaN(d.getTime()) ? null : d };
+      }
+      // Object: try common shapes (e.g., {seconds, nanos} or {sec, nsec} or {Time: '...'} )
+      if (typeof raw === 'object') {
+        try {
+          if (raw.Time && typeof raw.Time === 'string') {
+            const d = new Date(raw.Time);
+            return { raw, date: isNaN(d.getTime()) ? null : d };
+          }
+          const secs = raw.seconds ?? raw.secs ?? raw.sec ?? raw.Sec ?? raw.Seconds;
+          const nanos = raw.nanos ?? raw.nanoseconds ?? raw.Nanos ?? raw.Nanoseconds ?? 0;
+          if (typeof secs === 'number') {
+            const ms = secs * 1000 + Math.floor((nanos || 0) / 1e6);
+            const d = new Date(ms);
+            return { raw, date: isNaN(d.getTime()) ? null : d };
+          }
+          // Fallback: try to find ISO substring
+          const s = JSON.stringify(raw);
+          const match = s.match(/\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?Z?/);
+          if (match) {
+            const d = new Date(match[0]);
+            return { raw, date: isNaN(d.getTime()) ? null : d };
+          }
+        } catch (e) {
+          // ignore
+        }
+      }
+      return { raw, date: null };
+    }
+
+    Object.entries(cacheEntries).forEach(([dsName, entries]) => {
+      out[dsName] = (entries || []).map(entry => {
+        // Accept both camelCase and snake_case serialization from backend
+        const rawExpiryCandidate = entry && (entry.expiresAt ?? entry.expires_at ?? entry.expires_at_string ?? null);
+        const { date: expiryDate } = parseRawExpiry(rawExpiryCandidate);
+        const isZeroTime = expiryDate && expiryDate.getFullYear && expiryDate.getFullYear() === 1;
+        // Coerce to booleans so template sees true/false instead of null
+        const hasExpiry = !!(expiryDate && !isNaN(expiryDate.getTime()) && !isZeroTime);
+        const isExpired = !!(hasExpiry && expiryDate.getTime() < Date.now());
+        // Normalize expiresAt on returned entry so template formatTimestamp(entry.expiresAt) works
+        const normalizedExpiresAt = expiryDate ? expiryDate.toISOString() : null;
+        return { ...entry, expiresAt: normalizedExpiresAt, hasExpiry, isExpired, __expiryDate: expiryDate };
+      });
+    });
+
+    // Temporary debug: show a compact sample of computed flags to diagnose null/undefined
+    try {
+      const sample = Object.fromEntries(Object.entries(out).map(([ds, entries]) => [ds, entries.map(e => ({ key: e.key, rawExpiry: e.expiresAt, hasExpiry: e.hasExpiry, isExpired: e.isExpired }))]));
+      console.debug('groupedEntries sample:', sample);
+    } catch (err) {
+      // ignore serialization errors
+    }
+
+    return out;
+  })();
 </script>
 
 <div class="p-2 space-y-2 max-w-5xl mx-auto">
@@ -253,27 +324,23 @@
               <div class="border-t border-gray-200 dark:border-gray-700">
                 <div class="divide-y divide-gray-200 dark:divide-gray-700">
                   {#each entries as entry (entry.key)}
-                    {@const isExpired = entry.expiresAt && new Date(entry.expiresAt) < new Date()}
-                    <div class="p-3 hover:bg-gray-50 dark:hover:bg-gray-750">
+                    <div class="p-3 {entry.isExpired ? 'bg-red-50/50 dark:bg-red-900/10' : ''} hover:bg-gray-50 dark:hover:bg-gray-750">
                       <div class="flex items-start justify-between">
                         <div class="flex items-start gap-3 flex-1">
-                          <div class="w-2 h-2 {isExpired ? 'bg-red-500' : 'bg-green-500'} rounded-full mt-2"></div>
+                          <div class="w-2 h-2 {entry.isExpired ? 'bg-red-500' : 'bg-green-500'} rounded-full mt-2"></div>
                           <div class="flex-1 min-w-0">
                             <div class="font-medium text-gray-900 dark:text-gray-100">
                               {getCacheKeyLabel(entry.key)}
-                            </div>
-                            <div class="text-sm text-gray-500 dark:text-gray-400 font-mono">
-                              {entry.key}
                             </div>
                             <div class="mt-1 space-y-0.5">
                               <div class="text-xs text-gray-600 dark:text-gray-400">
                                 <span class="font-medium">Last Updated:</span> {formatTimestamp(entry.timestamp)}
                                 <span class="ml-2 text-gray-500 dark:text-gray-500">({formatTimeAgo(entry.timestamp)})</span>
                               </div>
-                              {#if entry.expiresAt}
-                                <div class="text-xs {isExpired ? 'text-red-600 dark:text-red-400' : 'text-gray-600 dark:text-gray-400'}">
-                                  <span class="font-medium">{isExpired ? 'Expired:' : 'Expires:'}</span> {formatTimestamp(entry.expiresAt)}
-                                  {#if isExpired}
+                              {#if entry.hasExpiry}
+                                <div class="text-xs {entry.isExpired ? 'text-red-600 dark:text-red-400' : 'text-gray-600 dark:text-gray-400'}">
+                                  <span class="font-medium">{entry.isExpired ? 'Expired:' : 'Expires:'}</span> {formatTimestamp(entry.expiresAt)}
+                                  {#if entry.isExpired}
                                     <span class="ml-2 px-2 py-0.5 bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 rounded text-xs font-semibold">EXPIRED</span>
                                   {/if}
                                 </div>
