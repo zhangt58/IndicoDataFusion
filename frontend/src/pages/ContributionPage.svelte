@@ -1,6 +1,6 @@
 <script>
   import { onMount, onDestroy } from 'svelte';
-  import { GetContributions, IsTestMode } from '../../wailsjs/go/main/App';
+  import { GetContributions, IsTestMode, GetCacheStats } from '../../wailsjs/go/main/App';
   import { EventsOn, EventsOff } from '../../wailsjs/runtime/runtime';
   import { createCachePage } from '../utils/cacheUtils.js';
   import { LayoutGrid, CreditCard, RefreshCw } from '@lucide/svelte';
@@ -46,8 +46,21 @@
 
     await loadData();
 
+    // Get current data source name from cache stats
+    let currentDataSource = null;
+    try {
+      const stats = await GetCacheStats();
+      currentDataSource = stats?.data_source_name || null;
+    } catch (e) {
+      currentDataSource = null;
+    }
+
     EventsOn('cache:updated', (...data) => {
       const ev = (data && data.length ? data[0] : data) || {};
+
+      if (ev.data_source_name && currentDataSource && ev.data_source_name !== currentDataSource) {
+        return;
+      }
 
       // Handle expired notification from backend goroutine
       if (ev.action === 'expired' && ev.key === 'contributions') {

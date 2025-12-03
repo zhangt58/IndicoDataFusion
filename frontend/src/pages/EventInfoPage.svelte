@@ -1,6 +1,6 @@
 <script>
   import { onMount, onDestroy } from 'svelte';
-  import { GetEventInfo, IsTestMode } from '../../wailsjs/go/main/App';
+  import { GetEventInfo, IsTestMode, GetCacheStats } from '../../wailsjs/go/main/App';
   import { EventsOn, EventsOff } from '../../wailsjs/runtime/runtime';
   import { formatDate } from '../utils/dateUtils.js';
   import { createCachePage } from '../utils/cacheUtils.js';
@@ -15,6 +15,7 @@
   let cacheExpired = false;
 
   let eventInfo = null;
+  let currentDataSource = null;
 
   async function loadData() {
     loading = true;
@@ -46,8 +47,22 @@
 
     await loadData();
 
+    // Get current data source name from cache stats so we can ignore cache events from other data sources
+    try {
+      const stats = await GetCacheStats();
+      currentDataSource = stats?.data_source_name || null;
+    } catch (e) {
+      console.warn('Failed to get cache stats for data source name', e);
+      currentDataSource = null;
+    }
+
     EventsOn('cache:updated', (...data) => {
       const ev = (data && data.length ? data[0] : data) || {};
+
+      // If the event includes a data_source_name and it doesn't match our current data source, ignore it
+      if (ev.data_source_name && currentDataSource && ev.data_source_name !== currentDataSource) {
+        return;
+      }
 
       // Handle expired notification from backend goroutine
       if (ev.action === 'expired' && ev.key === 'event_info') {
