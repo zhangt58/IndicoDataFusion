@@ -1,9 +1,10 @@
 <script>
-  import { Table } from '@flowbite-svelte-plugins/datatable';
+  import { VirtualList } from 'svelte-virtuallists';
   import ContributionDetailsDialog from './ContributionDetailsDialog.svelte';
   import { 
     getTableItems, 
-    createDataTableOptions 
+    createDataTableOptions,
+    rowRender
   } from './ContributionTableItem.js';
 
   /** @type {Array} */
@@ -15,10 +16,17 @@
 
   // Find contribution by ID
   function findContributionById(id) {
-    return contributionData.find(c => (c.friendly_id || c.id) == id);
+    return contributionData.find(c => String(c.friendly_id || c.id) === String(id));
   }
 
-  // Handle clicks on the table
+  // Open contribution details by id (used by title button)
+  function openContribution(id) {
+    const sid = String(id);
+    selectedContribution = findContributionById(sid);
+    if (selectedContribution) showContributionDialog = true;
+  }
+
+  // Handle clicks on the table (keeps existing delegation behavior)
   function handleTableClick(event) {
     const target = event.target;
     
@@ -37,15 +45,230 @@
     }
   }
 
+  // --- Virtualized table client-side controls (search/sort/pagination) ---
+  let searchQuery = '';
+  let perPage = 25;
+  let currentPage = 1;
+  let sortKey = null;
+  let sortDir = 'asc';
+
+  // Visible columns for contributions (matches ContributionTableItem.js visibleColumnNames)
+  const visibleKeys = ['ID','Code','Title','Type','Session','Track','Start','Duration','Room','Speakers'];
+
   $: tableItems = getTableItems(contributionData);
-  $: dataTableOptions = createDataTableOptions();
+  $: dataTableOptions = createDataTableOptions(); // kept for potential external use
+
+  // Filtering
+  $: filteredItems = tableItems.filter(item => {
+    if (!searchQuery) return true;
+    const q = searchQuery.toLowerCase();
+    return visibleKeys.some(k => String(item[k] ?? '').toLowerCase().includes(q));
+  });
+
+  // Sorting (string compare for all columns)
+  function compare(a,b,key) {
+    const sa = String(a[key] ?? '').toLowerCase();
+    const sb = String(b[key] ?? '').toLowerCase();
+    if (sa < sb) return -1;
+    if (sa > sb) return 1;
+    return 0;
+  }
+
+  $: sortedItems = (() => {
+    if (!sortKey) return filteredItems;
+    const copy = filteredItems.slice();
+    copy.sort((a,b) => {
+      const res = compare(a,b,sortKey);
+      return sortDir === 'asc' ? res : -res;
+    });
+    return copy;
+  })();
+
+  // Pagination
+  $: totalPages = Math.max(1, Math.ceil(sortedItems.length / perPage));
+  $: currentPage = Math.min(currentPage, totalPages);
+  $: paginatedItems = sortedItems.slice((currentPage-1)*perPage, currentPage*perPage);
+  $: visibleItems = paginatedItems;
+
+  function goPrev() { if (currentPage > 1) currentPage -= 1; }
+  function goNext() { if (currentPage < totalPages) currentPage += 1; }
+  function setSort(key) {
+    if (sortKey === key) {
+      sortDir = sortDir === 'asc' ? 'desc' : 'asc';
+    } else {
+      sortKey = key;
+      sortDir = 'asc';
+    }
+  }
+
+  // Helper action to apply the original rowRender to a rendered <tr>
+  function applyRowRender(node, payload) {
+    let { item, index } = payload || {};
+
+    function buildSyntheticRow(it) {
+      const cells = [];
+      // Build cells matching ContributionTableItem.js expected data indices 0..14
+      cells[0] = { data: it.ID ?? '' };
+      cells[1] = { data: it.Code ?? '' };
+      cells[2] = { data: it.Title ?? '' };
+      cells[3] = { data: it.Type ?? '' };
+      cells[4] = { data: it.Session ?? '' };
+      cells[5] = { data: it.Track ?? '' };
+      cells[6] = { data: it.StartDate ?? '' };
+      cells[7] = { data: it.Duration ?? '' };
+      cells[8] = { data: it.Location ?? '' };
+      cells[9] = { data: it.Room ?? '' };
+      cells[10] = { data: it.Speakers ?? '' };
+      cells[11] = { data: it.SpeakersTooltip ?? '' };
+      cells[12] = { data: it.Authors ?? '' };
+      cells[13] = { data: it.AuthorsTooltip ?? '' };
+      cells[14] = { data: it.URL ?? '' };
+      return { cells };
+    }
+
+    // Build a plain virtual `tr` whose structure matches what rowRender expects
+    function buildVirtualTr(visibleCount) {
+      const vtr = { childNodes: [] };
+      for (let i = 0; i < visibleCount; i++) {
+        // Each cell has childNodes; the first child has an attributes object that rowRender will mutate
+        vtr.childNodes[i] = { childNodes: [ { attributes: {} } ] };
+      }
+      return vtr;
+    }
+
+    function apply(it) {
+      // First try to call the original rowRender but using a virtual tr object
+      try {
+        if (typeof rowRender === 'function') {
+          const synthetic = buildSyntheticRow(it);
+          // create a virtual tr with slots matching the visible TDs in the real DOM
+          const visibleCount = Math.max((node.children && node.children.length) || 0, (synthetic.cells || []).length || 0);
+          const vtr = buildVirtualTr(visibleCount);
+          // Call rowRender with the synthetic row and virtual tr. rowRender will write into vtr.childNodes[x].childNodes[0].attributes
+          rowRender(synthetic, vtr, index);
+
+          // Copy any attributes set by rowRender from vtr into the real DOM elements
+          for (let i = 0; i < vtr.childNodes.length; i++) {
+            const vcell = vtr.childNodes[i];
+            if (!vcell || !vcell.childNodes || !vcell.childNodes[0]) continue;
+            const attrs = vcell.childNodes[0].attributes || {};
+            const td = node.children && node.children[i];
+            if (!td) continue;
+            // Prefer the first element child inside the TD (e.g., button, a, span)
+            const el = td.firstElementChild || td.querySelector && td.querySelector('*') || td;
+            for (const name in attrs) {
+              if (!Object.prototype.hasOwnProperty.call(attrs, name)) continue;
+              try {
+                el.setAttribute(name, attrs[name]);
+              } catch (e) {
+                // ignore if setAttribute fails for any reason
+              }
+            }
+          }
+          return;
+        }
+      } catch (err) {
+        console.error('rowRender call failed, falling back to manual apply:', err);
+      }
+
+      // fallback manual attribute updates
+      try {
+        const titleCell = node.children[2];
+        const titleAnchor = titleCell && (titleCell.querySelector('.title-link') || titleCell.querySelector('a'));
+        if (titleAnchor) {
+          if (it.ID != null) titleAnchor.setAttribute('data-id', String(it.ID));
+          if (it.Title != null) titleAnchor.setAttribute('data-title', String(it.Title));
+        }
+
+        const speakersCell = node.children[9];
+        const speakersSpan = speakersCell && (speakersCell.querySelector('.speakers-cell') || speakersCell.querySelector('span'));
+        if (speakersSpan && it.SpeakersTooltip != null) {
+          speakersSpan.setAttribute('title', String(it.SpeakersTooltip));
+        }
+      } catch (err) {
+        console.error('applyRowRender fallback error', err);
+      }
+    }
+
+    // initial apply
+    apply(item);
+
+    return {
+      update(newPayload) {
+        ({ item, index } = newPayload || {});
+        apply(item);
+      },
+      destroy() {}
+    };
+  }
 </script>
 
 <!-- svelte-ignore a11y_click_events_have_key_events -->
 <!-- svelte-ignore a11y_no_static_element_interactions -->
-<section class="mt-12 p-4 contribution-table-view" on:click={handleTableClick}>
-  <Table items={tableItems} dataTableOptions={dataTableOptions} />
-</section>
+<div class="mt-12 p-4 contribution-table-view">
+  <!-- Controls -->
+  <div class="flex items-center gap-4 p-2">
+    <input class="datatable-input" placeholder="Search..." bind:value={searchQuery} />
+    <label class="text-sm">Per page:
+      <select bind:value={perPage} class="datatable-selector">
+        <option value="10">10</option>
+        <option value="25">25</option>
+        <option value="50">50</option>
+        <option value="100">100</option>
+      </select>
+    </label>
+    <div class="ml-auto text-sm">
+      Page {currentPage} / {totalPages}
+      <button on:click={goPrev} class="datatable-selector" disabled={currentPage<=1}>Prev</button>
+      <button on:click={goNext} class="datatable-selector" disabled={currentPage>=totalPages}>Next</button>
+    </div>
+  </div>
+
+  <!-- Virtualized table -->
+  <section on:click={handleTableClick} style="flex:1;overflow:auto;">
+    {#if visibleItems && visibleItems.length > 0}
+      <VirtualList items={visibleItems} isTable class="datatable-table" style="width:100%;height:100%">
+        {#snippet header()}
+          <thead>
+            <tr>
+              {#each visibleKeys as key}
+                <th class="cursor-pointer select-none" on:click={() => setSort(key)} aria-sort={sortKey === key ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'}>
+                  <div style="display:inline-flex;align-items:center;gap:0.25rem;">
+                    <span>{key}</span>
+                    {#if sortKey === key}
+                      <span aria-hidden="true">{sortDir === 'asc' ? '▲' : '▼'}</span>
+                    {/if}
+                  </div>
+                </th>
+              {/each}
+            </tr>
+          </thead>
+        {/snippet}
+
+        {#snippet vl_slot({ index, item })}
+          <tr use:applyRowRender={{ item, index }}>
+            <td>{item.ID}</td>
+            <td>{item.Code}</td>
+            <td><button type="button" class="title-link" data-id={item.ID} on:click={() => openContribution(item.ID)}>{item.Title}</button></td>
+            <td>{item.Type}</td>
+            <td>{item.Session}</td>
+            <td>
+              {#if item.Track}
+                <button type="button" class="track-badge track-link" data-tracks={item.Track}>{item.Track}</button>
+              {/if}
+            </td>
+            <td>{item.StartDate}</td>
+            <td>{item.Duration}</td>
+            <td>{item.Room}</td>
+            <td>{#if item.Speakers}<span class="speakers-cell" title={item.SpeakersTooltip}>{item.Speakers}</span>{/if}</td>
+          </tr>
+        {/snippet}
+      </VirtualList>
+    {:else}
+      <div class="p-4 text-center text-slate-500">No contributions to display.</div>
+    {/if}
+  </section>
+</div>
 
 <!-- Contribution Detail Dialog -->
 <ContributionDetailsDialog bind:open={showContributionDialog} contribution={selectedContribution} />
@@ -56,6 +279,14 @@
     color: #0d6efd;
     text-decoration: none;
     cursor: pointer;
+    /* Make buttons behave like left-aligned links and align content to the top-left */
+    display: inline-flex !important;
+    align-items: flex-start !important; /* vertical alignment inside the button */
+    justify-content: flex-start !important; /* horizontal alignment */
+    text-align: left !important; /* ensure multi-line text is left-aligned */
+    padding: 0.0rem !important; /* remove extra button padding that can change alignment */
+    background: transparent !important; /* look like a link */
+    border: none !important;
   }
 
   :global(.title-link:hover) {
