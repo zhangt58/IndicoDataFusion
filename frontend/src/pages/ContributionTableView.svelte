@@ -1,5 +1,5 @@
 <script>
-  import { VirtualList } from 'svelte-virtuallists';
+  import VirtualDataTable from '../components/VirtualDataTable.svelte';
   import ContributionDetailsDialog from './ContributionDetailsDialog.svelte';
   import { 
     getTableItems, 
@@ -226,49 +226,28 @@
 
   <!-- Virtualized table -->
   <section on:click={handleTableClick} style="flex:1;overflow:auto;">
-    {#if visibleItems && visibleItems.length > 0}
-      <VirtualList items={visibleItems} isTable class="datatable-table" style="width:100%;height:100%">
-        {#snippet header()}
-          <thead>
-            <tr>
-              {#each visibleKeys as key}
-                <th class="cursor-pointer select-none" on:click={() => setSort(key)} aria-sort={sortKey === key ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'}>
-                  <div style="display:inline-flex;align-items:center;gap:0.25rem;">
-                    <span>{key}</span>
-                    {#if sortKey === key}
-                      <span aria-hidden="true">{sortDir === 'asc' ? '▲' : '▼'}</span>
-                    {/if}
-                  </div>
-                </th>
-              {/each}
-            </tr>
-          </thead>
-        {/snippet}
-
-        {#snippet vl_slot({ index, item })}
-          <tr use:applyRowRender={{ item, index }}>
-            <td>{item.ID}</td>
-            <td>{item.Code}</td>
-            <td><button type="button" class="title-link" data-id={item.ID} on:click={() => openContribution(item.ID)}>{item.Title}</button></td>
-            <td>{item.Type}</td>
-            <td>{item.Session}</td>
-            <td>
-              {#if item.Track}
-                <button type="button" class="track-badge track-link" data-tracks={item.Track}>{item.Track}</button>
-              {/if}
-            </td>
-            <td>{item.StartDate}</td>
-            <td>{item.Duration}</td>
-            <td>{item.Room}</td>
-            <td>{#if item.Speakers}<span class="speakers-cell" title={item.SpeakersTooltip}>{item.Speakers}</span>{/if}</td>
-          </tr>
-        {/snippet}
-      </VirtualList>
-    {:else}
-      <div class="p-4 text-center text-slate-500">No contributions to display.</div>
-    {/if}
-  </section>
-</div>
+    <VirtualDataTable items={visibleItems} {visibleKeys} bind:sortKey bind:sortDir className="datatable-table" style="width:100%;height:100%" on:sort={(e) => setSort(e.detail)}>
+      <svelte:fragment slot="default" let:item let:index>
+        <tr use:applyRowRender={{ item, index }}>
+          <td>{item.ID}</td>
+          <td>{item.Code}</td>
+          <td><button type="button" class="title-link" data-id={item.ID} on:click={() => openContribution(item.ID)}>{item.Title}</button></td>
+          <td>{item.Type}</td>
+          <td>{item.Session}</td>
+          <td>
+            {#if item.Track}
+              <button type="button" class="track-badge track-link" data-tracks={item.Track}>{item.Track}</button>
+            {/if}
+          </td>
+          <td>{item.StartDate}</td>
+          <td>{item.Duration}</td>
+          <td>{item.Room}</td>
+          <td>{#if item.Speakers}<span class="speakers-cell" title={item.SpeakersTooltip}>{item.Speakers}</span>{/if}</td>
+        </tr>
+      </svelte:fragment>
+    </VirtualDataTable>
+   </section>
+ </div>
 
 <!-- Contribution Detail Dialog -->
 <ContributionDetailsDialog bind:open={showContributionDialog} contribution={selectedContribution} />

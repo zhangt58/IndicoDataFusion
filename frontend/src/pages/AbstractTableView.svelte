@@ -1,5 +1,5 @@
 <script>
-  import { VirtualList } from 'svelte-virtuallists';
+  import VirtualDataTable from '../components/VirtualDataTable.svelte';
   import AbstractDetailsDialog from './AbstractDetailsDialog.svelte';
   import TrackDetailsDialog from './TrackDetailsDialog.svelte';
   import { 
@@ -267,65 +267,38 @@
 
   <!-- Table area: grow to fill remaining viewport space -->
   <section class="mt-2 p-4 abstract-table-view" style="flex:1;display:flex;flex-direction:column;overflow:hidden;">
-    {#if visibleItems && visibleItems.length > 0}
-      <!-- Virtualized table: header rendered once, rows rendered only when visible -->
-      <VirtualList items={visibleItems} isTable class="datatable-table" style="width:100%;height:100%;">
-        {#snippet header()}
-          <!-- Custom header so clicking column headers can sort and the header can be sticky -->
-          <thead>
-            <tr>
-              {#each visibleKeys as key}
-                <th
-                  class="cursor-pointer select-none"
-                  on:click={() => setSort(key)}
-                  aria-sort={sortKey === key ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'}
-                >
-                  <div style="display:inline-flex;align-items:center;gap:0.25rem;">
-                    <span>{key}</span>
-                    {#if sortKey === key}
-                      <span aria-hidden="true">{sortDir === 'asc' ? '▲' : '▼'}</span>
-                    {/if}
-                  </div>
-                </th>
-              {/each}
-            </tr>
-          </thead>
-        {/snippet}
-
-        {#snippet vl_slot({ index, item })}
-          <tr use:applyRowRender={{ item, index }}>
-            <td>{item.ID}</td>
-            <td>
-              <button type="button" class="title-link" on:click={() => openAbstract(item.ID)} data-id={item.ID} data-title={item.Title}>{item.Title}</button>
-            </td>
-            <td>
-              {#if item.State}
-                <span class={item.State.toLowerCase() === 'accepted' ? 'state-badge state-accepted' : (item.State.toLowerCase() === 'rejected' ? 'state-badge state-rejected' : 'state-badge state-other')}>{item.State}</span>
-              {/if}
-            </td>
-            <td>{item.Submitter}</td>
-            <td>{item.Affiliation}</td>
-            <td>
-              {#if item.Track}
-                <button type="button" class={'track-badge ' + (item.TrackType === 'accepted' ? 'track-accepted' : 'track-reviewed') + ' track-link'} on:click={() => openTrack(item.TrackFull)} data-tracks={item.TrackFull}>{item.Track}</button>
-              {/if}
-            </td>
-            <td>{item.Type}</td>
-            <td>{item.Score}</td>
-            <td>{item.Submitted}</td>
-            <td>
-              {#if item.Authors}
-                <span class="authors-cell" title={item.AuthorsTooltip}>{item.Authors}</span>
-              {/if}
-            </td>
-          </tr>
-        {/snippet}
-      </VirtualList>
-    {:else}
-      <div class="p-4 text-center text-slate-500">No abstracts to display.</div>
-    {/if}
-  </section>
-</div>
+    <VirtualDataTable items={visibleItems} {visibleKeys} bind:sortKey bind:sortDir className="datatable-table" style="width:100%;height:100%" on:sort={(e) => setSort(e.detail)}>
+      <svelte:fragment slot="default" let:item let:index>
+        <tr use:applyRowRender={{ item, index }}>
+          <td>{item.ID}</td>
+          <td>
+            <button type="button" class="title-link" on:click={() => openAbstract(item.ID)} data-id={item.ID} data-title={item.Title}>{item.Title}</button>
+          </td>
+          <td>
+            {#if item.State}
+              <span class={item.State.toLowerCase() === 'accepted' ? 'state-badge state-accepted' : (item.State.toLowerCase() === 'rejected' ? 'state-badge state-rejected' : 'state-badge state-other')}>{item.State}</span>
+            {/if}
+          </td>
+          <td>{item.Submitter}</td>
+          <td>{item.Affiliation}</td>
+          <td>
+            {#if item.Track}
+              <button type="button" class={'track-badge ' + (item.TrackType === 'accepted' ? 'track-accepted' : 'track-reviewed') + ' track-link'} on:click={() => openTrack(item.TrackFull)} data-tracks={item.TrackFull}>{item.Track}</button>
+            {/if}
+          </td>
+          <td>{item.Type}</td>
+          <td>{item.Score}</td>
+          <td>{item.Submitted}</td>
+          <td>
+            {#if item.Authors}
+              <span class="authors-cell" title={item.AuthorsTooltip}>{item.Authors}</span>
+            {/if}
+          </td>
+        </tr>
+      </svelte:fragment>
+    </VirtualDataTable>
+   </section>
+ </div>
 
 <!-- Abstract Detail Dialog -->
 <AbstractDetailsDialog bind:open={showAbstractDialog} abstract={selectedAbstract} />
