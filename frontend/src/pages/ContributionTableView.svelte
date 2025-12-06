@@ -6,6 +6,9 @@
     createDataTableOptions,
     rowRender
   } from './ContributionTableItem.js';
+  import SessionBadge from './SessionBadge.svelte';
+  import TrackBadge from './TrackBadge.svelte';
+  import TypeBadge from './TypeBadge.svelte';
 
   /** @type {Array} */
   export let contributionData = [];
@@ -232,11 +235,19 @@
           <td>{item.ID}</td>
           <td>{item.Code}</td>
           <td><button type="button" class="title-link" data-id={item.ID} on:click={() => openContribution(item.ID)}>{item.Title}</button></td>
-          <td>{item.Type}</td>
-          <td>{item.Session}</td>
+          <td>
+            {#if item.Type}
+              <TypeBadge text={item.Type} />
+            {/if}
+          </td>
+          <td>
+            {#if item.Session}
+              <SessionBadge text={item.Session} />
+            {/if}
+          </td>
           <td>
             {#if item.Track}
-              <button type="button" class="track-badge track-link" data-tracks={item.Track}>{item.Track}</button>
+              <TrackBadge text={item.Track} className="track-link" {...{ 'data-tracks': item.Track }} />
             {/if}
           </td>
           <td>{item.StartDate}</td>
@@ -279,36 +290,6 @@
 
   :global(.dark .title-link:hover) {
     color: #93c5fd;
-  }
-
-  /* Type badge styling */
-  :global(.type-badge) {
-    display: inline-block;
-    padding: 0.125rem 0.5rem;
-    border-radius: 0.25rem;
-    font-size: 0.75rem;
-    background-color: #e0e7ff !important;
-    color: #3730a3 !important;
-  }
-
-  /* Session badge styling */
-  :global(.session-badge) {
-    display: inline-block;
-    padding: 0.125rem 0.5rem;
-    border-radius: 0.25rem;
-    font-size: 0.75rem;
-    background-color: #f3e8ff !important;
-    color: #6b21a8 !important;
-  }
-
-  /* Track badge styling */
-  :global(.track-badge) {
-    display: inline-block;
-    padding: 0.125rem 0.5rem;
-    border-radius: 0.25rem;
-    font-size: 0.75rem;
-    background-color: #dcfce7 !important;
-    color: #166534 !important;
   }
 
   /* Speakers/Authors cell with tooltip */
@@ -429,22 +410,6 @@
     border: 1px solid #ced4da;
     border-radius: 0.25rem;
     background-color: #fff;
-  }
-
-  /* Dark mode support */
-  :global(.dark .type-badge) {
-    background-color: #3730a3 !important;
-    color: #e0e7ff !important;
-  }
-
-  :global(.dark .session-badge) {
-    background-color: #581c87 !important;
-    color: #e9d5ff !important;
-  }
-
-  :global(.dark .track-badge) {
-    background-color: #14532d !important;
-    color: #bbf7d0 !important;
   }
 
   :global(.dark) .contribution-table-view :global(.datatable-table thead th) {

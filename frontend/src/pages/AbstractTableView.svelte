@@ -1,5 +1,6 @@
 <script>
   import VirtualDataTable from '../components/VirtualDataTable.svelte';
+  import TypeBadge from './TypeBadge.svelte';
   import AbstractDetailsDialog from './AbstractDetailsDialog.svelte';
   import TrackDetailsDialog from './TrackDetailsDialog.svelte';
   import { 
@@ -286,7 +287,11 @@
               <button type="button" class={'track-badge ' + (item.TrackType === 'accepted' ? 'track-accepted' : 'track-reviewed') + ' track-link'} on:click={() => openTrack(item.TrackFull)} data-tracks={item.TrackFull}>{item.Track}</button>
             {/if}
           </td>
-          <td>{item.Type}</td>
+          <td>
+            {#if item.Type}
+              <TypeBadge text={item.Type} />
+            {/if}
+          </td>
           <td>{item.Score}</td>
           <td>{item.Submitted}</td>
           <td>
@@ -361,12 +366,6 @@
   }
 
   /* Track badge styling - matches card view */
-  :global(.track-badge) {
-    display: inline-block;
-    padding: 0.125rem 0.5rem;
-    border-radius: 0.25rem;
-    font-size: 0.75rem;
-  }
 
   :global(.track-link) {
     cursor: pointer;
@@ -390,16 +389,6 @@
   :global(.track-reviewed) {
     background-color: #f3e8ff !important;
     color: #6b21a8 !important;
-  }
-
-  /* Type badge styling */
-  :global(.type-badge) {
-    display: inline-block;
-    padding: 0.125rem 0.5rem;
-    border-radius: 0.25rem;
-    font-size: 0.75rem;
-    background-color: #e0f2fe !important;
-    color: #0369a1 !important;
   }
 
   /* Bootstrap-like table styling */
@@ -556,11 +545,6 @@
   :global(.dark .track-reviewed) {
     background-color: #581c87 !important;
     color: #e9d5ff !important;
-  }
-
-  :global(.dark .type-badge) {
-    background-color: #0c4a6e !important;
-    color: #bae6fd !important;
   }
 
   :global(.dark) .abstract-table-view :global(.datatable-table thead th) {
