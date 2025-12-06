@@ -9,6 +9,7 @@
   import SessionBadge from './SessionBadge.svelte';
   import TrackBadge from './TrackBadge.svelte';
   import TypeBadge from './TypeBadge.svelte';
+  import DataTableControls from '../components/DataTableControls.svelte';
 
   /** @type {Array} */
   export let contributionData = [];
@@ -87,14 +88,15 @@
     return copy;
   })();
 
+  // total items available after filtering/sorting
+  $: totalItems = sortedItems.length;
+
   // Pagination
   $: totalPages = Math.max(1, Math.ceil(sortedItems.length / perPage));
   $: currentPage = Math.min(currentPage, totalPages);
   $: paginatedItems = sortedItems.slice((currentPage-1)*perPage, currentPage*perPage);
   $: visibleItems = paginatedItems;
 
-  function goPrev() { if (currentPage > 1) currentPage -= 1; }
-  function goNext() { if (currentPage < totalPages) currentPage += 1; }
   function setSort(key) {
     if (sortKey === key) {
       sortDir = sortDir === 'asc' ? 'desc' : 'asc';
@@ -211,20 +213,16 @@
 <div class="mt-12 p-4 contribution-table-view">
   <!-- Controls -->
   <div class="flex items-center gap-4 p-2">
-    <input class="datatable-input" placeholder="Search..." bind:value={searchQuery} />
-    <label class="text-sm">Per page:
-      <select bind:value={perPage} class="datatable-selector">
-        <option value="10">10</option>
-        <option value="25">25</option>
-        <option value="50">50</option>
-        <option value="100">100</option>
-      </select>
-    </label>
-    <div class="ml-auto text-sm">
-      Page {currentPage} / {totalPages}
-      <button on:click={goPrev} class="datatable-selector" disabled={currentPage<=1}>Prev</button>
-      <button on:click={goNext} class="datatable-selector" disabled={currentPage>=totalPages}>Next</button>
-    </div>
+    <DataTableControls
+      bind:perPage
+      bind:currentPage
+      bind:search={searchQuery}
+      {totalItems}
+      perPageOptions={[10,25,50,100]}
+      on:perpagechange={(e) => { perPage = e.detail.perPage }}
+      on:pagechange={(e) => { currentPage = e.detail.currentPage }}
+      on:searchchange={(e) => { searchQuery = e.detail.search }}
+    />
   </div>
 
   <!-- Virtualized table -->

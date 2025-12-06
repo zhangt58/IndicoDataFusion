@@ -8,6 +8,7 @@
     createDataTableOptions,
     rowRender
   } from './AbstractTableItem.js';
+  import DataTableControls from '../components/DataTableControls.svelte';
 
   /** @type {Array} */
   export let abstractData = [];
@@ -113,6 +114,9 @@
     });
     return copy;
   })();
+
+  // expose total items for DataTableControls (mirrors ContributionTableView)
+  $: totalItems = sortedItems.length;
 
   // Pagination
   $: totalPages = Math.max(1, Math.ceil(sortedItems.length / perPage));
@@ -250,66 +254,62 @@
 <div class="space-y-4 mt-8" style="height:100vh; display:flex; flex-direction:column;">
   <!-- Controls: search, perPage, (removed Sort-by select) -->
   <div class="flex items-center gap-4 p-2">
-    <input class="datatable-input" placeholder="Search..." bind:value={searchQuery} />
-    <label class="text-sm">Per page:
-      <select bind:value={perPage} class="datatable-selector">
-        <option value="10">10</option>
-        <option value="25">25</option>
-        <option value="50">50</option>
-        <option value="100">100</option>
-      </select>
-    </label>
-    <div class="ml-auto text-sm">
-      Page {currentPage} / {totalPages}
-      <button on:click={goPrev} class="datatable-selector" disabled={currentPage<=1}>Prev</button>
-      <button on:click={goNext} class="datatable-selector" disabled={currentPage>=totalPages}>Next</button>
-    </div>
+    <DataTableControls
+      bind:perPage
+      bind:currentPage
+      bind:search={searchQuery}
+      {totalItems}
+      perPageOptions={[10,25,50,100]}
+      on:perpagechange={(e) => { perPage = e.detail.perPage }}
+      on:pagechange={(e) => { currentPage = e.detail.currentPage }}
+      on:searchchange={(e) => { searchQuery = e.detail.search }}
+    />
   </div>
 
-  <!-- Table area: grow to fill remaining viewport space -->
-  <section class="mt-2 p-4 abstract-table-view" style="flex:1;display:flex;flex-direction:column;overflow:hidden;">
-    <VirtualDataTable items={visibleItems} {visibleKeys} bind:sortKey bind:sortDir className="datatable-table" style="width:100%;height:100%" on:sort={(e) => setSort(e.detail)}>
-      <svelte:fragment slot="default" let:item let:index>
-        <tr use:applyRowRender={{ item, index }}>
-          <td>{item.ID}</td>
-          <td>
-            <button type="button" class="title-link" on:click={() => openAbstract(item.ID)} data-id={item.ID} data-title={item.Title}>{item.Title}</button>
-          </td>
-          <td>
-            {#if item.State}
-              <span class={item.State.toLowerCase() === 'accepted' ? 'state-badge state-accepted' : (item.State.toLowerCase() === 'rejected' ? 'state-badge state-rejected' : 'state-badge state-other')}>{item.State}</span>
-            {/if}
-          </td>
-          <td>{item.Submitter}</td>
-          <td>{item.Affiliation}</td>
-          <td>
-            {#if item.Track}
-              <button type="button" class={'track-badge ' + (item.TrackType === 'accepted' ? 'track-accepted' : 'track-reviewed') + ' track-link'} on:click={() => openTrack(item.TrackFull)} data-tracks={item.TrackFull}>{item.Track}</button>
-            {/if}
-          </td>
-          <td>
-            {#if item.Type}
-              <TypeBadge text={item.Type} />
-            {/if}
-          </td>
-          <td>{item.Score}</td>
-          <td>{item.Submitted}</td>
-          <td>
-            {#if item.Authors}
-              <span class="authors-cell" title={item.AuthorsTooltip}>{item.Authors}</span>
-            {/if}
-          </td>
-        </tr>
-      </svelte:fragment>
-    </VirtualDataTable>
-   </section>
- </div>
+   <!-- Table area: grow to fill remaining viewport space -->
+   <section class="mt-2 p-4 abstract-table-view" style="flex:1;display:flex;flex-direction:column;overflow:hidden;">
+     <VirtualDataTable items={visibleItems} {visibleKeys} bind:sortKey bind:sortDir className="datatable-table" style="width:100%;height:100%" on:sort={(e) => setSort(e.detail)}>
+       <svelte:fragment slot="default" let:item let:index>
+         <tr use:applyRowRender={{ item, index }}>
+           <td>{item.ID}</td>
+           <td>
+             <button type="button" class="title-link" on:click={() => openAbstract(item.ID)} data-id={item.ID} data-title={item.Title}>{item.Title}</button>
+           </td>
+           <td>
+             {#if item.State}
+               <span class={item.State.toLowerCase() === 'accepted' ? 'state-badge state-accepted' : (item.State.toLowerCase() === 'rejected' ? 'state-badge state-rejected' : 'state-badge state-other')}>{item.State}</span>
+             {/if}
+           </td>
+           <td>{item.Submitter}</td>
+           <td>{item.Affiliation}</td>
+           <td>
+             {#if item.Track}
+               <button type="button" class={'track-badge ' + (item.TrackType === 'accepted' ? 'track-accepted' : 'track-reviewed') + ' track-link'} on:click={() => openTrack(item.TrackFull)} data-tracks={item.TrackFull}>{item.Track}</button>
+             {/if}
+           </td>
+           <td>
+             {#if item.Type}
+               <TypeBadge text={item.Type} />
+             {/if}
+           </td>
+           <td>{item.Score}</td>
+           <td>{item.Submitted}</td>
+           <td>
+             {#if item.Authors}
+               <span class="authors-cell" title={item.AuthorsTooltip}>{item.Authors}</span>
+             {/if}
+           </td>
+         </tr>
+       </svelte:fragment>
+     </VirtualDataTable>
+    </section>
+  </div>
 
-<!-- Abstract Detail Dialog -->
-<AbstractDetailsDialog bind:open={showAbstractDialog} abstract={selectedAbstract} />
+ <!-- Abstract Detail Dialog -->
+ <AbstractDetailsDialog bind:open={showAbstractDialog} abstract={selectedAbstract} />
 
-<!-- Track Details Dialog -->
-<TrackDetailsDialog bind:open={showTrackDialog} tracks={selectedTracks} allTracks={allAvailableTracks} />
+ <!-- Track Details Dialog -->
+ <TrackDetailsDialog bind:open={showTrackDialog} tracks={selectedTracks} allTracks={allAvailableTracks} />
 
 <style>
   /* Title link styling */
