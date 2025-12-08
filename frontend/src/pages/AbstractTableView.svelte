@@ -413,11 +413,6 @@
     color: #6b21a8 !important;
   }
 
-  /* Bootstrap-like table styling */
-  .abstract-table-view :global(.datatable-wrapper) {
-    font-size: 0.9rem;
-  }
-
   .abstract-table-view :global(.datatable-table) {
     width: 100%;
     border-collapse: collapse;

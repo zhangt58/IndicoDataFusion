@@ -328,11 +328,6 @@
     cursor: help;
   }
 
-  /* Bootstrap-like table styling */
-  .contribution-table-view :global(.datatable-wrapper) {
-    font-size: 0.9rem;
-  }
-
   .contribution-table-view :global(.datatable-table) {
     width: 100%;
     border-collapse: collapse;
