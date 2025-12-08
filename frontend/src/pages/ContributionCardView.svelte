@@ -4,12 +4,10 @@
 
   /** @type {Array} */
   export let contributionData = [];
-  // Height for the virtual list container. Default to full viewport.
-  export let listHeight = '100vh';
 </script>
 
 {#if contributionData && contributionData.length > 0}
-  <div class="space-y-4 mt-8" style={`height:${listHeight}; display:flex; flex-direction:column;`}>
+  <div class="flex flex-col mt-8 h-screen" style="height: calc(100vh - 8rem);">
     <VirtualList items={contributionData} style={`width:100%;height:100%;`}>
       {#snippet vl_slot({ index, item })}
         <div class="mb-4">

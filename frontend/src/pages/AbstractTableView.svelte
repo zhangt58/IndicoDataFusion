@@ -23,7 +23,7 @@
 
   // Simple client-side controls (search/sort/pagination)
   let searchQuery = '';
-  let perPage = 25;
+  let perPage = 25;  // Fixed value, not user-configurable
   let currentPage = 1;
   let sortKey = null; // e.g. 'Title' or 'Score'
   let sortDir = 'asc'; // 'asc' | 'desc'
@@ -121,6 +121,26 @@
       return ta - tb;
     }
 
+    // Special-case Track: extract number from strings like "MC10" or "MC10: description"
+    if (key === 'Track') {
+      const extractTrackNumber = (str) => {
+        if (!str) return NaN;
+        const match = String(str).match(/\d+/);
+        return match ? Number(match[0]) : NaN;
+      };
+      const na = extractTrackNumber(va);
+      const nb = extractTrackNumber(vb);
+      if (isNaN(na) && isNaN(nb)) {
+        // fallback to string comparison if no numbers found
+        const sa = String(va ?? '').toLowerCase();
+        const sb = String(vb ?? '').toLowerCase();
+        return sa < sb ? -1 : sa > sb ? 1 : 0;
+      }
+      if (isNaN(na)) return -1;
+      if (isNaN(nb)) return 1;
+      return na - nb;
+    }
+
     // fallback string compare
     const sa = String(va ?? '').toLowerCase();
     const sb = String(vb ?? '').toLowerCase();
@@ -137,7 +157,7 @@
     return copy;
   })();
 
-  // expose total items for DataTableControls (mirrors ContributionTableView)
+  // expose total items for DataTableControls
   $: totalItems = sortedItems.length;
 
   // Pagination
@@ -270,62 +290,64 @@
   }
 </script>
 
-<!-- Controls + table wrapped in a viewport-height flex container -->
-<div class="space-y-4 mt-8" style="height:100vh; display:flex; flex-direction:column;">
-  <!-- Controls: search, perPage, (removed Sort-by select) -->
-  <div class="flex items-center gap-4 p-2">
-    <!-- DataTableControls uses Svelte v5 callback-prop API: pass values and callbacks
-         instead of Svelte v3-style events/bind. -->
+<div class="flex flex-col overflow-hidden mt-8 px-4" style="height: calc(100vh - 8rem);">
+  <div class="sticky top-0 z-10 bg-transparent py-1 border-b border-gray-200 dark:border-gray-700 mb-2 flex-shrink-0">
     <DataTableControls
       search={searchQuery}
       currentPage={currentPage}
       perPage={perPage}
       {totalItems}
-      perPageOptions={[10,25,50,100]}
-      perpagechange={(payload) => { perPage = payload.perPage }}
       pagechange={(payload) => { currentPage = payload.currentPage }}
       searchchange={(payload) => { searchQuery = payload.search }}
     />
   </div>
 
-   <!-- Table area: grow to fill remaining viewport space -->
-   <section class="mt-2 p-4 abstract-table-view" style="flex:1;display:flex;flex-direction:column;overflow:hidden;">
-     <VirtualDataTable items={visibleItems} {visibleKeys} bind:sortKey bind:sortDir className="datatable-table" style="width:100%;height:100%" on:sort={(e) => setSort(e.detail)}>
-       <svelte:fragment slot="default" let:item let:index>
-         <tr use:applyRowRender={{ item, index }}>
-           <td>{item.ID}</td>
-           <td>
-             <button type="button" class="title-link" on:click={() => openAbstract(item.ID)} data-id={item.ID} data-title={item.Title}>{item.Title}</button>
-           </td>
-           <td>
-             {#if item.State}
-               <span class={item.State.toLowerCase() === 'accepted' ? 'state-badge state-accepted' : (item.State.toLowerCase() === 'rejected' ? 'state-badge state-rejected' : 'state-badge state-other')}>{item.State}</span>
-             {/if}
-           </td>
-           <td>{item.Submitter}</td>
-           <td>{item.Affiliation}</td>
-           <td>
-             {#if item.Track}
-               <button type="button" class={'track-badge ' + (item.TrackType === 'accepted' ? 'track-accepted' : 'track-reviewed') + ' track-link'} on:click={() => openTrack(item.TrackFull)} data-tracks={item.TrackFull}>{item.Track}</button>
-             {/if}
-           </td>
-           <td>
-             {#if item.Type}
-               <TypeBadge text={item.Type} />
-             {/if}
-           </td>
-           <td>{item.Score}</td>
-           <td>{item.Submitted}</td>
-           <td>
-             {#if item.Authors}
-               <span class="authors-cell" title={item.AuthorsTooltip}>{item.Authors}</span>
-             {/if}
-           </td>
-         </tr>
-       </svelte:fragment>
-     </VirtualDataTable>
-    </section>
-  </div>
+  <section class="flex flex-col flex-1 max-h-screen overflow-hidden">
+    <VirtualDataTable
+      items={visibleItems}
+      {visibleKeys}
+      bind:sortKey
+      bind:sortDir
+      className="datatable-table"
+      style="width:100%;height:100%;"
+      on:sort={(e) => setSort(e.detail)}
+      colWidths={{ ID: '6%', Title: '30%', State: '8%', Submitter: '12%', Affiliation: '12%', Track: '8%', Type: '6%', Score: '5%', Submitted: '7%', Authors: '6%' }}
+    >
+      <svelte:fragment slot="default" let:item let:index>
+        <tr use:applyRowRender={{ item, index }}>
+          <td>{item.ID}</td>
+          <td>
+            <button type="button" class="title-link" on:click={() => openAbstract(item.ID)} data-id={item.ID} data-title={item.Title}>{item.Title}</button>
+          </td>
+          <td>
+            {#if item.State}
+              <span class={item.State.toLowerCase() === 'accepted' ? 'state-badge state-accepted' : (item.State.toLowerCase() === 'rejected' ? 'state-badge state-rejected' : 'state-badge state-other')}>{item.State}</span>
+            {/if}
+          </td>
+          <td>{item.Submitter}</td>
+          <td>{item.Affiliation}</td>
+          <td>
+            {#if item.Track}
+              <button type="button" class={'track-badge ' + (item.TrackType === 'accepted' ? 'track-accepted' : 'track-reviewed') + ' track-link'} on:click={() => openTrack(item.TrackFull)} data-tracks={item.TrackFull}>{item.Track}</button>
+            {/if}
+          </td>
+          <td>
+            {#if item.Type}
+              <TypeBadge text={item.Type} />
+            {/if}
+          </td>
+          <td>{item.Score}</td>
+          <td>{item.Submitted}</td>
+          <td>
+            {#if item.Authors}
+              <span class="authors-cell" title={item.AuthorsTooltip}>{item.Authors}</span>
+            {/if}
+          </td>
+        </tr>
+      </svelte:fragment>
+    </VirtualDataTable>
+  </section>
+</div>
 
  <!-- Abstract Detail Dialog -->
  <AbstractDetailsDialog bind:open={showAbstractDialog} abstract={selectedAbstract} />
@@ -334,18 +356,16 @@
  <TrackDetailsDialog bind:open={showTrackDialog} tracks={selectedTracks} allTracks={allAvailableTracks} />
 
 <style>
-  /* Title link styling */
   :global(.title-link) {
     color: #0d6efd;
     text-decoration: none;
     cursor: pointer;
-    /* Make buttons behave like left-aligned links and align content to the top-left */
     display: inline-flex !important;
-    align-items: flex-start !important; /* vertical alignment inside the button */
-    justify-content: flex-start !important; /* horizontal alignment */
-    text-align: left !important; /* ensure multi-line text is left-aligned */
-    padding: 0.0rem !important; /* remove extra button padding that can change alignment */
-    background: transparent !important; /* look like a link */
+    align-items: flex-start !important;
+    justify-content: flex-start !important;
+    text-align: left !important;
+    padding: 0 !important;
+    background: transparent !important;
     border: none !important;
   }
 
@@ -360,270 +380,5 @@
 
   :global(.dark .title-link:hover) {
     color: #93c5fd;
-  }
-
-  /* State badge styling - matches card view */
-  :global(.state-badge) {
-    display: inline-block;
-    padding: 0.25rem 0.75rem;
-    border-radius: 9999px;
-    font-size: 0.75rem;
-    font-weight: 600;
-    text-transform: capitalize;
-  }
-
-  :global(.state-accepted) {
-    background-color: #dcfce7 !important;
-    color: #166534 !important;
-  }
-
-  :global(.state-rejected) {
-    background-color: #fee2e2 !important;
-    color: #991b1b !important;
-  }
-
-  :global(.state-other) {
-    background-color: #fef3c7 !important;
-    color: #92400e !important;
-  }
-
-  /* Track badge styling - matches card view */
-
-  :global(.track-link) {
-    cursor: pointer;
-    text-decoration: none;
-  }
-
-  :global(.track-link:hover) {
-    text-decoration: underline;
-  }
-
-  /* Authors cell with tooltip */
-  :global(.authors-cell) {
-    cursor: help;
-  }
-
-  :global(.track-accepted) {
-    background-color: #dcfce7 !important;
-    color: #166534 !important;
-  }
-
-  :global(.track-reviewed) {
-    background-color: #f3e8ff !important;
-    color: #6b21a8 !important;
-  }
-
-  .abstract-table-view :global(.datatable-table) {
-    width: 100%;
-    border-collapse: collapse;
-    font-size: 0.95rem;
-  }
-
-  .abstract-table-view :global(.datatable-table thead th) {
-    background-color: #f8f9fa;
-    border-bottom: 2px solid #dee2e6;
-    padding: 0.3rem 0.5rem;
-    text-align: left;
-    font-weight: 600;
-    white-space: nowrap;
-  }
-
-  /* add sticky header styles */
-  .abstract-table-view :global(.datatable-table thead) {
-    /* ensure thead is treated as header group inside the scroll container */
-    display: table-header-group;
-  }
-
-  .abstract-table-view :global(.datatable-table thead th) {
-    position: sticky;
-    top: 0;
-    z-index: 20;
-    /* keep header background to cover rows when sticky */
-    background-color: var(--tbl-head-bg, #f8f9fa);
-  }
-
-  .abstract-table-view :global(.datatable-table tbody tr:nth-child(odd)) {
-    background-color: rgba(0, 0, 0, 0.02);
-  }
-
-  .abstract-table-view :global(.datatable-table tbody tr:hover) {
-    background-color: rgba(0, 0, 0, 0.075);
-  }
-
-  .abstract-table-view :global(.datatable-table tbody td) {
-    padding: 0.2rem 0.5rem;
-    border-top: 1px solid #dee2e6;
-    vertical-align: middle;
-    text-align: left;
-  }
-
-  /* Compact styling */
-  .abstract-table-view :global(.datatable-table.compact tbody td) {
-    padding: 0.1rem 0.3rem;
-  }
-
-  /* Search input styling */
-  .abstract-table-view :global(.datatable-input) {
-    padding: 0.375rem 0.75rem;
-    font-size: 0.95rem;
-    border: 1px solid #ced4da;
-    border-radius: 0.25rem;
-  }
-
-  .abstract-table-view :global(.datatable-input:focus) {
-    border-color: #86b7fe;
-    outline: 0;
-    box-shadow: 0 0 0.1rem 0.2rem rgba(13, 110, 253, 0.25);
-  }
-
-  /* Column filter row styling */
-  .abstract-table-view :global(.search-filtering-row) {
-    background-color: #f8f9fa;
-  }
-
-  .abstract-table-view :global(.search-filtering-row th) {
-    padding: 0.1rem 0.1rem;
-    border-bottom: 1px solid #dee2e6;
-  }
-
-  .abstract-table-view :global(.column-filter) {
-    width: 95%;
-    padding: 0.2rem 0.25rem;
-    font-size: 0.8rem;
-    border: 1px solid #ced4da;
-    border-radius: 0.25rem;
-  }
-
-  .abstract-table-view :global(.column-filter::placeholder) {
-    color: #adb5bd;
-    font-size: 0.75rem;
-    font-style: italic;
-  }
-
-  /* Pagination styling */
-  .abstract-table-view :global(.datatable-pagination) {
-    display: flex;
-    gap: 0.1rem;
-    margin-top: 0.6rem;
-  }
-
-  .abstract-table-view :global(.datatable-pagination li a),
-  .abstract-table-view :global(.datatable-pagination li button) {
-    padding: 0.3rem 0.7rem;
-    border: 1px solid #dee2e6;
-    border-radius: 0;
-    background-color: #fff;
-    color: #0d6efd;
-    text-decoration: none;
-  }
-
-  .abstract-table-view :global(.datatable-pagination li a:hover),
-  .abstract-table-view :global(.datatable-pagination li button:hover) {
-    background-color: #e9ecef;
-  }
-
-  .abstract-table-view :global(.datatable-pagination .datatable-active a),
-  .abstract-table-view :global(.datatable-pagination .datatable-active button) {
-    background-color: #0d6efd;
-    border-color: #0d6efd;
-    color: #fff;
-  }
-
-  /* Per page select styling */
-  .abstract-table-view :global(.datatable-selector) {
-    padding: 0.375rem 2rem 0.375rem 0.75rem;
-    font-size: 0.875rem;
-    border: 1px solid #ced4da;
-    border-radius: 0.25rem;
-    background-color: #fff;
-  }
-
-  /* Dark mode support */
-  :global(.dark .state-accepted) {
-    background-color: #14532d !important;
-    color: #bbf7d0 !important;
-  }
-
-  :global(.dark .state-rejected) {
-    background-color: #7f1d1d !important;
-    color: #fecaca !important;
-  }
-
-  :global(.dark .state-other) {
-    background-color: #78350f !important;
-    color: #fde68a !important;
-  }
-
-  :global(.dark .track-accepted) {
-    background-color: #14532d !important;
-    color: #bbf7d0 !important;
-  }
-
-  :global(.dark .track-reviewed) {
-    background-color: #581c87 !important;
-    color: #e9d5ff !important;
-  }
-
-  :global(.dark) .abstract-table-view :global(.datatable-table thead th) {
-    background-color: #374151;
-    border-color: #4b5563;
-    color: #f9fafb;
-  }
-
-  :global(.dark) .abstract-table-view :global(.datatable-table tbody tr:nth-child(odd)) {
-    background-color: rgba(255, 255, 255, 0.02);
-  }
-
-  :global(.dark) .abstract-table-view :global(.datatable-table tbody tr:hover) {
-    background-color: rgba(255, 255, 255, 0.075);
-  }
-
-  :global(.dark) .abstract-table-view :global(.datatable-table tbody td) {
-    border-color: #4b5563;
-    color: #e5e7eb;
-  }
-
-  :global(.dark) .abstract-table-view :global(.datatable-input) {
-    background-color: #374151;
-    border-color: #4b5563;
-    color: #f9fafb;
-  }
-
-  :global(.dark) .abstract-table-view :global(.search-filtering-row) {
-    background-color: #1f2937;
-  }
-
-  :global(.dark) .abstract-table-view :global(.search-filtering-row th) {
-    border-color: #4b5563;
-  }
-
-  :global(.dark) .abstract-table-view :global(.column-filter) {
-    background-color: #374151;
-    border-color: #4b5563;
-    color: #f9fafb;
-  }
-
-  :global(.dark) .abstract-table-view :global(.column-filter::placeholder) {
-    color: #9ca3af;
-  }
-
-  :global(.dark) .abstract-table-view :global(.datatable-selector) {
-    background-color: #374151;
-    border-color: #4b5563;
-    color: #f9fafb;
-  }
-
-  :global(.dark) .abstract-table-view :global(.datatable-pagination li a),
-  :global(.dark) .abstract-table-view :global(.datatable-pagination li button) {
-    background-color: #374151;
-    border-color: #4b5563;
-    color: #60a5fa;
-  }
-
-  :global(.dark) .abstract-table-view :global(.datatable-pagination .datatable-active a),
-  :global(.dark) .abstract-table-view :global(.datatable-pagination .datatable-active button) {
-    background-color: #2563eb;
-    border-color: #2563eb;
-    color: #fff;
   }
 </style>

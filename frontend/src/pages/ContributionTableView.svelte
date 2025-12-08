@@ -51,7 +51,7 @@
 
   // --- Virtualized table client-side controls (search/sort/pagination) ---
   let searchQuery = '';
-  let perPage = 25;
+  let perPage = 25;  // Fixed value, not user-configurable
   let currentPage = 1;
   let sortKey = null;
   let sortDir = 'asc';
@@ -99,6 +99,26 @@
       if (isNaN(sa)) return -1;
       if (isNaN(sb)) return 1;
       return sa - sb;
+    }
+
+    // Special-case Track: extract number from strings like "MC10" or "MC10: description"
+    if (key === 'Track') {
+      const extractTrackNumber = (str) => {
+        if (!str) return NaN;
+        const match = String(str).match(/\d+/);
+        return match ? Number(match[0]) : NaN;
+      };
+      const na = extractTrackNumber(a[key]);
+      const nb = extractTrackNumber(b[key]);
+      if (isNaN(na) && isNaN(nb)) {
+        // fallback to string comparison if no numbers found
+        const sa = String(a[key] ?? '').toLowerCase();
+        const sb = String(b[key] ?? '').toLowerCase();
+        return sa < sb ? -1 : sa > sb ? 1 : 0;
+      }
+      if (isNaN(na)) return -1;
+      if (isNaN(nb)) return 1;
+      return na - nb;
     }
 
     // fallback: string compare
@@ -241,25 +261,31 @@
 
 <!-- svelte-ignore a11y_click_events_have_key_events -->
 <!-- svelte-ignore a11y_no_static_element_interactions -->
-<div class="mt-12 p-4 contribution-table-view">
-  <!-- Controls -->
-  <div class="flex items-center gap-4 p-2">
-    <!-- DataTableControls uses Svelte v5 callback-prop API: pass values and callbacks -->
+<div class="flex flex-col overflow-hidden mt-8 px-4" style="height: calc(100vh - 8rem);">
+  <!-- Sticky Controls at top -->
+  <div class="sticky top-0 z-10 bg-transparent dark:bg-gray-800 py-1 border-b border-gray-200 dark:border-gray-700 mb-2 flex-shrink-0">
     <DataTableControls
       search={searchQuery}
       currentPage={currentPage}
       perPage={perPage}
       {totalItems}
-      perPageOptions={[10,25,50,100]}
-      perpagechange={(payload) => { perPage = payload.perPage }}
       pagechange={(payload) => { currentPage = payload.currentPage }}
       searchchange={(payload) => { searchQuery = payload.search }}
     />
   </div>
 
-  <!-- Virtualized table -->
-  <section on:click={handleTableClick} style="flex:1;overflow:auto;">
-    <VirtualDataTable items={visibleItems} {visibleKeys} bind:sortKey bind:sortDir className="datatable-table" style="width:100%;height:100%" on:sort={(e) => setSort(e.detail)}>
+  <!-- Table area: scrollable content -->
+  <section class="flex-1 overflow-hidden flex flex-col min-h-0" on:click={handleTableClick}>
+    <VirtualDataTable
+      items={visibleItems}
+      {visibleKeys}
+      bind:sortKey
+      bind:sortDir
+      className="datatable-table"
+      style="width:100%;height:100%;"
+      on:sort={(e) => setSort(e.detail)}
+      colWidths={{ ID: '6%', Code: '8%', Title: '36%', Type: '6%', Session: '8%', Track: '8%', Start: '8%', Duration: '6%', Room: '6%', Speakers: '8%' }}
+    >
       <svelte:fragment slot="default" let:item let:index>
         <tr use:applyRowRender={{ item, index }}>
           <td>{item.ID}</td>
@@ -287,8 +313,8 @@
         </tr>
       </svelte:fragment>
     </VirtualDataTable>
-   </section>
- </div>
+  </section>
+</div>
 
 <!-- Contribution Detail Dialog -->
 <ContributionDetailsDialog bind:open={showContributionDialog} contribution={selectedContribution} />
@@ -299,13 +325,12 @@
     color: #0d6efd;
     text-decoration: none;
     cursor: pointer;
-    /* Make buttons behave like left-aligned links and align content to the top-left */
     display: inline-flex !important;
-    align-items: flex-start !important; /* vertical alignment inside the button */
-    justify-content: flex-start !important; /* horizontal alignment */
-    text-align: left !important; /* ensure multi-line text is left-aligned */
-    padding: 0.0rem !important; /* remove extra button padding that can change alignment */
-    background: transparent !important; /* look like a link */
+    align-items: flex-start !important;
+    justify-content: flex-start !important;
+    text-align: left !important;
+    padding: 0 !important;
+    background: transparent !important;
     border: none !important;
   }
 
@@ -322,181 +347,8 @@
     color: #93c5fd;
   }
 
-  /* Speakers/Authors cell with tooltip */
-  :global(.speakers-cell),
-  :global(.authors-cell) {
+  /* Speakers cell with tooltip */
+  :global(.speakers-cell) {
     cursor: help;
-  }
-
-  .contribution-table-view :global(.datatable-table) {
-    width: 100%;
-    border-collapse: collapse;
-  }
-
-  .contribution-table-view :global(.datatable-table thead th) {
-    background-color: #f8f9fa;
-    border-bottom: 2px solid #dee2e6;
-    padding: 0.3rem 0.5rem;
-    text-align: left;
-    font-weight: 600;
-    white-space: nowrap;
-  }
-
-  .contribution-table-view :global(.datatable-table tbody tr:nth-child(odd)) {
-    background-color: rgba(0, 0, 0, 0.02);
-  }
-
-  .contribution-table-view :global(.datatable-table tbody tr:hover) {
-    background-color: rgba(0, 0, 0, 0.075);
-  }
-
-  .contribution-table-view :global(.datatable-table tbody td) {
-    padding: 0.2rem 0.5rem;
-    border-top: 1px solid #dee2e6;
-    vertical-align: middle;
-  }
-
-  /* Compact styling */
-  .contribution-table-view :global(.datatable-table.compact tbody td) {
-    padding: 0.1rem 0.3rem;
-  }
-
-  /* Search input styling */
-  .contribution-table-view :global(.datatable-input) {
-    padding: 0.375rem 0.75rem;
-    font-size: 0.95rem;
-    border: 1px solid #ced4da;
-    border-radius: 0.25rem;
-  }
-
-  .contribution-table-view :global(.datatable-input:focus) {
-    border-color: #86b7fe;
-    outline: 0;
-    box-shadow: 0 0 0.1rem 0.2rem rgba(13, 110, 253, 0.25);
-  }
-
-  /* Column filter row styling */
-  .contribution-table-view :global(.search-filtering-row) {
-    background-color: #f8f9fa;
-  }
-
-  .contribution-table-view :global(.search-filtering-row th) {
-    padding: 0.1rem 0.1rem;
-    border-bottom: 1px solid #dee2e6;
-  }
-
-  .contribution-table-view :global(.column-filter) {
-    width: 95%;
-    padding: 0.2rem 0.25rem;
-    font-size: 0.8rem;
-    border: 1px solid #ced4da;
-    border-radius: 0.25rem;
-  }
-
-  .contribution-table-view :global(.column-filter::placeholder) {
-    color: #adb5bd;
-    font-size: 0.75rem;
-    font-style: italic;
-  }
-
-  /* Pagination styling */
-  .contribution-table-view :global(.datatable-pagination) {
-    display: flex;
-    gap: 0.1rem;
-    margin-top: 0.6rem;
-  }
-
-  .contribution-table-view :global(.datatable-pagination li a),
-  .contribution-table-view :global(.datatable-pagination li button) {
-    padding: 0.3rem 0.7rem;
-    border: 1px solid #dee2e6;
-    border-radius: 0;
-    background-color: #fff;
-    color: #0d6efd;
-    text-decoration: none;
-  }
-
-  .contribution-table-view :global(.datatable-pagination li a:hover),
-  .contribution-table-view :global(.datatable-pagination li button:hover) {
-    background-color: #e9ecef;
-  }
-
-  .contribution-table-view :global(.datatable-pagination .datatable-active a),
-  .contribution-table-view :global(.datatable-pagination .datatable-active button) {
-    background-color: #0d6efd;
-    border-color: #0d6efd;
-    color: #fff;
-  }
-
-  /* Per page select styling */
-  .contribution-table-view :global(.datatable-selector) {
-    padding: 0.375rem 2rem 0.375rem 0.75rem;
-    font-size: 0.875rem;
-    border: 1px solid #ced4da;
-    border-radius: 0.25rem;
-    background-color: #fff;
-  }
-
-  :global(.dark) .contribution-table-view :global(.datatable-table thead th) {
-    background-color: #374151;
-    border-color: #4b5563;
-    color: #f9fafb;
-  }
-
-  :global(.dark) .contribution-table-view :global(.datatable-table tbody tr:nth-child(odd)) {
-    background-color: rgba(255, 255, 255, 0.02);
-  }
-
-  :global(.dark) .contribution-table-view :global(.datatable-table tbody tr:hover) {
-    background-color: rgba(255, 255, 255, 0.075);
-  }
-
-  :global(.dark) .contribution-table-view :global(.datatable-table tbody td) {
-    border-color: #4b5563;
-    color: #e5e7eb;
-  }
-
-  :global(.dark) .contribution-table-view :global(.datatable-input) {
-    background-color: #374151;
-    border-color: #4b5563;
-    color: #f9fafb;
-  }
-
-  :global(.dark) .contribution-table-view :global(.search-filtering-row) {
-    background-color: #1f2937;
-  }
-
-  :global(.dark) .contribution-table-view :global(.search-filtering-row th) {
-    border-color: #4b5563;
-  }
-
-  :global(.dark) .contribution-table-view :global(.column-filter) {
-    background-color: #374151;
-    border-color: #4b5563;
-    color: #f9fafb;
-  }
-
-  :global(.dark) .contribution-table-view :global(.column-filter::placeholder) {
-    color: #9ca3af;
-  }
-
-  :global(.dark) .contribution-table-view :global(.datatable-selector) {
-    background-color: #374151;
-    border-color: #4b5563;
-    color: #f9fafb;
-  }
-
-  :global(.dark) .contribution-table-view :global(.datatable-pagination li a),
-  :global(.dark) .contribution-table-view :global(.datatable-pagination li button) {
-    background-color: #374151;
-    border-color: #4b5563;
-    color: #60a5fa;
-  }
-
-  :global(.dark) .contribution-table-view :global(.datatable-pagination .datatable-active a),
-  :global(.dark) .contribution-table-view :global(.datatable-pagination .datatable-active button) {
-    background-color: #2563eb;
-    border-color: #2563eb;
-    color: #fff;
   }
 </style>
