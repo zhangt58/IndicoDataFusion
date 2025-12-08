@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"net/http"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -82,6 +83,8 @@ func NewDataSourceHandlerWithCache(ds *DataSource, cacheConfig *CacheConfig) (*D
 		if ds.Indico.Timeout != "" {
 			if timeout, err := time.ParseDuration(ds.Indico.Timeout); err == nil {
 				client.Timeout = timeout
+				// Also update the HTTP client timeout to match
+				client.Client = &http.Client{Timeout: timeout}
 			}
 		}
 		handler.client = client
