@@ -356,29 +356,18 @@
  <TrackDetailsDialog bind:open={showTrackDialog} tracks={selectedTracks} allTracks={allAvailableTracks} />
 
 <style>
-  :global(.title-link) {
-    color: #0d6efd;
-    text-decoration: none;
-    cursor: pointer;
-    display: inline-flex !important;
-    align-items: flex-start !important;
-    justify-content: flex-start !important;
-    text-align: left !important;
-    padding: 0 !important;
-    background: transparent !important;
-    border: none !important;
+  /* Component-specific styling for AbstractTableView */
+  
+  /* State badge styling - specific to AbstractTableView */
+  :global(.state-badge) {
+    font-size: 0.75rem;
+    padding: 0.25rem 0.5rem;
+    border-radius: 0.25rem;
+    font-weight: 500;
   }
 
-  :global(.title-link:hover) {
-    color: #0a58ca;
-    text-decoration: underline;
-  }
-
-  :global(.dark .title-link) {
-    color: #60a5fa;
-  }
-
-  :global(.dark .title-link:hover) {
-    color: #93c5fd;
+  /* Authors cell with tooltip */
+  :global(.authors-cell) {
+    cursor: help;
   }
 </style>

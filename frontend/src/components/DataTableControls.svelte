@@ -47,7 +47,7 @@
 
   <!-- Range count badge -->
   <div class="flex-1">
-    <Badge class="text-md rounded" color="gray">
+    <Badge rounded color="gray">
       Showing {startItem()} to {endItem()} of {totalItems}
     </Badge>
   </div>
@@ -60,6 +60,6 @@
     onPageChange={(p) => goTo(p)}
     showIcons={true}
     ariaLabel="Pagination"
-    classes={{ active: "bg-green-100 dark:bg-green-700 text-green-600 dark:text-white rounded-sm" }}
+    classes={{ active: "bg-green-100 dark:bg-green-700 text-green-600 dark:text-white" }}
   />
 </div>

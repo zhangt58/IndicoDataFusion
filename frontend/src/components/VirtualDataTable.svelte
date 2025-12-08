@@ -96,21 +96,23 @@
 </section>
 
 <style>
-  .virtual-data-table {
-    display: block;
+  .virtual-data-table { 
+    display: block; 
     min-width: 0;
     height: 100%;
     overflow: auto;
   }
-
+  
   :global(.datatable-table) {
     display: table;
     width: 100%;
     min-width: 0;
     border-collapse: collapse;
     box-sizing: border-box;
-    font-size: 0.95rem;
-    border: 1px solid #dee2e6;
+    font-size: 0.875rem; /* 14px - smaller, more compact */
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif;
+    line-height: 1.4;
+    border: none;
   }
 
   /* Sticky header support */
@@ -120,80 +122,107 @@
     z-index: 20;
   }
 
-  /* Header visual styles */
+  /* Header visual styles - only bottom border */
   :global(.datatable-table) thead th {
     background-color: var(--tbl-head-bg, #f8f9fa);
+    font-size: 0.8125rem; /* 13px */
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.025em;
+    border-top: none;
+    border-left: none;
+    border-right: none;
     border-bottom: 2px solid #dee2e6;
-    border-right: 1px solid #dee2e6;
     padding: 0.5rem 0.75rem;
     text-align: left;
-    font-weight: 600;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    white-space: normal; /* Allow header text to wrap */
+    overflow: visible;
+    box-shadow: 0 2px 2px -1px rgba(0, 0, 0, 0.1); /* Keep border visible on scroll */
   }
 
-  :global(.datatable-table) thead th:last-child {
-    border-right: none;
+  /* Row striping - alternating colors */
+  /* VirtualList may wrap rows, so we target tr directly */
+  :global(.datatable-table tbody tr:nth-of-type(even)) {
+    background-color: #ffffff;
   }
 
-  /* Row striping and hover */
-  :global(.datatable-table) tbody tr:nth-child(odd) {
-    background-color: rgba(0, 0, 0, 0.02);
+  :global(.datatable-table tbody tr:nth-of-type(odd)) {
+    background-color: #f8f9fa;
   }
 
-  :global(.datatable-table) tbody tr:hover {
-    background-color: rgba(0, 0, 0, 0.075);
+  /* Also ensure tr elements themselves have background */
+  :global(.datatable-table tbody tr) {
+    background-color: inherit;
   }
 
-  /* Body cell defaults */
-  :global(.datatable-table) tbody td {
+  /* Hover effect */
+  :global(.datatable-table tbody tr:hover) {
+    background-color: #e7f1ff !important;
+    transition: background-color 0.15s ease-in-out;
+  }
+
+  /* Body cell defaults - only bottom border */
+  :global(.datatable-table tbody td) {
     padding: 0.5rem 0.75rem;
-    border-top: 1px solid #dee2e6;
-    border-right: 1px solid #dee2e6;
+    border-top: none;
+    border-left: none;
+    border-right: none;
+    border-bottom: 1px solid #e9ecef;
     vertical-align: middle;
     text-align: left;
+    font-size: 0.875rem; /* 14px */
     overflow: hidden;
-    white-space: nowrap;
-    text-overflow: ellipsis;
+    white-space: normal; /* Allow wrapping by default */
+    word-wrap: break-word;
     box-sizing: border-box;
   }
 
-  :global(.datatable-table) tbody td:last-child {
-    border-right: none;
+  /* No-wrap variant for cells that should truncate */
+  :global(.datatable-table tbody td.nowrap) {
+    white-space: nowrap;
+    text-overflow: ellipsis;
   }
 
   /* Compact variant */
-  :global(.datatable-table).compact tbody td {
+  :global(.datatable-table.compact tbody td) {
     padding: 0.1rem 0.3rem;
   }
 
   /* Header content alignment helper */
-  :global(.datatable-table) thead th > div { display:inline-flex; align-items:center; gap:0.25rem; }
+  :global(.datatable-table thead th > div) {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+  }
 
   /* Allow certain long cells to wrap fully if explicitly requested */
-  :global(.datatable-table) td.wrap {
+  :global(.datatable-table td.wrap) {
     white-space: normal;
     word-break: break-word;
   }
 
   /* Dark mode variants for the datatable */
-  :global(.dark) :global(.datatable-table) thead th {
-    background-color: #374151;
-    border-color: #4b5563;
+  :global(.dark) :global(.datatable-table thead th) {
+    background-color: #1f2937;
+    border-bottom-color: #374151;
     color: #f9fafb;
+    box-shadow: 0 2px 2px -1px rgba(0, 0, 0, 0.3); /* Darker shadow for dark mode */
   }
 
-  :global(.dark) :global(.datatable-table) tbody tr:nth-child(odd) {
-    background-color: rgba(255, 255, 255, 0.02);
+  :global(.dark) :global(.datatable-table tbody tr:nth-of-type(even)) {
+    background-color: #111827;
   }
 
-  :global(.dark) :global(.datatable-table) tbody tr:hover {
-    background-color: rgba(255, 255, 255, 0.075);
+  :global(.dark) :global(.datatable-table tbody tr:nth-of-type(odd)) {
+    background-color: #1f2937;
   }
 
-  :global(.dark) :global(.datatable-table) tbody td {
-    border-color: #4b5563;
+  :global(.dark) :global(.datatable-table tbody tr:hover) {
+    background-color: #374151 !important;
+  }
+
+  :global(.dark) :global(.datatable-table tbody td) {
+    border-bottom-color: #374151;
     color: #e5e7eb;
   }
 
@@ -268,6 +297,41 @@
     border: 1px solid #ced4da;
     border-radius: 0.25rem;
     background-color: #fff;
+  }
+
+  /* Title link styling - common for both Abstract and Contribution views */
+  :global(.title-link) {
+    color: #0d6efd;
+    text-decoration: none;
+    cursor: pointer;
+    display: inline-flex !important;
+    align-items: flex-start !important;
+    justify-content: flex-start !important;
+    text-align: left !important;
+    padding: 0 !important;
+    background: transparent !important;
+    border: none !important;
+    font-size: 0.875rem;
+    font-weight: 400;
+  }
+
+  :global(.title-link:hover) {
+    color: #0a58ca;
+    text-decoration: underline;
+  }
+
+  :global(.dark .title-link) {
+    color: #60a5fa;
+  }
+
+  :global(.dark .title-link:hover) {
+    color: #93c5fd;
+  }
+
+  /* Badge sizing adjustments for compact table */
+  :global(.datatable-table .badge) {
+    font-size: 0.75rem;
+    padding: 0.25rem 0.5rem;
   }
 
   /* Badges and small helpers used inside table cells */
