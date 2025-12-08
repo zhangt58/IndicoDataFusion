@@ -213,15 +213,16 @@
 <div class="mt-12 p-4 contribution-table-view">
   <!-- Controls -->
   <div class="flex items-center gap-4 p-2">
+    <!-- DataTableControls uses Svelte v5 callback-prop API: pass values and callbacks -->
     <DataTableControls
-      bind:perPage
-      bind:currentPage
-      bind:search={searchQuery}
+      search={searchQuery}
+      currentPage={currentPage}
+      perPage={perPage}
       {totalItems}
       perPageOptions={[10,25,50,100]}
-      on:perpagechange={(e) => { perPage = e.detail.perPage }}
-      on:pagechange={(e) => { currentPage = e.detail.currentPage }}
-      on:searchchange={(e) => { searchQuery = e.detail.search }}
+      perpagechange={(payload) => { perPage = payload.perPage }}
+      pagechange={(payload) => { currentPage = payload.currentPage }}
+      searchchange={(payload) => { searchQuery = payload.search }}
     />
   </div>
 
