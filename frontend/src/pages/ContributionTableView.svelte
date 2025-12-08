@@ -71,6 +71,37 @@
 
   // Sorting (string compare for all columns)
   function compare(a,b,key) {
+    // Special-case ID: numeric sort if IDNumber exists
+    if (key === 'ID') {
+      const na = a.IDNumber != null ? Number(a.IDNumber) : NaN;
+      const nb = b.IDNumber != null ? Number(b.IDNumber) : NaN;
+      if (isNaN(na) && isNaN(nb)) return 0;
+      if (isNaN(na)) return -1;
+      if (isNaN(nb)) return 1;
+      return na - nb;
+    }
+
+    // Special-case Duration: sort by DurationMinutes (number of minutes)
+    if (key === 'Duration') {
+      const da = a.DurationMinutes != null ? Number(a.DurationMinutes) : NaN;
+      const db = b.DurationMinutes != null ? Number(b.DurationMinutes) : NaN;
+      if (isNaN(da) && isNaN(db)) return 0;
+      if (isNaN(da)) return -1;
+      if (isNaN(db)) return 1;
+      return da - db;
+    }
+
+    // Special-case Start: sort by StartMillis (timestamp)
+    if (key === 'Start') {
+      const sa = a.StartMillis != null ? Number(a.StartMillis) : NaN;
+      const sb = b.StartMillis != null ? Number(b.StartMillis) : NaN;
+      if (isNaN(sa) && isNaN(sb)) return 0;
+      if (isNaN(sa)) return -1;
+      if (isNaN(sb)) return 1;
+      return sa - sb;
+    }
+
+    // fallback: string compare
     const sa = String(a[key] ?? '').toLowerCase();
     const sb = String(b[key] ?? '').toLowerCase();
     if (sa < sb) return -1;

@@ -97,9 +97,23 @@ export function getAllAuthorsTooltip(persons) {
 export function transformAbstractToTableItem(abstract) {
   const trackTitle = abstract.accepted_track?.title || abstract.reviewed_for_tracks?.[0]?.title || '';
   const allTracks = getAllTracks(abstract);
-  
+
+  // compute numeric ID if possible
+  const rawId = abstract.friendly_id ?? abstract.id;
+  const idNum = Number(rawId);
+
+  // compute submitted timestamp millis if possible
+  let submittedISO = '';
+  let submittedMillis = NaN;
+  if (abstract.submitted_dt) {
+    submittedISO = String(abstract.submitted_dt);
+    const d = new Date(submittedISO);
+    if (!isNaN(d.getTime())) submittedMillis = d.getTime();
+  }
+
   return {
-    ID: abstract.friendly_id || abstract.id,
+    ID: rawId,
+    IDNumber: isNaN(idNum) ? null : idNum,
     Title: abstract.title || '',
     State: abstract.state || '',
     Submitter: abstract.submitter?.full_name || '',
@@ -110,6 +124,8 @@ export function transformAbstractToTableItem(abstract) {
     Type: abstract.accepted_contrib_type?.name || '',
     Score: abstract.score ?? '',
     Submitted: formatTimestamp(abstract.submitted_dt),
+    SubmittedISO: submittedISO,
+    SubmittedMillis: submittedMillis,
     Authors: getPrimaryAuthorsDisplay(abstract.persons),
     AuthorsTooltip: getAllAuthorsTooltip(abstract.persons)  // All authors for tooltip
   };

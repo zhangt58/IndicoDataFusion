@@ -90,6 +90,17 @@
   function compare(a,b,key) {
     const va = a[key];
     const vb = b[key];
+
+    // Special-case ID: numeric sort using IDNumber
+    if (key === 'ID') {
+      const na = a.IDNumber != null ? Number(a.IDNumber) : NaN;
+      const nb = b.IDNumber != null ? Number(b.IDNumber) : NaN;
+      if (isNaN(na) && isNaN(nb)) return 0;
+      if (isNaN(na)) return -1;
+      if (isNaN(nb)) return 1;
+      return na - nb;
+    }
+
     // numeric sort for Score
     if (key === 'Score') {
       const na = Number(va === '' ? NaN : va);
@@ -99,6 +110,17 @@
       if (isNaN(nb)) return 1;
       return na - nb;
     }
+
+    // Special-case Submitted: sort by SubmittedMillis timestamp
+    if (key === 'Submitted') {
+      const ta = a.SubmittedMillis != null ? Number(a.SubmittedMillis) : NaN;
+      const tb = b.SubmittedMillis != null ? Number(b.SubmittedMillis) : NaN;
+      if (isNaN(ta) && isNaN(tb)) return 0;
+      if (isNaN(ta)) return -1;
+      if (isNaN(tb)) return 1;
+      return ta - tb;
+    }
+
     // fallback string compare
     const sa = String(va ?? '').toLowerCase();
     const sb = String(vb ?? '').toLowerCase();
