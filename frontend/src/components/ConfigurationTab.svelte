@@ -1,6 +1,7 @@
 <script>
   import { onMount } from 'svelte';
   import { GetStructuredConfigUI, ApplyStructuredConfigUI } from '../../wailsjs/go/main/App';
+  import { TrashBinOutline } from 'flowbite-svelte-icons';
 
   let configData = null;
   let loading = true;
@@ -301,6 +302,59 @@
       applying = false;
     }
   }
+
+  // -- Delete data source state and handlers --
+  let showDeleteConfirm = false;
+  let deleteIndex = null;
+  let deleteName = '';
+
+  function openDeleteConfirm(i) {
+    deleteIndex = i;
+    deleteName = (configData?.dataSources?.[i]?.name) || '';
+    showDeleteConfirm = true;
+  }
+
+  function cancelDelete() {
+    showDeleteConfirm = false;
+    deleteIndex = null;
+    deleteName = '';
+  }
+
+  async function confirmDelete() {
+    if (deleteIndex === null || !configData || !Array.isArray(configData.dataSources)) return;
+    // remove the data source
+    configData.dataSources.splice(deleteIndex, 1);
+    // rebuild expandedSources to avoid stale keys
+    const newExpanded = {};
+    (configData.dataSources || []).forEach((_, idx) => {
+      newExpanded[idx] = !!expandedSources[idx];
+    });
+    expandedSources = newExpanded;
+
+    // adjust selectedActiveIndex and currentActiveIndex
+    if (selectedActiveIndex === deleteIndex) {
+      selectedActiveIndex = 0;
+    } else if (selectedActiveIndex > deleteIndex) {
+      selectedActiveIndex = Math.max(0, selectedActiveIndex - 1);
+    }
+    if (currentActiveIndex === deleteIndex) {
+      currentActiveIndex = 0;
+    } else if (currentActiveIndex > deleteIndex) {
+      currentActiveIndex = Math.max(0, currentActiveIndex - 1);
+    }
+
+    // re-run name validation
+    validateNames();
+
+    // persist changes
+    const ok = await apply();
+    if (ok) {
+      showToastMsg(`Deleted data source "${deleteName || ''}"`, 'success');
+      cancelDelete();
+    } else {
+      // apply() will have set applyError and shown toast
+    }
+  }
 </script>
 
 <style>
@@ -421,9 +475,21 @@
                 <span class="px-2 py-0.5 text-xs rounded-full bg-indigo-100 dark:bg-indigo-900 text-indigo-800 dark:text-indigo-200">Active</span>
               {/if}
             </span>
-            <svg class="w-5 h-5 text-gray-500 dark:text-gray-400 transform transition-transform {expandedSources[i] ? 'rotate-180' : ''}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
-            </svg>
+            <div class="flex items-center gap-2">
+              <!-- Delete button: stop propagation so header click doesn't toggle -->
+              <button
+                type="button"
+                class="text-red-500 hover:text-red-700 p-1 rounded focus:outline-none focus:ring-2 focus:ring-red-300"
+                on:click|preventDefault|stopPropagation={() => openDeleteConfirm(i)}
+                aria-label={`Delete data source ${dataSource.name || i}`}
+                title="Delete data source"
+              >
+                <TrashBinOutline class="w-4 h-4" />
+              </button>
+              <svg class="w-5 h-5 text-gray-500 dark:text-gray-400 transform transition-transform {expandedSources[i] ? 'rotate-180' : ''}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+              </svg>
+            </div>
           </div>
 
           <!-- Content -->
@@ -583,6 +649,26 @@
               disabled={applying}
             >
               {applying ? 'Saving...' : 'Save'}
+            </button>
+          </div>
+        </div>
+      </div>
+    {/if}
+
+    <!-- Delete Confirmation Modal -->
+    {#if showDeleteConfirm}
+      <div class="fixed inset-0 z-40 flex items-center justify-center">
+        <div class="absolute inset-0 bg-black/40" role="button" tabindex="0" aria-label="Close dialog" on:click={cancelDelete} on:keydown={(e) => { if (e.key === 'Enter' || e.key === ' ' || e.key === 'Spacebar') { e.preventDefault(); cancelDelete(); } }}></div>
+        <div role="dialog" aria-modal="true" tabindex="0" on:keydown|stopPropagation={(e) => { if (e.key === 'Escape') cancelDelete(); }} class="relative z-50 w-full max-w-md mx-4 bg-white dark:bg-gray-800 rounded-lg shadow-lg p-4 pointer-events-auto">
+          <h4 class="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-3">Delete Data Source</h4>
+          <p class="text-sm text-gray-700 dark:text-gray-300">Are you sure you want to delete <strong>{deleteName || 'this data source'}</strong>? This action cannot be undone.</p>
+          <div class="mt-4 flex justify-end gap-2">
+            <button type="button" class="px-3 py-1 rounded bg-gray-200 dark:bg-gray-700 text-sm" on:click={cancelDelete}>Cancel</button>
+            <button type="button" class="px-3 py-1 rounded bg-red-600 text-white text-sm hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-red-400"
+                    on:click={confirmDelete}
+                    disabled={applying}
+            >
+              {applying ? 'Deleting...' : 'Delete'}
             </button>
           </div>
         </div>
