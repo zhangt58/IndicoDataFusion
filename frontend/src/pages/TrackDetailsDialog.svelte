@@ -12,6 +12,9 @@
   /** @type {Array<{title: string, type: string}>} */
   export let allTracks = [];
 
+  /** @type {boolean} */
+  export let showTypes = true;
+
   // Close dialog
   function closeDialog() {
     open = false;
@@ -58,7 +61,9 @@
   // Get the type of the current track (for highlighting color)
   function getCurrentTrackType(trackTitle) {
     const found = tracks.find(t => t.title === trackTitle);
-    return found?.type || null;
+    if (!found) return null;
+    // only treat explicit 'accepted'/'reviewed' as meaningful types; otherwise return null
+    return (found.type === 'accepted' || found.type === 'reviewed') ? found.type : null;
   }
 </script>
 
@@ -77,14 +82,18 @@
   {#if tracks.length > 0}
     <div class="space-y-3">
       {#each tracks as track}
-        <div class="p-3 rounded-lg border {track.type === 'accepted' ? 'bg-green-50 dark:bg-green-900/30 border-green-200 dark:border-green-800' : 'bg-purple-50 dark:bg-purple-900/30 border-purple-200 dark:border-purple-800'}">
-          <div class="flex items-center gap-2">
-            <span class="px-2 py-0.5 text-xs font-medium rounded {track.type === 'accepted' ? 'bg-green-100 dark:bg-green-800 text-green-800 dark:text-green-200' : 'bg-purple-100 dark:bg-purple-800 text-purple-800 dark:text-purple-200'}">
-              {track.type === 'accepted' ? 'Accepted' : 'Reviewed'}
-            </span>
+        {#if track}
+          <div class="p-3 rounded-lg border bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700">
+            <div class="flex items-center gap-2">
+              {#if showTypes && (track.type === 'accepted' || track.type === 'reviewed')}
+                <span class="px-2 py-0.5 text-xs font-medium rounded {track.type === 'accepted' ? 'bg-green-100 dark:bg-green-800 text-green-800 dark:text-green-200' : 'bg-purple-100 dark:bg-purple-800 text-purple-800 dark:text-purple-200'}">
+                  {track.type === 'accepted' ? 'Accepted' : 'Reviewed'}
+                </span>
+              {/if}
+              <p class="text-sm text-gray-700 dark:text-gray-300 m-0">{track.title}</p>
+            </div>
           </div>
-          <p class="mt-2 text-sm text-gray-700 dark:text-gray-300">{track.title}</p>
-        </div>
+        {/if}
       {/each}
     </div>
   {:else}
@@ -98,14 +107,19 @@
       <ul class="space-y-2">
         {#each uniqueTracks as track}
           {@const isCurrent = isCurrentTrack(track.title)}
-          {@const currentType = getCurrentTrackType(track.title)}
-          <li class="text-sm pl-2 border-l-2 {isCurrent 
-            ? (currentType === 'accepted' 
-              ? 'border-green-400 text-green-700 dark:text-green-300 font-semibold' 
-              : 'border-purple-400 text-purple-700 dark:text-purple-300 font-semibold')
-            : 'border-blue-400 text-blue-700 dark:text-blue-300'}">
-            {track.title}
-          </li>
+          {@const currentType = showTypes ? getCurrentTrackType(track.title) : null}
+          {#if isCurrent}
+            {#if currentType === 'accepted'}
+              <li class="text-sm pl-2 border-l-2 border-green-400 text-green-700 dark:text-green-300 font-semibold">{track.title}</li>
+            {:else if currentType === 'reviewed'}
+              <li class="text-sm pl-2 border-l-2 border-purple-400 text-purple-700 dark:text-purple-300 font-semibold">{track.title}</li>
+            {:else}
+              <!-- current track but no meaningful type: neutral highlight -->
+              <li class="text-sm pl-2 border-l-2 border-gray-400 text-gray-700 dark:text-gray-300 font-semibold">{track.title}</li>
+            {/if}
+          {:else}
+            <li class="text-sm pl-2 border-l-2 border-blue-400 text-blue-700 dark:text-blue-300">{track.title}</li>
+          {/if}
         {/each}
       </ul>
     </div>

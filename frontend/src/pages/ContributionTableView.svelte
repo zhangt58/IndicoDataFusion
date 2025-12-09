@@ -10,6 +10,7 @@
   import TrackBadge from './TrackBadge.svelte';
   import TypeBadge from './TypeBadge.svelte';
   import DataTableControls from '../components/DataTableControls.svelte';
+  import TrackDetailsDialog from './TrackDetailsDialog.svelte';
 
   /** @type {Array} */
   export let contributionData = [];
@@ -17,6 +18,10 @@
   // Contribution dialog state (can be extended later for contribution details dialog)
   let showContributionDialog = false;
   let selectedContribution = null;
+
+  // Track dialog state
+  let showTrackDialog = false;
+  let selectedTracks = [];
 
   // Find contribution by ID
   function findContributionById(id) {
@@ -28,6 +33,45 @@
     const sid = String(id);
     selectedContribution = findContributionById(sid);
     if (selectedContribution) showContributionDialog = true;
+  }
+
+  // Aggregate all unique tracks from contributions
+  $: allAvailableTracks = contributionData.reduce((acc, c) => {
+    const title = c.track || c.Track || null;
+    if (title && !acc.some(t => t.title === title)) {
+      // contribution source doesn't carry accepted/reviewed flag, mark as unknown
+      acc.push({ title, type: 'unknown' });
+    }
+    return acc;
+  }, []);
+
+  // Open track dialog - accepts JSON string/array/object or plain title string
+  function openTrack(trackFull) {
+    try {
+      if (!trackFull) {
+        selectedTracks = [];
+        return;
+      }
+      // If it's already an array/object, handle accordingly
+      if (typeof trackFull === 'string') {
+        // Try JSON parse first
+        try {
+          const parsed = JSON.parse(trackFull);
+          selectedTracks = Array.isArray(parsed) ? parsed : [parsed];
+        } catch (e) {
+          // plain title string
+          selectedTracks = [{ title: trackFull, type: 'unknown' }];
+        }
+      } else if (Array.isArray(trackFull)) {
+        selectedTracks = trackFull;
+      } else {
+        selectedTracks = [trackFull];
+      }
+      if (selectedTracks.length > 0) showTrackDialog = true;
+    } catch (err) {
+      console.error('Failed to open track dialog:', err);
+      selectedTracks = [];
+    }
   }
 
   // Handle clicks on the table (keeps existing delegation behavior)
@@ -46,6 +90,15 @@
       if (selectedContribution) {
         showContributionDialog = true;
       }
+    }
+
+    // Handle track badge click (support clicks on inner elements too)
+    if (target.classList.contains('track-link') || (target.closest && target.closest('.track-link'))) {
+      event.preventDefault();
+      const el = target.classList.contains('track-link') ? target : target.closest('.track-link');
+      const data = el && (el.dataset && el.dataset.tracks) ? el.dataset.tracks : el && el.getAttribute && el.getAttribute('data-tracks');
+      // openTrack will handle JSON or plain string
+      openTrack(data || el.textContent || '');
     }
   }
 
@@ -241,6 +294,13 @@
         if (speakersSpan && it.SpeakersTooltip != null) {
           speakersSpan.setAttribute('title', String(it.SpeakersTooltip));
         }
+
+        // Track badge: ensure data-tracks is present (useful when original rowRender doesn't set it)
+        const trackCell = node.children[5];
+        const trackEl = trackCell && (trackCell.querySelector('.track-link') || trackCell.querySelector('button') || trackCell.querySelector('a') || trackCell.querySelector('span'));
+        if (trackEl && it.Track != null) {
+          try { trackEl.setAttribute('data-tracks', String(it.Track)); } catch (e) { /* ignore */ }
+        }
       } catch (err) {
         console.error('applyRowRender fallback error', err);
       }
@@ -263,7 +323,7 @@
 <!-- svelte-ignore a11y_no_static_element_interactions -->
 <div class="flex flex-col overflow-hidden mt-8 px-1" style="height: calc(100vh - 8rem);">
   <!-- Sticky Controls at top -->
-  <div class="sticky top-0 z-10 bg-transparent py-1 border-b border-gray-200 dark:border-gray-700 mb-2 flex-shrink-0">
+  <div class="sticky top-0 z-10 bg-transparent py-1 border-b border-gray-200 dark:border-gray-700 mb-2 shrink-0">
     <DataTableControls
       search={searchQuery}
       currentPage={currentPage}
@@ -303,7 +363,7 @@
           </td>
           <td>
             {#if item.Track}
-              <TrackBadge text={item.Track} className="track-link" {...{ 'data-tracks': item.Track }} />
+              <TrackBadge text={item.Track} className="track-link" on:click={() => openTrack(item.Track)} {...{ 'data-tracks': item.Track }} />
             {/if}
           </td>
           <td>{item.StartDate}</td>
@@ -319,11 +379,19 @@
 <!-- Contribution Detail Dialog -->
 <ContributionDetailsDialog bind:open={showContributionDialog} contribution={selectedContribution} />
 
+<!-- Track Details Dialog -->
+<TrackDetailsDialog bind:open={showTrackDialog} tracks={selectedTracks} allTracks={allAvailableTracks} showTypes={false} />
+
 <style>
   /* Component-specific styling for ContributionTableView */
 
   /* Speakers cell with tooltip */
   :global(.speakers-cell) {
     cursor: help;
+  }
+
+  /* Make track-link appear clickable */
+  :global(.track-link) {
+    cursor: pointer;
   }
 </style>
