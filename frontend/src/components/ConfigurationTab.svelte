@@ -1,7 +1,8 @@
 <script>
   import { onMount } from 'svelte';
   import { GetStructuredConfigUI, ApplyStructuredConfigUI } from '../../wailsjs/go/main/App';
-  import { TrashBinOutline } from 'flowbite-svelte-icons';
+  import DataSources from './DataSources.svelte';
+  import IndicoConfig from './IndicoConfig.svelte';
 
   let configData = null;
   let loading = true;
@@ -53,125 +54,56 @@
     contribs: 'contribs.json'
   }
 
-  // -- New state for Add Indico dialog --
-  let showAddIndico = false;
-  let newIndico = {
-    name: '',
-    baseUrl: 'https://',
-    eventId: 0,
-    apiToken: '',
-    timeout: '60s'
-  };
-
-  // Errors for the Add Indico dialog fields
-  let newIndicoErrors = {};
-
-  // Helper to validate the newIndico fields client-side
-  function validateNewIndico() {
-    newIndicoErrors = {};
-    // name
-    if (!newIndico.name || String(newIndico.name).trim() === '') {
-      newIndicoErrors.name = 'Name is required';
-    }
-    // baseUrl: must be a valid http/https URL
-    try {
-      const url = new URL(String(newIndico.baseUrl || '').trim());
-      if (url.protocol !== 'http:' && url.protocol !== 'https:') {
-        newIndicoErrors.baseUrl = 'Base URL must start with http:// or https://';
-      }
-    } catch (e) {
-      newIndicoErrors.baseUrl = 'Base URL is not a valid URL';
-    }
-    // eventId: must be non-empty numeric
-    if (newIndico.eventId === null || newIndico.eventId === undefined) {
-      newIndicoErrors.eventId = 'Event ID is required';
-    } else if (isNaN(Number(newIndico.eventId)) || Number(newIndico.eventId) <= 0) {
-      newIndicoErrors.eventId = 'Event ID must be a positive number';
-    } else if (!Number.isInteger(Number(newIndico.eventId))) {
-      newIndicoErrors.eventId = 'Event ID must be an integer';
-    }
-    // timeout: basic pattern like 500ms, 15s, 1m, 2h
-    const t = String(newIndico.timeout || '').trim();
-    if (!/^\d+(ms|s|m|h)$/.test(t)) {
-      newIndicoErrors.timeout = 'Timeout must be a duration like 500ms, 15s, 1m, or 2h';
-    }
-    // apiToken: optional but if present should be non-empty after trim
-    if (newIndico.apiToken !== null && newIndico.apiToken !== undefined) {
-      if (String(newIndico.apiToken).trim() === '') {
-        // allow empty token (some servers might not need it) - do not error
-      }
-    }
-
-    return Object.keys(newIndicoErrors).length === 0;
-  }
+  // -- Indico dialog integration: we use the extracted component --
+  let indicoDialogOpen = false;
+  let indicoDialogInitialName = '';
 
   function openAddIndicoDialog() {
-    // initialize template values and open dialog
-    newIndico.name = getUniqueName('Conference Name');
-    // provide sensible defaults so validation passes immediately and Save is clickable
-    newIndico.baseUrl = indicoDataSourcePlaceholders.baseUrl;
-    newIndico.eventId = parseInt(String(indicoDataSourcePlaceholders.eventId), 10);
-    newIndico.apiToken = indicoDataSourcePlaceholders.apiToken;
-    newIndico.timeout = indicoDataSourcePlaceholders.timeout;
-    newIndicoErrors = {};
-    showAddIndico = true;
+    indicoDialogInitialName = getUniqueName('Conference Name');
+    indicoDialogOpen = true;
   }
 
-  function cancelAddIndico() {showAddIndico = false;
-    newIndicoErrors = {};
-  }
-
-  async function saveNewIndico() {
-    // client-side validation
-    if (!validateNewIndico()) {
-      return;
-    }
-
-    // basic validation: name non-empty (already validated above)
-    const name = (newIndico.name || '').trim();
-    // ensure configData.dataSources exists
+  // Handler when child component emits 'create' with the raw indico payload
+  async function handleCreateIndico(event) {
+    const payload = event.detail || event; // allow both direct and event.detail
+    const nameRaw = (payload.name || '').trim();
     if (!configData) configData = {};
     if (!Array.isArray(configData.dataSources)) configData.dataSources = [];
 
-    // If name collides, make it unique by appending suffix
+    // make name unique if collision
     const existingNames = new Set(configData.dataSources.map(ds => (ds && ds.name) ? String(ds.name) : ''));
-    let finalName = name;
+    let finalName = nameRaw || getUniqueName('Conference Name');
     if (existingNames.has(finalName)) {
       let i = 2;
       while (existingNames.has(`${finalName} (${i})`)) i++;
       finalName = `${finalName} (${i})`;
     }
 
-    // build the new data source object
     const newSource = {
       name: finalName,
       type: 'indico',
       indico: {
-        baseUrl: (newIndico.baseUrl || '').trim(),
-        // ensure eventId is sent as an integer
-        eventId: Number.isInteger(Number(newIndico.eventId)) ? parseInt(String(newIndico.eventId), 10) : Number(newIndico.eventId),
-        apiToken: newIndico.apiToken || '',
-        timeout: newIndico.timeout || '60s'
+        baseUrl: (payload.baseUrl || '').trim(),
+        eventId: Number.isInteger(Number(payload.eventId)) ? parseInt(String(payload.eventId), 10) : Number(payload.eventId),
+        apiToken: payload.apiToken || '',
+        timeout: payload.timeout || '60s'
       }
     };
 
-    // push to config and update UI state
     const newIndex = configData.dataSources.length;
     configData.dataSources.push(newSource);
-    expandedSources[newIndex] = true; // expand newly added source
-    // re-run name validation and set selection to the new source
+    expandedSources[newIndex] = true;
     validateNames();
     selectedActiveIndex = newIndex;
 
-    // Persist immediately by calling apply(); await result and close modal on success
     const ok = await apply();
     if (ok) {
-      // If apply succeeded, clear modal and errors
-      showAddIndico = false;
-      newIndicoErrors = {};
-    } else {
-      // apply() set applyError; keep modal open so user can fix issues
+      indicoDialogOpen = false;
     }
+  }
+
+  function cancelCreateIndico() {
+    indicoDialogOpen = false;
   }
 
   // Helper to create a unique default name
@@ -217,9 +149,6 @@
 
   // Derived flag used to disable Apply when there are name validation errors
   $: hasNameErrors = Object.values(nameErrors).some(Boolean);
-
-  // Reactive validity for newIndico so the Save button can be disabled
-  $: newIndicoValid = validateNewIndico();
 
   async function loadConfig() {
     try {
@@ -420,240 +349,27 @@
     </div>
 
     <!-- Data Sources -->
-    <div class="bg-gray-50 dark:bg-gray-800 rounded-lg shadow p-4 border border-gray-200 dark:border-gray-700">
-      <div class="flex items-center justify-between">
-        <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">Data Sources</h3>
-        <!-- Add Indico Source button -->
-        <div class="flex items-center gap-2">
-          <button
-            type="button"
-            class="px-2 py-1 rounded-lg bg-green-600 text-white text-sm font-medium hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed dark:bg-green-500 dark:hover:bg-green-600 focus:outline-none focus:ring-2 focus:ring-green-400"
-            on:click={openAddIndicoDialog}
-            disabled={loading}
-            title="Add a new Indico data source"
-          >
-            + Add Indico Source
-          </button>
-        </div>
-      </div>
-      <div class="space-y-1">
+    <DataSources {configData}
+                 {expandedSources}
+                 {nameErrors}
+                 indicoDataSourcePlaceholders={indicoDataSourcePlaceholders}
+                 testDataSourcePlaceholders={testDataSourcePlaceholders}
+                 {loading}
+                 {applying}
+                 validateNames={validateNames}
+                 currentActiveIndex={currentActiveIndex}
+                 on:add-indico={openAddIndicoDialog}
+                 on:delete={(e) => openDeleteConfirm(e.detail)}
+                 on:toggle={(e) => toggleSource(e.detail)} />
 
-        {#each configData.dataSources as dataSource, i (i)}
-        <div class="bg-gray-50 dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
-          <!-- Header -->
-          <div
-            role="button"
-            tabindex="0"
-            on:click={() => toggleSource(i)}
-            on:keydown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleSource(i); } }}
-            class="w-full flex items-center justify-between p-1 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-          >
-            <span class="flex items-center gap-2">
-              <!-- Make the name editable -->
-              <input
-                id={`ds-name-${i}`}
-                type="text"
-                bind:value={dataSource.name}
-                on:input={validateNames}
-                placeholder="Data source name"
-                title="Edit data source name"
-                aria-label={`Data source name ${i}`}
-                class="text-xl md:text-lg font-semibold text-gray-900 dark:text-gray-100 bg-transparent border-b-2 border-transparent focus:border-indigo-500 px-1 py-0.5 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-sm transition-colors placeholder-gray-400 cursor-text"
-              />
-              {#if nameErrors[i]}
-                <span class="ml-2 text-red-500 text-xs font-medium" title={nameErrors[i]}>{nameErrors[i]}</span>
-              {/if}
-              <!-- pencil icon to indicate editability -->
-              <svg aria-hidden="true" class="w-4 h-4 text-gray-400 ml-1" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M12 20h9" />
-                <path d="M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4 12.5-12.5z" />
-              </svg>
-              <span class="px-2 py-0.5 text-xs rounded-full {dataSource.type === 'indico' ? 'bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200' : 'bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200'}">
-                {dataSource.type === 'indico' ? 'API' : 'Test Data'}
-              </span>
-              {#if currentActiveIndex === i}
-                <span class="px-2 py-0.5 text-xs rounded-full bg-indigo-100 dark:bg-indigo-900 text-indigo-800 dark:text-indigo-200">Active</span>
-              {/if}
-            </span>
-            <div class="flex items-center gap-2">
-              <!-- Delete button: stop propagation so header click doesn't toggle -->
-              <button
-                type="button"
-                class="text-red-500 hover:text-red-700 p-1 rounded focus:outline-none focus:ring-2 focus:ring-red-300"
-                on:click|preventDefault|stopPropagation={() => openDeleteConfirm(i)}
-                aria-label={`Delete data source ${dataSource.name || i}`}
-                title="Delete data source"
-              >
-                <TrashBinOutline class="w-4 h-4" />
-              </button>
-              <svg class="w-5 h-5 text-gray-500 dark:text-gray-400 transform transition-transform {expandedSources[i] ? 'rotate-180' : ''}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
-              </svg>
-            </div>
-          </div>
-
-          <!-- Content -->
-          {#if expandedSources[i]}
-            <div class="px-4 pb-4 pt-2 border-t border-gray-200 dark:border-gray-700 space-y-2">
-              {#if dataSource.type === 'indico' && dataSource.indico}
-                <!-- Indico API Configuration -->
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
-                  <div>
-                    <label for={`ds-${i}-baseUrl`} class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Base URL</label>
-                    <input
-                      id={`ds-${i}-baseUrl`}
-                      type="text"
-                      bind:value={dataSource.indico.baseUrl}
-                      placeholder={indicoDataSourcePlaceholders.baseUrl}
-                      class="w-full rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                    />
-                  </div>
-                  <div>
-                    <label for={`ds-${i}-eventId`} class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Event ID</label>
-                    <input
-                      id={`ds-${i}-eventId`}
-                      type="number"
-                      bind:value={dataSource.indico.eventId}
-                      placeholder={indicoDataSourcePlaceholders.eventId}
-                      class="w-full rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                    />
-                  </div>
-                  <div class="md:col-span-2">
-                    <label for={`ds-${i}-apiToken`} class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">API Token</label>
-                    <input
-                      id={`ds-${i}-apiToken`}
-                      type="password"
-                      bind:value={dataSource.indico.apiToken}
-                      placeholder={indicoDataSourcePlaceholders.apiToken}
-                      class="w-full rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                    />
-                  </div>
-                  <div>
-                    <label for={`ds-${i}-timeout`} class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Timeout</label>
-                    <input
-                      id={`ds-${i}-timeout`}
-                      type="text"
-                      bind:value={dataSource.indico.timeout}
-                      placeholder={indicoDataSourcePlaceholders.timeout}
-                      class="w-full rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                    />
-                    <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">e.g., 15s, 1m, 500ms</p>
-                  </div>
-                </div>
-              {:else if dataSource.type === 'test' && dataSource.test}
-                <!-- Test Data Configuration -->
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
-                  <div class="md:col-span-2">
-                    <label for={`ds-${i}-test-dataDir`} class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Data Directory</label>
-                    <input
-                      id={`ds-${i}-test-dataDir`}
-                      type="text"
-                      bind:value={dataSource.test.dataDir}
-                      placeholder={testDataSourcePlaceholders.dataDir}
-                      class="w-full rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                    />
-                  </div>
-                  <div>
-                    <label for={`ds-${i}-test-eventInfo`} class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Event Info File</label>
-                    <input
-                      id={`ds-${i}-test-eventInfo`}
-                      type="text"
-                      bind:value={dataSource.test.eventInfo}
-                      placeholder={testDataSourcePlaceholders.eventInfo}
-                      class="w-full rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                    />
-                  </div>
-                  <div>
-                    <label for={`ds-${i}-test-abstracts`} class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Abstracts File</label>
-                    <input
-                      id={`ds-${i}-test-abstracts`}
-                      type="text"
-                      bind:value={dataSource.test.abstracts}
-                      placeholder={testDataSourcePlaceholders.abstracts}
-                      class="w-full rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                    />
-                  </div>
-                  <div>
-                    <label for={`ds-${i}-test-contribs`} class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Contributions File</label>
-                    <input
-                      id={`ds-${i}-test-contribs`}
-                      type="text"
-                      bind:value={dataSource.test.contribs}
-                      placeholder={testDataSourcePlaceholders.contribs}
-                      class="w-full rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                    />
-                  </div>
-                </div>
-              {/if}
-              <!-- Error message for data source name -->
-              {#if nameErrors[i]}
-                <div class="text-red-500 text-sm mt-1">{nameErrors[i]}</div>
-              {/if}
-            </div>
-          {/if}
-        </div>
-        {/each}
-      </div>
-    </div>
-
-    <!-- Add Indico Dialog (Modal) -->
-    {#if showAddIndico}
-      <div class="fixed inset-0 z-40 flex items-center justify-center">
-        <div class="absolute inset-0 bg-black/40" role="button" tabindex="0" aria-label="Close dialog" on:click={cancelAddIndico} on:keydown={(e) => { if (e.key === 'Enter' || e.key === ' ' || e.key === 'Spacebar') { e.preventDefault(); cancelAddIndico(); } }}></div>
-        <div role="dialog" aria-modal="true" tabindex="0" on:keydown|stopPropagation={(e) => { if (e.key === 'Escape') cancelAddIndico(); }} class="relative z-50 w-full max-w-lg mx-4 bg-white dark:bg-gray-800 rounded-lg shadow-lg p-4 pointer-events-auto">
-          <h4 class="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-3">Add Indico Data Source</h4>
-          <div class="space-y-3">
-            <div>
-              <label for="new-indico-name" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Name</label>
-              <input id="new-indico-name" type="text" bind:value={newIndico.name} class="w-full rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm" />
-              {#if newIndicoErrors.name}
-                <p class="text-red-500 text-xs mt-1">{newIndicoErrors.name}</p>
-              {/if}
-            </div>
-            <div>
-              <label for="new-indico-baseUrl" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Base URL</label>
-              <input id="new-indico-baseUrl" type="text" bind:value={newIndico.baseUrl} class="w-full rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm"
-                     placeholder={indicoDataSourcePlaceholders.baseUrl} />
-              {#if newIndicoErrors.baseUrl}
-                <p class="text-red-500 text-xs mt-1">{newIndicoErrors.baseUrl}</p>
-              {/if}
-            </div>
-            <div>
-              <label for="new-indico-eventId" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Event ID</label>
-              <input id="new-indico-eventId" type="number" bind:value={newIndico.eventId} class="w-full rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm"
-                     placeholder={indicoDataSourcePlaceholders.eventId} />
-              {#if newIndicoErrors.eventId}
-                <p class="text-red-500 text-xs mt-1">{newIndicoErrors.eventId}</p>
-              {/if}
-            </div>
-            <div>
-              <label for="new-indico-apiToken" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">API Token</label>
-              <input id="new-indico-apiToken" type="text" bind:value={newIndico.apiToken} class="w-full rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm font-mono"
-                     placeholder={indicoDataSourcePlaceholders.apiToken} />
-            </div>
-            <div>
-              <label for="new-indico-timeout" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Timeout</label>
-              <input id="new-indico-timeout" type="text" bind:value={newIndico.timeout} class="w-full rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm"
-                     placeholder={indicoDataSourcePlaceholders.timeout} />
-              {#if newIndicoErrors.timeout}
-                <p class="text-red-500 text-xs mt-1">{newIndicoErrors.timeout}</p>
-              {/if}
-            </div>
-          </div>
-          <div class="mt-4 flex justify-end gap-2">
-            <button type="button" class="px-3 py-1 rounded bg-gray-200 dark:bg-gray-700 text-sm pointer-events-auto" on:click={cancelAddIndico}>Cancel</button>
-            <button
-              type="button"
-              class="px-3 py-1 rounded bg-indigo-600 text-white text-sm pointer-events-auto hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-indigo-400 disabled:hover:bg-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-400 disabled:focus:ring-0 transition-colors"
-              on:click={saveNewIndico}
-              disabled={applying}
-            >
-              {applying ? 'Saving...' : 'Save'}
-            </button>
-          </div>
-        </div>
-      </div>
-    {/if}
+    <!-- IndicoConfig component for adding new Indico sources -->
+    <IndicoConfig bind:open={indicoDialogOpen}
+                 initialName={indicoDialogInitialName}
+                 existingNames={(configData?.dataSources || []).map(ds => ds.name)}
+                 placeholders={indicoDataSourcePlaceholders}
+                 saving={applying}
+                 on:create={handleCreateIndico}
+                 on:cancel={cancelCreateIndico} />
 
     <!-- Delete Confirmation Modal -->
     {#if showDeleteConfirm}
