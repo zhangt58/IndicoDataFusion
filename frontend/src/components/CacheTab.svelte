@@ -338,12 +338,15 @@
                                 <span class="ml-2 text-gray-500 dark:text-gray-500">({formatTimeAgo(entry.timestamp)})</span>
                               </div>
                               {#if entry.hasExpiry}
-                                <div class="text-xs {entry.isExpired ? 'text-red-600 dark:text-red-400' : 'text-gray-600 dark:text-gray-400'}">
-                                  <span class="font-normal">{entry.isExpired ? 'Expired:' : 'Expires:'}</span> {formatTimestamp(entry.expiresAt)}
-                                  {#if entry.isExpired}
-                                    <span class="ml-2 px-2 py-0.5 bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 rounded text-xs font-semibold">EXPIRED</span>
-                                  {/if}
-                                </div>
+                                {#if entry.isExpired}
+                                  <div class="text-xs text-red-600 dark:text-red-400">
+                                    <span class="px-2 py-0.5 bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 rounded text-xs font-semibold">EXPIRED</span>
+                                  </div>
+                                {:else}
+                                  <div class="text-xs text-gray-600 dark:text-gray-400">
+                                    <span class="font-normal">Expires:</span> {formatTimestamp(entry.expiresAt)}
+                                  </div>
+                                {/if}
                               {/if}
                             </div>
                           </div>
