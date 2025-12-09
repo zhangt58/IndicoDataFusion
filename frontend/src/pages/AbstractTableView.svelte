@@ -290,7 +290,7 @@
   }
 </script>
 
-<div class="flex flex-col overflow-hidden mt-8 px-4" style="height: calc(100vh - 8rem);">
+<div class="flex flex-col overflow-hidden mt-8 px-1" style="height: calc(100vh - 8rem);">
   <div class="sticky top-0 z-10 bg-transparent py-1 border-b border-gray-200 dark:border-gray-700 mb-2 flex-shrink-0">
     <DataTableControls
       search={searchQuery}
