@@ -21,6 +21,7 @@ var embeddedSample []byte
 
 const (
 	AppName     = "IndicoDataFusion"
+	AppNameAbbr = "IDF"
 	AppVersion  = "v0.2.0"
 	Author      = "Tong Zhang"
 	Company     = "Michigan State University"
@@ -238,6 +239,7 @@ func (a *App) GetContributionsByTrack(track string) ([]backend.ContributionData,
 // AppInfo holds application metadata
 type AppInfo struct {
 	Name        string `json:"name"`
+	NameAbbr    string `json:"nameAbbr"`
 	Version     string `json:"version"`
 	Author      string `json:"author"`
 	Company     string `json:"company"`
@@ -249,6 +251,7 @@ type AppInfo struct {
 func (a *App) GetAppInfo() AppInfo {
 	return AppInfo{
 		Name:        AppName,
+		NameAbbr:    AppNameAbbr,
 		Version:     AppVersion,
 		Author:      Author,
 		Company:     Company,
