@@ -122,15 +122,15 @@
       </div>
     </div>
   {:else}
-    <!-- Active Data Source Selector -->
-    <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-4 border border-gray-200 dark:border-gray-700">
+    <!-- Active Data Source -->
+    <div class="bg-gray-50 dark:bg-gray-800 rounded-lg shadow p-4 border border-gray-200 dark:border-gray-700">
       <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">Active Data Source</h3>
       <div class="flex items-center gap-2">
         <label for="active-source" class="text-sm font-medium text-gray-700 dark:text-gray-300">Select Data Source:</label>
         <select
           id="active-source"
           bind:value={selectedActiveIndex}
-          class="flex-1 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          class="flex-1 rounded border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-gray-100 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
         >
           {#each configData.dataSources as ds, i}
             <option value={i}>{ds.name}</option>
@@ -143,19 +143,19 @@
     </div>
 
     <!-- Data Sources -->
-    <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-4 border border-gray-200 dark:border-gray-700">
+    <div class="bg-gray-50 dark:bg-gray-800 rounded-lg shadow p-4 border border-gray-200 dark:border-gray-700">
       <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-3">Data Sources</h3>
       <div class="space-y-2">
 
         {#each configData.dataSources as dataSource, i (i)}
-        <div class="bg-gray-50 dark:bg-gray-750 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+        <div class="bg-gray-50 dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
           <!-- Header -->
           <div
             role="button"
             tabindex="0"
             on:click={() => toggleSource(i)}
             on:keydown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleSource(i); } }}
-            class="w-full flex items-center justify-between p-2 hover:bg-gray-50 dark:hover:bg-gray-750 transition-colors"
+            class="w-full flex items-center justify-between p-2 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
           >
             <span class="flex items-center gap-3">
               <!-- Make the name editable -->
@@ -294,7 +294,7 @@
     </div>
 
     <!-- Cache Configuration -->
-    <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-4 border border-gray-200 dark:border-gray-700">
+    <div class="bg-gray-50 dark:bg-gray-800 rounded-lg shadow p-4 border border-gray-200 dark:border-gray-700">
       <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-3">Cache Configuration</h3>
       <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
         <div>
@@ -373,7 +373,7 @@
         tabindex="0"
         on:click={() => showConfigFile = !showConfigFile}
         on:keydown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); showConfigFile = !showConfigFile; } }}
-        class="w-full flex items-center justify-between p-3 hover:bg-gray-100 dark:hover:bg-gray-750 transition-colors"
+        class="w-full flex items-center justify-between p-3 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
       >
         <h4 class="text-sm font-semibold text-gray-700 dark:text-gray-300">Configuration File</h4>
         <svg class="w-5 h-5 text-gray-500 dark:text-gray-400 transform transition-transform {showConfigFile ? 'rotate-180' : ''}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
