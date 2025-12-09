@@ -52,6 +52,7 @@
 <div
   class="titlebar select-none fixed top-0 left-0 right-0 flex items-center justify-between h-10 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 shadow-md dark:shadow-black/40"
   style="--wails-draggable: drag; z-index: 9999;"
+  on:dblclick={handleMaximise}
 >
   <!-- Left: App title/icon -->
   <div class="flex items-center px-3 gap-2">
@@ -66,6 +67,7 @@
     <!-- Minimize -->
     <button
       on:click={handleMinimise}
+      on:dblclick|stopPropagation={() => {}}
       class="h-full px-4 hover:bg-gray-200 dark:hover:bg-gray-800 transition-colors flex items-center justify-center group"
       aria-label="Minimize"
       title="Minimize"
@@ -77,6 +79,7 @@
     <!-- Maximize/Restore -->
     <button
       on:click={handleMaximise}
+      on:dblclick|stopPropagation={() => {}}
       class="h-full px-4 hover:bg-gray-200 dark:hover:bg-gray-800 transition-colors flex items-center justify-center group"
       aria-label={isMaximised ? 'Restore' : 'Maximize'}
       title={isMaximised ? 'Restore' : 'Maximize'}
@@ -115,6 +118,7 @@
     <!-- Close -->
     <button
       on:click={handleClose}
+      on:dblclick|stopPropagation={() => {}}
       class="h-full px-4 hover:bg-red-500 dark:hover:bg-red-600 transition-colors flex items-center justify-center group"
       aria-label="Close"
       title="Close"
