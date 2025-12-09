@@ -126,7 +126,8 @@
                  placeholder={placeholders.apiToken} />
         </div>
         <div>
-          <label for="new-indico-timeout" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Timeout</label>
+          <label for="new-indico-timeout" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            Timeout <span class="text-xs text-gray-500 dark:text-gray-400 ml-2" title="Duration formats: 500ms, 15s, 1m, 2h">e.g. 60s, 2m</span></label>
           <input id="new-indico-timeout" type="text" bind:value={newIndico.timeout} class="w-full rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm"
                  placeholder={placeholders.timeout} />
           {#if newIndicoErrors.timeout}
