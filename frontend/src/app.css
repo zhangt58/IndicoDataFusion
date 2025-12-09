@@ -41,7 +41,7 @@
   cursor: default;
 }
 
-.datatable-wrapper .datatable-table tbody tr.selected {
+.datatable-table tbody tr.selected {
   background-color: #fff1ee !important;
 }
 

@@ -34,7 +34,7 @@ func NewIndicoClient(baseURL string, eventID int, apiToken string) *IndicoClient
 		BaseURL:  StringsTrimRightSlash(baseURL),
 		EventID:  eventID,
 		APIToken: apiToken,
-		Client:   &http.Client{Timeout: 10 * time.Second},
+		Client:   &http.Client{Timeout: 60 * time.Second},
 		Timeout:  10 * time.Second,
 	}
 }

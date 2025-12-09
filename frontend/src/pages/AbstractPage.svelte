@@ -1,9 +1,9 @@
 <script>
   import { onMount, onDestroy } from 'svelte';
+  import { GridOutline, CreditCardOutline, RefreshOutline } from 'flowbite-svelte-icons';
   import { GetAbstracts, IsTestMode, GetCacheStats } from '../../wailsjs/go/main/App';
   import { EventsOn, EventsOff } from '../../wailsjs/runtime/runtime';
   import { createCachePage } from '../utils/cacheUtils.js';
-  import { LayoutGrid, CreditCard, RefreshCw } from '@lucide/svelte';
   import AbstractCardView from './AbstractCardView.svelte';
   import AbstractTableView from './AbstractTableView.svelte';
   import LoadErrorHint from './LoadErrorHint.svelte';
@@ -87,7 +87,7 @@
 {:else if error}
   <LoadErrorHint {error} message="Failed to load abstracts." />
 {:else}
-  <div class="fixed bg-sky-300 dark:bg-sky-800 top-12 left-2 shadow-md px-2 py-1 rounded-sm flex items-center gap-2 z-10">
+  <div class="fixed bg-sky-300 dark:bg-sky-800 top-12 left-2 shadow-md px-2 py-1 rounded-sm flex items-center gap-2 z-999">
     <h2 class="text-xl font-semibold text-gray-800 dark:text-gray-100">Abstracts ({abstractData.length})</h2>
     <div class="flex gap-1 ml-2">
       {#if !isTestMode}
@@ -98,7 +98,7 @@
             class="p-1.5 rounded transition-colors hover:bg-sky-100 disabled:opacity-50"
             title={cacheExpired ? "Cache expired - Click to refresh" : "Refresh from API"}
           >
-            <RefreshCw size={18} class={refreshing ? 'animate-spin' : ''} />
+            <RefreshOutline class={`shrink-0 h-6 w-6 ${refreshing ? 'animate-spin' : ''}`} />
           </button>
           {#if cacheExpired && !refreshing}
             <span class="absolute -top-1 -right-1 flex h-3 w-3">
@@ -113,14 +113,14 @@
         class="p-1.5 rounded transition-colors {viewMode === 'card' ? 'bg-sky-400' : 'hover:bg-sky-100'}"
         title="Card View"
       >
-        <CreditCard size={18} />
+        <CreditCardOutline class="shrink-0 h-6 w-6" />
       </button>
       <button
         onclick={() => viewMode = 'table'}
         class="p-1.5 rounded transition-colors {viewMode === 'table' ? 'bg-sky-400' : 'hover:bg-sky-100'}"
         title="Table View"
       >
-        <LayoutGrid size={18} />
+        <GridOutline class="shrink-0 h-6 w-6" />
       </button>
     </div>
   </div>

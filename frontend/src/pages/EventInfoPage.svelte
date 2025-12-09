@@ -4,7 +4,7 @@
   import { EventsOn, EventsOff } from '../../wailsjs/runtime/runtime';
   import { formatDate } from '../utils/dateUtils.js';
   import { createCachePage } from '../utils/cacheUtils.js';
-  import { RefreshCw } from '@lucide/svelte';
+  import { RefreshOutline } from 'flowbite-svelte-icons';
   import LoadErrorHint from './LoadErrorHint.svelte';
 
   let loading = false;
@@ -113,7 +113,7 @@
               class="p-2 rounded-lg bg-white/20 hover:bg-white/30 transition-colors disabled:opacity-50"
               title={cacheExpired ? "Cache expired - Click to refresh" : "Refresh from API"}
             >
-              <RefreshCw size={18} class={refreshing ? 'animate-spin' : ''} />
+              <RefreshOutline class={`shrink-0 h-6 w-6 ${refreshing ? 'animate-spin' : ''}`} />
             </button>
             {#if cacheExpired && !refreshing}
               <span class="absolute -top-1 -right-1 flex h-3 w-3">

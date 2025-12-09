@@ -1,6 +1,8 @@
 <script>
   /** @type {Object} */
   export let abstract = {};
+  import TypeBadge from './TypeBadge.svelte';
+  import TrackBadge from './TrackBadge.svelte';
 </script>
 
 <div class="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 border border-gray-200 dark:border-gray-700">
@@ -47,9 +49,7 @@
       <p class="text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1">Reviewed for tracks:</p>
       <div class="flex gap-2 flex-wrap">
         {#each abstract.reviewed_for_tracks as track}
-          <span class="px-2 py-1 bg-purple-100 dark:bg-purple-900 text-purple-800 dark:text-purple-200 rounded text-xs">
-            {track.title}
-          </span>
+          <TrackBadge text={track.title} className="track-reviewed" />
         {/each}
       </div>
     </div>
@@ -58,9 +58,7 @@
   {#if abstract.accepted_track}
     <div class="mb-3">
       <p class="text-xs font-semibold text-gray-600 dark:text-gray-400">Accepted track:</p>
-      <span class="px-2 py-1 bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 rounded text-xs">
-        {abstract.accepted_track.title}
-      </span>
+      <TrackBadge text={abstract.accepted_track.title} className="track-accepted" />
     </div>
   {/if}
 
@@ -68,7 +66,7 @@
   {#if abstract.accepted_contrib_type}
     <div class="mb-3">
       <p class="text-xs font-semibold text-gray-600 dark:text-gray-400">Type:</p>
-      <span class="text-sm text-gray-700 dark:text-gray-300">{abstract.accepted_contrib_type.name}</span>
+      <TypeBadge text={abstract.accepted_contrib_type.name} />
     </div>
   {/if}
 

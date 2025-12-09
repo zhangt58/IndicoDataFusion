@@ -1,6 +1,8 @@
 <script>
   import { BrowserOpenURL } from '../../wailsjs/runtime';
   import { formatDate } from '../utils/dateUtils.js';
+  import TypeBadge from './TypeBadge.svelte';
+  import SessionBadge from './SessionBadge.svelte';
 
   /** @type {Object} */
   export let contribution = {};
@@ -19,9 +21,7 @@
       </p>
     </div>
     {#if contribution.type}
-      <span class="ml-4 px-3 py-1 rounded-full text-xs font-semibold bg-indigo-100 dark:bg-indigo-900 text-indigo-800 dark:text-indigo-200">
-        {contribution.type}
-      </span>
+      <TypeBadge text={contribution.type} />
     {/if}
   </div>
 
@@ -37,9 +37,7 @@
     {#if contribution.session}
       <div>
         <p class="text-xs font-semibold text-gray-600 dark:text-gray-400">Session:</p>
-        <span class="text-sm px-2 py-1 bg-purple-100 dark:bg-purple-900 text-purple-800 dark:text-purple-200 rounded">
-          {contribution.session}
-        </span>
+        <SessionBadge text={contribution.session} />
       </div>
     {/if}
 

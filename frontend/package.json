@@ -16,10 +16,9 @@
   },
   "dependencies": {
     "@flowbite-svelte-plugins/datatable": "^0.4.1",
-    "@lucide/svelte": "^0.554.0",
-    "@tailwindcss/vite": "^4.1.17",
     "flowbite": "^4.0.1",
     "flowbite-svelte": "^1.28.1",
-    "flowbite-svelte-icons": "^3.0.0"
+    "flowbite-svelte-icons": "^3.0.0",
+    "svelte-virtuallists": "^1.4.2"
   }
 }

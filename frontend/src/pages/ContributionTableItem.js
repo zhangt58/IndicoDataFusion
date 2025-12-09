@@ -77,15 +77,38 @@ export function getAllAuthorsTooltip(primaryauthors, coauthors) {
  * @returns {Object} Table row data
  */
 export function transformContributionToTableItem(contribution) {
+  // compute numeric ID if possible
+  const rawId = contribution.friendly_id ?? contribution.id;
+  const idNum = Number(rawId);
+
+  // compute duration minutes (backend provides duration as number in minutes)
+  const durationMinutes = typeof contribution.duration === 'number' ? contribution.duration : (contribution.duration ? Number(contribution.duration) : NaN);
+
+  // compute ISO datetime and millis for Start (if startDate object present)
+  let startISO = '';
+  let startMillis = NaN;
+  if (contribution.startDate && contribution.startDate.date && contribution.startDate.time) {
+    // combine to ISO-like string: YYYY-MM-DDTHH:MM[:SS]
+    startISO = `${contribution.startDate.date}T${contribution.startDate.time}`;
+    const d = new Date(startISO);
+    if (!isNaN(d.getTime())) startMillis = d.getTime();
+  }
+
   return {
-    ID: contribution.friendly_id || contribution.id,
+    ID: rawId,
+    IDNumber: isNaN(idNum) ? null : idNum,
     Code: contribution.code || '',
     Title: contribution.title || '',
     Type: contribution.type || '',
     Session: contribution.session || '',
     Track: contribution.track || '',
+    // preserve both Start (formatted) and StartDate for compatibility
+    Start: formatDate(contribution.startDate),
     StartDate: formatDate(contribution.startDate),
+    StartISO: startISO,
+    StartMillis: startMillis,
     Duration: contribution.duration ? `${contribution.duration} min` : '',
+    DurationMinutes: isNaN(durationMinutes) ? null : durationMinutes,
     Location: contribution.location || '',
     Room: contribution.roomFullname || contribution.room || '',
     Speakers: getSpeakersDisplay(contribution.speakers),
