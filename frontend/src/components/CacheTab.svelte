@@ -190,19 +190,26 @@
     }
 
     Object.entries(cacheEntries).forEach(([dsName, entries]) => {
-      out[dsName] = (entries || []).map(entry => {
-        // Accept both camelCase and snake_case serialization from backend
-        const rawExpiryCandidate = entry && (entry.expiresAt ?? entry.expires_at ?? entry.expires_at_string ?? null);
-        const { date: expiryDate } = parseRawExpiry(rawExpiryCandidate);
-        const isZeroTime = expiryDate && expiryDate.getFullYear && expiryDate.getFullYear() === 1;
-        // Coerce to booleans so template sees true/false instead of null
-        const hasExpiry = !!(expiryDate && !isNaN(expiryDate.getTime()) && !isZeroTime);
-        const isExpired = !!(hasExpiry && expiryDate.getTime() < Date.now());
-        // Normalize expiresAt on returned entry so template formatTimestamp(entry.expiresAt) works
-        const normalizedExpiresAt = expiryDate ? expiryDate.toISOString() : null;
-        return { ...entry, expiresAt: normalizedExpiresAt, hasExpiry, isExpired, __expiryDate: expiryDate };
+      // Make a shallow copy and sort by the entry.key (ascending, case-insensitive, numeric-aware)
+      const sorted = [...(entries || [])].sort((a, b) => {
+        const ka = a && a.key != null ? String(a.key) : '';
+        const kb = b && b.key != null ? String(b.key) : '';
+        return ka.localeCompare(kb, undefined, { numeric: true, sensitivity: 'base' });
       });
-    });
+
+      out[dsName] = sorted.map(entry => {
+         // Accept both camelCase and snake_case serialization from backend
+         const rawExpiryCandidate = entry && (entry.expiresAt ?? entry.expires_at ?? entry.expires_at_string ?? null);
+         const { date: expiryDate } = parseRawExpiry(rawExpiryCandidate);
+         const isZeroTime = expiryDate && expiryDate.getFullYear && expiryDate.getFullYear() === 1;
+         // Coerce to booleans so template sees true/false instead of null
+         const hasExpiry = !!(expiryDate && !isNaN(expiryDate.getTime()) && !isZeroTime);
+         const isExpired = !!(hasExpiry && expiryDate.getTime() < Date.now());
+         // Normalize expiresAt on returned entry so template formatTimestamp(entry.expiresAt) works
+         const normalizedExpiresAt = expiryDate ? expiryDate.toISOString() : null;
+         return { ...entry, expiresAt: normalizedExpiresAt, hasExpiry, isExpired, __expiryDate: expiryDate };
+       });
+     });
 
     // Temporary debug: show a compact sample of computed flags to diagnose null/undefined
     try {
@@ -214,6 +221,13 @@
 
     return out;
   })();
+
+  // Reactive: sorted array of [dataSourceName, entries] sorted by data source name
+  $: groupedEntriesList = Object.entries(groupedEntries).sort((a, b) => {
+    const ka = a && a[0] != null ? String(a[0]) : '';
+    const kb = b && b[0] != null ? String(b[0]) : '';
+    return ka.localeCompare(kb, undefined, { numeric: true, sensitivity: 'base' });
+  });
 </script>
 
 <div class="p-2 space-y-2 max-w-5xl mx-auto">
@@ -297,7 +311,7 @@
           <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100">Cached Data</h3>
         </div>
 
-        {#each Object.entries(groupedEntries) as [dataSourceName, entries]}
+        {#each groupedEntriesList as [dataSourceName, entries]}
           <div class="bg-gray-50 dark:bg-gray-800 rounded-lg shadow border border-gray-200 dark:border-gray-700 overflow-hidden">
             <!-- Data Source Header -->
             <button
@@ -338,12 +352,15 @@
                                 <span class="ml-2 text-gray-500 dark:text-gray-500">({formatTimeAgo(entry.timestamp)})</span>
                               </div>
                               {#if entry.hasExpiry}
-                                <div class="text-xs {entry.isExpired ? 'text-red-600 dark:text-red-400' : 'text-gray-600 dark:text-gray-400'}">
-                                  <span class="font-normal">{entry.isExpired ? 'Expired:' : 'Expires:'}</span> {formatTimestamp(entry.expiresAt)}
-                                  {#if entry.isExpired}
-                                    <span class="ml-2 px-2 py-0.5 bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 rounded text-xs font-semibold">EXPIRED</span>
-                                  {/if}
-                                </div>
+                                {#if entry.isExpired}
+                                  <div class="text-xs text-red-600 dark:text-red-400">
+                                    <span class="px-2 py-0.5 bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 rounded text-xs font-semibold">EXPIRED</span>
+                                  </div>
+                                {:else}
+                                  <div class="text-xs text-gray-600 dark:text-gray-400">
+                                    <span class="font-normal">Expires:</span> {formatTimestamp(entry.expiresAt)}
+                                  </div>
+                                {/if}
                               {/if}
                             </div>
                           </div>

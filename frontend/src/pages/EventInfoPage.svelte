@@ -97,7 +97,7 @@
 {:else if eventInfo}
   <div class="max-w-4xl mx-auto mt-8">
     <!-- Event Header -->
-    <div class="bg-gradient-to-r from-indigo-500 to-purple-600 rounded-t-lg p-6 text-white">
+    <div class="bg-linear-to-r from-indigo-500 to-purple-600 rounded-t-lg p-6 text-white">
       <div class="flex items-center justify-between mb-2">
         <div class="flex items-center gap-2">
           <span class="px-3 py-1 bg-white/20 rounded-full text-sm font-medium">

@@ -21,6 +21,7 @@ var embeddedSample []byte
 
 const (
 	AppName     = "IndicoDataFusion"
+	AppNameAbbr = "IDF"
 	AppVersion  = "v0.2.0"
 	Author      = "Tong Zhang"
 	Company     = "Michigan State University"
@@ -37,6 +38,8 @@ type App struct {
 	ctx        context.Context
 	handler    *backend.DataSourceHandler
 	configPath string
+	// DataSourceName caches the active data source name from the handler
+	DataSourceName string
 }
 
 // NewApp creates a new App application struct
@@ -80,7 +83,7 @@ func GetDefaultConfigPath() []string {
 func (a *App) DetermineConfigPath(flagPath string) string {
 	// 1) If environment variable explicitly specifies a config path, use it.
 	// Note: intentionally accept the value as-is (caller decides if it's valid).
-	if env := os.Getenv("INDICO_DATA_FUSION_CONFIG_PATH"); env != "" {
+	if env := os.Getenv(ConfEnvName); env != "" {
 		log.Printf("Using config path from env: %s", env)
 		return env
 	}
@@ -166,7 +169,16 @@ func (a *App) startup(ctx context.Context, configPath string) {
 	}
 	a.handler = handler
 	a.configPath = configPath
+	// Cache the active data source name on startup
+	if a.handler != nil {
+		a.DataSourceName = a.handler.GetDataSourceName()
+	}
 	log.Printf("Data handler initialized from: %s\n", configPath)
+
+	// Notify frontend of the active data source name so UI (titlebar) can display it
+	if a.handler != nil {
+		runtime.EventsEmit(a.ctx, "app:datasource", a.DataSourceName)
+	}
 
 	a.registerCacheCallbacks()
 }
@@ -238,22 +250,26 @@ func (a *App) GetContributionsByTrack(track string) ([]backend.ContributionData,
 // AppInfo holds application metadata
 type AppInfo struct {
 	Name        string `json:"name"`
+	NameAbbr    string `json:"nameAbbr"`
 	Version     string `json:"version"`
 	Author      string `json:"author"`
 	Company     string `json:"company"`
 	AuthorEmail string `json:"authorEmail"`
 	BuildDate   string `json:"buildDate"`
+	DataSource  string `json:"dataSource"` // New field for data source name
 }
 
 // GetAppInfo returns application metadata
 func (a *App) GetAppInfo() AppInfo {
 	return AppInfo{
 		Name:        AppName,
+		NameAbbr:    AppNameAbbr,
 		Version:     AppVersion,
 		Author:      Author,
 		Company:     Company,
 		AuthorEmail: AuthorEmail,
 		BuildDate:   BuildDate,
+		DataSource:  a.DataSourceName,
 	}
 }
 
@@ -294,6 +310,15 @@ func (a *App) ApplyConfigYAML(yamlContent string) error {
 		return errors.Wrap(err, "failed to reload handler")
 	}
 	a.handler = h
+	// Cache the active data source name after reload
+	if a.handler != nil {
+		a.DataSourceName = a.handler.GetDataSourceName()
+	}
+
+	// Notify frontend of the active data source name after reload
+	if a.handler != nil {
+		runtime.EventsEmit(a.ctx, "app:datasource", a.DataSourceName)
+	}
 
 	a.registerCacheCallbacks()
 	return nil
@@ -337,6 +362,15 @@ func (a *App) ApplyStructuredConfigUI(configData *backend.ConfigDataUI) error {
 		return errors.Wrap(err, "failed to reload handler")
 	}
 	a.handler = h
+	// Cache the active data source name after structured config reload
+	if a.handler != nil {
+		a.DataSourceName = a.handler.GetDataSourceName()
+	}
+
+	// Notify frontend of the active data source name after structured config reload
+	if a.handler != nil {
+		runtime.EventsEmit(a.ctx, "app:datasource", a.DataSourceName)
+	}
 
 	a.registerCacheCallbacks()
 	return nil
@@ -356,7 +390,7 @@ func (a *App) RefreshCache(key string) error {
 	runtime.EventsEmit(a.ctx, "cache:updated", map[string]interface{}{
 		"key":              key,
 		"action":           "refreshed",
-		"data_source_name": a.handler.GetDataSourceName(),
+		"data_source_name": a.DataSourceName,
 	})
 
 	return nil
@@ -376,7 +410,7 @@ func (a *App) DeleteCacheEntry(key string) error {
 	runtime.EventsEmit(a.ctx, "cache:updated", map[string]interface{}{
 		"key":              key,
 		"action":           "deleted",
-		"data_source_name": a.handler.GetDataSourceName(),
+		"data_source_name": a.DataSourceName,
 	})
 
 	return nil
@@ -394,7 +428,8 @@ func (a *App) ClearCache() error {
 
 	// Emit event to notify frontend
 	runtime.EventsEmit(a.ctx, "cache:updated", map[string]interface{}{
-		"action": "cleared",
+		"action":           "cleared",
+		"data_source_name": a.DataSourceName,
 	})
 
 	return nil

@@ -10,6 +10,7 @@
     import EventInfoPage from './pages/EventInfoPage.svelte';
     import Settings from './components/Settings.svelte';
     import TitleBar from './components/TitleBar.svelte';
+    import StatusBar from './components/StatusBar.svelte';
 
     let Router = LocalRouter;
 
@@ -21,6 +22,7 @@
 
   let isSidebarOpen = false;
   let settingsOpen = false;
+  let settingsTab = 'about';
 
   // Keep onMount in case other init logic is needed
   onMount(() => {
@@ -55,7 +57,13 @@
     settingsOpen = !settingsOpen;
   }
 
-  function openSettingsHandler() {
+  function openSettingsHandler(e) {
+    // If the event provides a tab, use it; otherwise default to 'about'
+    try {
+      settingsTab = (e && e.detail && e.detail.tab) ? e.detail.tab : 'about';
+    } catch (err) {
+      settingsTab = 'about';
+    }
     settingsOpen = true;
   }
 
@@ -71,7 +79,7 @@
 <!-- Custom Title Bar for frameless window -->
 <TitleBar />
 
-<div class="flex min-h-screen pt-12 overflow-hidden h-full">
+<div class="flex min-h-screen pt-12 overflow-hidden h-full pb-10">
 
   {#if isSidebarOpen}
   <!-- horizontal quick buttons left of the toggle -->
@@ -156,7 +164,10 @@
 </div>
 
 <!-- Settings Modal -->
-<Settings bind:open={settingsOpen} />
+<Settings bind:open={settingsOpen} bind:activeTab={settingsTab} />
+
+<!-- Status Bar (bottom) -->
+<StatusBar />
 
 <style>
   /* Animation for sliding in from right */
