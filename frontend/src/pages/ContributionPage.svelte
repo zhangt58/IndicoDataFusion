@@ -1,9 +1,9 @@
 <script>
   import { onMount, onDestroy } from 'svelte';
+  import { GridOutline, CreditCardOutline, RefreshOutline } from 'flowbite-svelte-icons';
   import { GetContributions, IsTestMode, GetCacheStats } from '../../wailsjs/go/main/App';
   import { EventsOn, EventsOff } from '../../wailsjs/runtime/runtime';
   import { createCachePage } from '../utils/cacheUtils.js';
-  import { LayoutGrid, CreditCard, RefreshCw } from '@lucide/svelte';
   import ContributionCardView from './ContributionCardView.svelte';
   import ContributionTableView from './ContributionTableView.svelte';
   import LoadErrorHint from './LoadErrorHint.svelte';
@@ -98,7 +98,7 @@
             class="p-1.5 rounded transition-colors hover:bg-indigo-100 disabled:opacity-50"
             title={cacheExpired ? "Cache expired - Click to refresh" : "Refresh from API"}
           >
-            <RefreshCw size={18} class={refreshing ? 'animate-spin' : ''} />
+            <RefreshOutline class={`shrink-0 h-6 w-6 ${refreshing ? 'animate-spin' : ''}`} />
           </button>
           {#if cacheExpired && !refreshing}
             <span class="absolute -top-1 -right-1 flex h-3 w-3">
@@ -113,14 +113,14 @@
         class="p-1.5 rounded transition-colors {viewMode === 'card' ? 'bg-indigo-400' : 'hover:bg-indigo-100'}"
         title="Card View"
       >
-        <CreditCard size={18} />
+        <CreditCardOutline class="shrink-0 h-6 w-6" />
       </button>
       <button
         onclick={() => viewMode = 'table'}
         class="p-1.5 rounded transition-colors {viewMode === 'table' ? 'bg-indigo-400' : 'hover:bg-indigo-100'}"
         title="Table View"
       >
-        <LayoutGrid size={18} />
+        <GridOutline class="shrink-0 h-6 w-6" />
       </button>
     </div>
   </div>
