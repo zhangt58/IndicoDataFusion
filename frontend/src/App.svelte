@@ -10,6 +10,7 @@
     import EventInfoPage from './pages/EventInfoPage.svelte';
     import Settings from './components/Settings.svelte';
     import TitleBar from './components/TitleBar.svelte';
+    import StatusBar from './components/StatusBar.svelte';
 
     let Router = LocalRouter;
 
@@ -78,7 +79,7 @@
 <!-- Custom Title Bar for frameless window -->
 <TitleBar />
 
-<div class="flex min-h-screen pt-12 overflow-hidden h-full">
+<div class="flex min-h-screen pt-12 overflow-hidden h-full pb-10">
 
   {#if isSidebarOpen}
   <!-- horizontal quick buttons left of the toggle -->
@@ -164,6 +165,9 @@
 
 <!-- Settings Modal -->
 <Settings bind:open={settingsOpen} bind:activeTab={settingsTab} />
+
+<!-- Status Bar (bottom) -->
+<StatusBar />
 
 <style>
   /* Animation for sliding in from right */
