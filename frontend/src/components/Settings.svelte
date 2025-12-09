@@ -11,8 +11,8 @@
 
   /** @type {boolean} */
   export let open = false;
+  export let activeTab = 'about';
 
-  let activeTab = 'about';
   let appInfo = null;
   let loading = true;
 
