@@ -8,11 +8,8 @@
   } from '../../wailsjs/runtime/runtime.js';
   import { MinusOutline, CloseOutline } from 'flowbite-svelte-icons';
   import iconImage from '../assets/images/icon.png';
-  import { GetAppInfo } from '../../wailsjs/go/main/App';
 
   let isMaximised = false;
-  let appNameAbbr = 'IDF';
-  let appVersion = '';
 
   onMount(async () => {
     // Check initial maximised state
@@ -20,15 +17,6 @@
       isMaximised = await WindowIsMaximised();
     } catch (e) {
       console.error('Failed to get window state:', e);
-    }
-
-    // Fetch app metadata to show in the titlebar
-    try {
-      const info = await GetAppInfo();
-      if (info && info.nameAbbr) appNameAbbr = info.nameAbbr
-      if (info && info.version) appVersion = info.version;
-    } catch (e) {
-      console.error('Failed to get app info:', e);
     }
   });
 
@@ -59,15 +47,6 @@
       console.error('Failed to quit application:', e);
     }
   }
-
-  function openAbout() {
-    try {
-      // Dispatch a global event that the Settings modal listens for; include the tab detail
-      window.dispatchEvent(new CustomEvent('open:settings', { detail: { tab: 'about' } }));
-    } catch (e) {
-      console.error('Failed to open About dialog:', e);
-    }
-  }
 </script>
 
 <div
@@ -82,17 +61,7 @@
   <!-- Left: App title/icon -->
   <div class="flex items-center px-3 gap-2">
     <img src={ iconImage } alt="App" class="w-6 h-6 rounded-sm" draggable="false" />
-    <span
-      class="text-sm font-semibold text-gray-700 dark:text-gray-200 cursor-pointer hover:text-indigo-600 dark:hover:text-indigo-400 hover:underline transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-400 rounded-sm"
-      role="button"
-      tabindex="0"
-      aria-label="Open About dialog"
-      title="Show the About dialog"
-      on:click={openAbout}
-      on:keydown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openAbout(); } }}
-    >
-      {appNameAbbr}{appVersion ? ` - ${appVersion}` : ''}
-    </span>
+    <span class="text-sm font-semibold text-gray-700 dark:text-gray-200 rounded-sm">IDF</span>
   </div>
 
   <!-- Right: Window controls -->
