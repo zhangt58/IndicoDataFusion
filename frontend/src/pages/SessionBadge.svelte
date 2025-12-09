@@ -25,14 +25,27 @@
     font-size: 0.75rem;
     background-color: #f3e8ff !important;
     color: #6b21a8 !important;
+    transition: background-color 120ms ease, transform 100ms ease, box-shadow 120ms ease;
+    cursor: default;
+  }
+  .session-badge:hover,
+  .session-badge:focus {
+    /* Slightly darker background and subtle lift to indicate interactivity (similar to track hover feel) */
+    filter: brightness(0.95);
+    transform: translateY(-1px);
+    box-shadow: 0 1px 4px rgba(16,24,40,0.06);
+  }
+  .session-badge:active {
+    transform: translateY(0);
+  }
+  /* When used as interactive link/button, ensure pointer cursor is shown */
+  :global(.session-link) .session-badge,
+  :global(.session-badge.session-link),
+  :global(.session-link.session-badge) {
+    cursor: pointer;
   }
   :global(.dark .session-badge) {
       background-color: #581c87 !important;
       color: #e9d5ff !important;
   }
 </style>
-
-
-
-
-

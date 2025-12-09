@@ -11,6 +11,7 @@
   import TypeBadge from './TypeBadge.svelte';
   import DataTableControls from '../components/DataTableControls.svelte';
   import TrackDetailsDialog from './TrackDetailsDialog.svelte';
+  import SessionDetailsDialog from './SessionDetailsDialog.svelte';
 
   /** @type {Array} */
   export let contributionData = [];
@@ -22,6 +23,54 @@
   // Track dialog state
   let showTrackDialog = false;
   let selectedTracks = [];
+
+  // Session dialog state
+  let showSessionDialog = false;
+  let selectedSessions = [];
+
+  // Aggregate all unique sessions from contributions
+  $: allAvailableSessions = contributionData.reduce((acc, c) => {
+    const title = c.session || c.Session || null;
+    if (title && !acc.some(s => s.title === title)) {
+      acc.push({ title });
+    }
+    return acc;
+  }, []);
+
+  // Open session dialog - accepts a string or array/object
+  function openSession(sessionFull) {
+    try {
+      if (!sessionFull) { selectedSessions = []; return; }
+      // If it's a simple title string, gather matching table items to show additional fields
+      if (typeof sessionFull === 'string') {
+        // try parsing JSON first
+        let title = sessionFull;
+        try {
+          const parsed = JSON.parse(sessionFull);
+          if (parsed && typeof parsed === 'object' && parsed.title) title = parsed.title;
+        } catch (e) {
+          // not JSON, keep the raw title
+        }
+        const matches = tableItems.filter(it => it.Session === title);
+        selectedSessions = [{ title, items: matches }];
+      } else if (Array.isArray(sessionFull)) {
+        // try to normalize array entries
+        selectedSessions = sessionFull.map(s => (typeof s === 'string' ? { title: s, items: tableItems.filter(it => it.Session === s) } : s));
+      } else if (sessionFull && typeof sessionFull === 'object') {
+        // object may contain a title
+        const title = sessionFull.title || sessionFull.name || '';
+        const matches = title ? tableItems.filter(it => it.Session === title) : [];
+        selectedSessions = [{ ...sessionFull, items: matches }];
+      } else {
+        selectedSessions = [];
+      }
+
+      if (selectedSessions.length > 0) showSessionDialog = true;
+    } catch (err) {
+      console.error('Failed to open session dialog', err);
+      selectedSessions = [];
+    }
+  }
 
   // Find contribution by ID
   function findContributionById(id) {
@@ -99,6 +148,15 @@
       const data = el && (el.dataset && el.dataset.tracks) ? el.dataset.tracks : el && el.getAttribute && el.getAttribute('data-tracks');
       // openTrack will handle JSON or plain string
       openTrack(data || el.textContent || '');
+    }
+
+    // Handle session badge click (support clicks on inner elements too)
+    if (target.classList.contains('session-link') || (target.closest && target.closest('.session-link'))) {
+      event.preventDefault();
+      const el = target.classList.contains('session-link') ? target : target.closest('.session-link');
+      const data = el && (el.dataset && el.dataset.session) ? el.dataset.session : el && el.getAttribute && el.getAttribute('data-session');
+      // openSession will handle string or array/object
+      openSession(data || el.textContent || '');
     }
   }
 
@@ -301,6 +359,13 @@
         if (trackEl && it.Track != null) {
           try { trackEl.setAttribute('data-tracks', String(it.Track)); } catch (e) { /* ignore */ }
         }
+
+        // Session badge: ensure data-session is present
+        const sessionCell = node.children[4];
+        const sessionEl = sessionCell && (sessionCell.querySelector('.session-link') || sessionCell.querySelector('button') || sessionCell.querySelector('a') || sessionCell.querySelector('span'));
+        if (sessionEl && it.Session != null) {
+          try { sessionEl.setAttribute('data-session', String(it.Session)); } catch (e) { /* ignore */ }
+        }
       } catch (err) {
         console.error('applyRowRender fallback error', err);
       }
@@ -358,7 +423,7 @@
           </td>
           <td>
             {#if item.Session}
-              <SessionBadge text={item.Session} />
+              <SessionBadge text={item.Session} as="button" className="session-link" on:click={() => openSession(item.Session)} {...{ 'data-session': item.Session }} />
             {/if}
           </td>
           <td>
@@ -382,6 +447,9 @@
 <!-- Track Details Dialog -->
 <TrackDetailsDialog bind:open={showTrackDialog} tracks={selectedTracks} allTracks={allAvailableTracks} showTypes={false} />
 
+<!-- Session Details Dialog -->
+<SessionDetailsDialog bind:open={showSessionDialog} sessions={selectedSessions} allSessions={allAvailableSessions} />
+
 <style>
   /* Component-specific styling for ContributionTableView */
 
@@ -392,6 +460,11 @@
 
   /* Make track-link appear clickable */
   :global(.track-link) {
+    cursor: pointer;
+  }
+
+  /* Make session-link appear clickable */
+  :global(.session-link) {
     cursor: pointer;
   }
 </style>
