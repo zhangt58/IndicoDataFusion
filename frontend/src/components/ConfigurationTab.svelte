@@ -203,8 +203,8 @@
           const ds = configData.dataSources[i];
           if (ds && ds.type === 'indico' && ds.indico) {
             const ev = ds.indico.eventId;
-            if (ev === '' || ev === null || ev === undefined || isNaN(Number(ev)) || Number(ev) <= 0 || !Number.isInteger(Number(ev))) {
-              applyError = `Event ID for data source "${ds.name || ('#' + i)}" must be a positive integer`;
+            if (ev === '' || ev === null || ev === undefined || isNaN(Number(ev)) || Number(ev) < 0 || !Number.isInteger(Number(ev))) {
+              applyError = `Event ID for data source "${ds.name || ('#' + i)}" must be a positive integer (zero or greater).`;
               return false;
             }
             // coerce to integer

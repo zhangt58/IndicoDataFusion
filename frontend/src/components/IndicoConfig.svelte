@@ -61,8 +61,8 @@
     // eventId
     if (newIndico.eventId === null || newIndico.eventId === undefined) {
       newIndicoErrors.eventId = 'Event ID is required';
-    } else if (isNaN(Number(newIndico.eventId)) || Number(newIndico.eventId) <= 0) {
-      newIndicoErrors.eventId = 'Event ID must be a positive number';
+    } else if (isNaN(Number(newIndico.eventId)) || Number(newIndico.eventId) < 0) {
+      newIndicoErrors.eventId = 'Event ID must be a positive number (zero or greater)';
     } else if (!Number.isInteger(Number(newIndico.eventId))) {
       newIndicoErrors.eventId = 'Event ID must be an integer';
     }
