@@ -230,23 +230,23 @@
     </div>
   {:else}
     <!-- Cache Statistics -->
-    <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-2 border border-gray-200 dark:border-gray-700">
-      <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-3">Cache Statistics</h3>
-      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-2">
-        <div class="bg-gray-50 dark:bg-gray-750 rounded-lg p-3">
+    <div class="bg-gray-50 dark:bg-gray-800 rounded-lg shadow p-2 border border-gray-200 dark:border-gray-700">
+      <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">Cache Statistics</h3>
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-1">
+        <div class="bg-gray-200 dark:bg-gray-700 rounded-md p-2">
           <div class="text-sm text-gray-500 dark:text-gray-400">Status</div>
-          <div class="text-2xl font-bold {cacheStats?.enabled ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}">
+          <div class="text-xl font-bold {cacheStats?.enabled ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}">
             {cacheStats?.enabled ? 'Enabled' : 'Disabled'}
           </div>
         </div>
-        <div class="bg-gray-50 dark:bg-gray-750 rounded-lg p-3">
-          <div class="text-sm text-gray-500 dark:text-gray-400">Cached Entries</div>
-          <div class="text-2xl font-bold text-indigo-600 dark:text-indigo-400">
+        <div class="bg-gray-200 dark:bg-gray-700 rounded-md p-2">
+          <div class="text-sm text-gray-500 dark:text-gray-400">Entries</div>
+          <div class="text-xl font-bold text-indigo-600 dark:text-indigo-400">
             {cacheStats?.entries || 0}
           </div>
         </div>
-        <div class="bg-gray-50 dark:bg-gray-750 rounded-lg p-3">
-          <div class="text-sm text-gray-500 dark:text-gray-400">Cache Size</div>
+        <div class="bg-gray-200 dark:bg-gray-700 rounded-md p-2">
+          <div class="text-sm text-gray-500 dark:text-gray-400">Size</div>
           <div class="text-lg font-bold text-blue-600 dark:text-blue-400">
             {cacheStats?.current_size_mb || '0 MB'}
           </div>
@@ -254,14 +254,14 @@
             Max: {cacheStats?.max_size_mb || 'N/A'}
           </div>
         </div>
-        <div class="bg-gray-50 dark:bg-gray-750 rounded-lg p-3">
+        <div class="bg-gray-200 dark:bg-gray-700 rounded-md p-2">
           <div class="text-sm text-gray-500 dark:text-gray-400">TTL</div>
           <div class="text-lg font-bold text-purple-600 dark:text-purple-400">
             {cacheStats?.ttl || 'N/A'}
           </div>
         </div>
       </div>
-      <div class="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700 grid grid-cols-1 md:grid-cols-2 gap-3">
+      <div class="mt-2 pt-2 border-t border-gray-200 dark:border-gray-700 grid grid-cols-1 md:grid-cols-2 gap-2">
         {#if cacheStats?.data_source_name}
           <div>
             <div class="text-sm text-gray-500 dark:text-gray-400">Data Source</div>
@@ -273,7 +273,7 @@
         {#if cacheStats?.cache_dir}
           <div>
             <div class="text-sm text-gray-500 dark:text-gray-400">Cache Directory</div>
-            <div class="text-sm font-mono text-gray-800 dark:text-gray-200 break-all mt-1">
+            <div class="text-xs font-mono text-gray-800 dark:text-gray-200 break-all mt-1">
               {cacheStats.cache_dir}
             </div>
           </div>
@@ -283,7 +283,7 @@
 
     <!-- Test Mode Note -->
     {#if isTestMode}
-      <div class="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3">
+      <div class="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-2">
         <p class="text-sm text-blue-800 dark:text-blue-300">
           <strong>Note:</strong> Cached data is not available for test data sources. Test data is loaded directly from local files.
         </p>
@@ -298,7 +298,7 @@
         </div>
 
         {#each Object.entries(groupedEntries) as [dataSourceName, entries]}
-          <div class="bg-white dark:bg-gray-800 rounded-lg shadow border border-gray-200 dark:border-gray-700 overflow-hidden">
+          <div class="bg-gray-50 dark:bg-gray-800 rounded-lg shadow border border-gray-200 dark:border-gray-700 overflow-hidden">
             <!-- Data Source Header -->
             <button
               type="button"
@@ -306,9 +306,9 @@
                 expandedDataSources[dataSourceName] = !expandedDataSources[dataSourceName];
                 expandedDataSources = { ...expandedDataSources };
               }}
-              class="w-full flex items-center justify-between p-3 hover:bg-gray-50 dark:hover:bg-gray-750 transition-colors"
+              class="w-full flex items-center justify-between p-2 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
             >
-              <span class="inline-flex items-center gap-3">
+              <span class="inline-flex items-center gap-2">
                 <span class="text-base font-semibold text-gray-900 dark:text-gray-100">{dataSourceName}</span>
                 <span class="px-2 py-0.5 text-xs rounded-full bg-indigo-100 dark:bg-indigo-900 text-indigo-800 dark:text-indigo-200">
                   {entries.length} {entries.length === 1 ? 'entry' : 'entries'}
@@ -324,22 +324,22 @@
               <div class="border-t border-gray-200 dark:border-gray-700">
                 <div class="divide-y divide-gray-200 dark:divide-gray-700">
                   {#each entries as entry (entry.key)}
-                    <div class="p-3 {entry.isExpired ? 'bg-red-50/50 dark:bg-red-900/10' : ''} hover:bg-gray-50 dark:hover:bg-gray-750">
+                    <div class="p-2 {entry.isExpired ? 'bg-red-50/50 dark:bg-red-900/10' : ''} hover:bg-gray-200 dark:hover:bg-gray-700">
                       <div class="flex items-start justify-between">
-                        <div class="flex items-start gap-3 flex-1">
+                        <div class="flex items-start gap-2 flex-1">
                           <div class="w-2 h-2 {entry.isExpired ? 'bg-red-500' : 'bg-green-500'} rounded-full mt-2"></div>
                           <div class="flex-1 min-w-0">
-                            <div class="font-medium text-gray-900 dark:text-gray-100">
+                            <div class="text-sm font-medium text-gray-900 dark:text-gray-100">
                               {getCacheKeyLabel(entry.key)}
                             </div>
                             <div class="mt-1 space-y-0.5">
                               <div class="text-xs text-gray-600 dark:text-gray-400">
-                                <span class="font-medium">Last Updated:</span> {formatTimestamp(entry.timestamp)}
+                                <span class="font-normal">Last Updated:</span> {formatTimestamp(entry.timestamp)}
                                 <span class="ml-2 text-gray-500 dark:text-gray-500">({formatTimeAgo(entry.timestamp)})</span>
                               </div>
                               {#if entry.hasExpiry}
                                 <div class="text-xs {entry.isExpired ? 'text-red-600 dark:text-red-400' : 'text-gray-600 dark:text-gray-400'}">
-                                  <span class="font-medium">{entry.isExpired ? 'Expired:' : 'Expires:'}</span> {formatTimestamp(entry.expiresAt)}
+                                  <span class="font-normal">{entry.isExpired ? 'Expired:' : 'Expires:'}</span> {formatTimestamp(entry.expiresAt)}
                                   {#if entry.isExpired}
                                     <span class="ml-2 px-2 py-0.5 bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 rounded text-xs font-semibold">EXPIRED</span>
                                   {/if}
@@ -354,7 +354,7 @@
                               type="button"
                               on:click={() => handleRefresh(entry.key)}
                               disabled={refreshing[entry.key]}
-                              class="px-3 py-1.5 rounded bg-indigo-600 text-white text-sm hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors whitespace-nowrap"
+                              class="px-2 py-1 rounded bg-indigo-600 text-white text-sm hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors whitespace-nowrap"
                               title="Refresh from API"
                             >
                               {refreshing[entry.key] ? 'Refreshing...' : 'Refresh'}
@@ -362,7 +362,7 @@
                             <button
                               type="button"
                               on:click={() => handleDeleteEntry(entry.key)}
-                              class="px-3 py-1.5 rounded bg-red-600 text-white text-sm hover:bg-red-700 transition-colors whitespace-nowrap"
+                              class="px-2 py-1 rounded bg-red-600 text-white text-sm hover:bg-red-700 transition-colors whitespace-nowrap"
                               title="Delete this cache entry"
                             >
                               Delete
@@ -389,7 +389,7 @@
     {/if}
 
     <!-- Actions -->
-    <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-2 border border-gray-200 dark:border-gray-700">
+    <div class="bg-gray-50 dark:bg-gray-800 rounded-lg shadow p-2 border border-gray-200 dark:border-gray-700">
       <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-3">Actions</h3>
       <div class="space-y-2">
         <button

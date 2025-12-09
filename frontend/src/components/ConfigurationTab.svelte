@@ -1,12 +1,36 @@
 <script>
   import { onMount } from 'svelte';
   import { GetStructuredConfigUI, ApplyStructuredConfigUI } from '../../wailsjs/go/main/App';
+  import DataSources from './DataSources.svelte';
+  import IndicoConfig from './IndicoConfig.svelte';
 
   let configData = null;
   let loading = true;
   let applying = false;
   let applyError = '';
   let applySuccess = '';
+  // Toast state
+  let showToast = false;
+  let toastMessage = '';
+  let toastType = 'success'; // 'success' | 'error' | 'info'
+  let toastTimeoutId = null;
+
+  function showToastMsg(msg, type = 'success', duration = 3500) {
+    // clear previous timeout
+    if (toastTimeoutId) {
+      clearTimeout(toastTimeoutId);
+      toastTimeoutId = null;
+    }
+    toastMessage = msg || '';
+    toastType = type || 'success';
+    showToast = true;
+    // auto-hide
+    toastTimeoutId = setTimeout(() => {
+      showToast = false;
+      toastTimeoutId = null;
+    }, duration);
+  }
+
   // expandedSources keyed by data-source index to avoid problems when renaming
   let expandedSources = {};
   // track active selection by index so we can rename sources safely
@@ -15,6 +39,82 @@
   let showConfigFile = false;
   // name validation errors keyed by data-source index
   let nameErrors = {};
+
+  let indicoDataSourcePlaceholders = {
+    baseUrl: 'https://indico.example.org',
+    eventId: '123',
+    apiToken: 'indp_...',
+    timeout: '60s'
+  }
+
+  let testDataSourcePlaceholders = {
+    dataDir: './testdata',
+    eventInfo: 'info.json',
+    abstracts: 'abstracts.json',
+    contribs: 'contribs.json'
+  }
+
+  // -- Indico dialog integration: we use the extracted component --
+  let indicoDialogOpen = false;
+  let indicoDialogInitialName = '';
+
+  function openAddIndicoDialog() {
+    indicoDialogInitialName = getUniqueName('Conference Name');
+    indicoDialogOpen = true;
+  }
+
+  // Handler when child component emits 'create' with the raw indico payload
+  async function handleCreateIndico(event) {
+    const payload = event.detail || event; // allow both direct and event.detail
+    const nameRaw = (payload.name || '').trim();
+    if (!configData) configData = {};
+    if (!Array.isArray(configData.dataSources)) configData.dataSources = [];
+
+    // make name unique if collision
+    const existingNames = new Set(configData.dataSources.map(ds => (ds && ds.name) ? String(ds.name) : ''));
+    let finalName = nameRaw || getUniqueName('Conference Name');
+    if (existingNames.has(finalName)) {
+      let i = 2;
+      while (existingNames.has(`${finalName} (${i})`)) i++;
+      finalName = `${finalName} (${i})`;
+    }
+
+    const newSource = {
+      name: finalName,
+      type: 'indico',
+      indico: {
+        baseUrl: (payload.baseUrl || '').trim(),
+        eventId: Number.isInteger(Number(payload.eventId)) ? parseInt(String(payload.eventId), 10) : Number(payload.eventId),
+        apiToken: payload.apiToken || '',
+        timeout: payload.timeout || '60s'
+      }
+    };
+
+    const newIndex = configData.dataSources.length;
+    configData.dataSources.push(newSource);
+    expandedSources[newIndex] = true;
+    validateNames();
+    selectedActiveIndex = newIndex;
+
+    const ok = await apply();
+    if (ok) {
+      indicoDialogOpen = false;
+    }
+  }
+
+  function cancelCreateIndico() {
+    indicoDialogOpen = false;
+  }
+
+  // Helper to create a unique default name
+  function getUniqueName(base = 'Conference Name') {
+    if (!configData || !Array.isArray(configData.dataSources) || configData.dataSources.length === 0) return base;
+    const existing = new Set(configData.dataSources.map(ds => (ds && ds.name) ? String(ds.name) : ''));
+    if (!existing.has(base)) return base;
+    let i = 2;
+    while (existing.has(`${base} (${i})`)) i++;
+    return `${base} (${i})`;
+  }
 
   // Validate data source names: non-empty and unique
   function validateNames() {
@@ -95,8 +195,22 @@
       validateNames();
       if (Object.values(nameErrors).some(Boolean)) {
         applyError = 'Please fix data source name errors before applying.';
-        applying = false;
-        return;
+        return false;
+      }
+      // Validate and coerce indico eventId fields to integers so backend can unmarshal
+      if (configData && Array.isArray(configData.dataSources)) {
+        for (let i = 0; i < configData.dataSources.length; i++) {
+          const ds = configData.dataSources[i];
+          if (ds && ds.type === 'indico' && ds.indico) {
+            const ev = ds.indico.eventId;
+            if (ev === '' || ev === null || ev === undefined || isNaN(Number(ev)) || Number(ev) <= 0 || !Number.isInteger(Number(ev))) {
+              applyError = `Event ID for data source "${ds.name || ('#' + i)}" must be a positive integer`;
+              return false;
+            }
+            // coerce to integer
+            ds.indico.eventId = parseInt(String(ds.indico.eventId), 10);
+          }
+        }
       }
       // Ensure backend activeDataSourceName is set from the currently selected index
       if (configData && configData.dataSources && configData.dataSources[selectedActiveIndex]) {
@@ -105,15 +219,107 @@
       await ApplyStructuredConfigUI(configData);
       currentActiveIndex = selectedActiveIndex;
       applySuccess = 'Configuration applied successfully';
+      // show a transient toast for success
+      showToastMsg(applySuccess, 'success');
+      return true;
     } catch (e) {
       applyError = `Failed to apply configuration: ${e}`;
+      // show error toast too
+      showToastMsg(applyError, 'error');
+      return false;
     } finally {
       applying = false;
     }
   }
+
+  // -- Delete data source state and handlers --
+  let showDeleteConfirm = false;
+  let deleteIndex = null;
+  let deleteName = '';
+
+  function openDeleteConfirm(i) {
+    deleteIndex = i;
+    deleteName = (configData?.dataSources?.[i]?.name) || '';
+    showDeleteConfirm = true;
+  }
+
+  function cancelDelete() {
+    showDeleteConfirm = false;
+    deleteIndex = null;
+    deleteName = '';
+  }
+
+  async function confirmDelete() {
+    if (deleteIndex === null || !configData || !Array.isArray(configData.dataSources)) return;
+    // remove the data source
+    configData.dataSources.splice(deleteIndex, 1);
+    // rebuild expandedSources to avoid stale keys
+    const newExpanded = {};
+    (configData.dataSources || []).forEach((_, idx) => {
+      newExpanded[idx] = !!expandedSources[idx];
+    });
+    expandedSources = newExpanded;
+
+    // adjust selectedActiveIndex and currentActiveIndex
+    if (selectedActiveIndex === deleteIndex) {
+      selectedActiveIndex = 0;
+    } else if (selectedActiveIndex > deleteIndex) {
+      selectedActiveIndex = Math.max(0, selectedActiveIndex - 1);
+    }
+    if (currentActiveIndex === deleteIndex) {
+      currentActiveIndex = 0;
+    } else if (currentActiveIndex > deleteIndex) {
+      currentActiveIndex = Math.max(0, currentActiveIndex - 1);
+    }
+
+    // re-run name validation
+    validateNames();
+
+    // persist changes
+    const ok = await apply();
+    if (ok) {
+      showToastMsg(`Deleted data source "${deleteName || ''}"`, 'success');
+      cancelDelete();
+    } else {
+      // apply() will have set applyError and shown toast
+    }
+  }
 </script>
 
+<style>
+  /* Dim placeholders to distinguish them from filled input text. Use slightly different colors in light and dark mode. */
+  :global(input::placeholder), :global(textarea::placeholder) {
+    color: rgba(107, 114, 128, 0.6); /* gray-500 @ 60% */
+  }
+  :global(.dark input::placeholder), :global(.dark textarea::placeholder) {
+    color: rgba(148, 163, 184, 0.55); /* slate-300-ish for dark mode */
+  }
+</style>
+
 <div class="p-2 space-y-2 max-w-5xl mx-auto">
+  <!-- Toast (top-right) -->
+  <div class="fixed right-4 top-4 z-50 pointer-events-none">
+    <div class="transform transition-all duration-300 ease-out {showToast ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2'}">
+      <div class="pointer-events-auto max-w-xs w-full rounded-lg shadow-lg overflow-hidden">
+        <div class="flex items-start gap-3 p-3 {toastType === 'success' ? 'bg-green-50 border border-green-200 text-green-800' : toastType === 'error' ? 'bg-red-50 border border-red-200 text-red-800' : 'bg-gray-50 border border-gray-200 text-gray-800'} rounded-lg">
+          <div class="shrink-0 mt-0.5">
+            {#if toastType === 'success'}
+              <svg class="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+            {:else if toastType === 'error'}
+              <svg class="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+            {:else}
+              <svg class="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01"/></svg>
+            {/if}
+          </div>
+          <div class="flex-1 text-sm leading-tight">
+            <div class="font-medium">{toastMessage}</div>
+          </div>
+          <button class="ml-2 text-xs text-gray-500 hover:text-gray-700" on:click={() => { showToast = false; if (toastTimeoutId) { clearTimeout(toastTimeoutId); toastTimeoutId = null; } }} aria-label="Dismiss toast">×</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   {#if loading}
     <div class="flex items-center justify-center p-4">
       <div class="text-center">
@@ -122,15 +328,15 @@
       </div>
     </div>
   {:else}
-    <!-- Active Data Source Selector -->
-    <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-4 border border-gray-200 dark:border-gray-700">
+    <!-- Active Data Source -->
+    <div class="bg-gray-50 dark:bg-gray-800 rounded-lg shadow p-4 border border-gray-200 dark:border-gray-700">
       <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">Active Data Source</h3>
       <div class="flex items-center gap-2">
         <label for="active-source" class="text-sm font-medium text-gray-700 dark:text-gray-300">Select Data Source:</label>
         <select
           id="active-source"
           bind:value={selectedActiveIndex}
-          class="flex-1 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          class="flex-1 rounded border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-gray-100 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
         >
           {#each configData.dataSources as ds, i}
             <option value={i}>{ds.name}</option>
@@ -143,160 +349,52 @@
     </div>
 
     <!-- Data Sources -->
-    <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-4 border border-gray-200 dark:border-gray-700">
-      <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-3">Data Sources</h3>
-      <div class="space-y-2">
+    <DataSources {configData}
+                 {expandedSources}
+                 {nameErrors}
+                 indicoDataSourcePlaceholders={indicoDataSourcePlaceholders}
+                 testDataSourcePlaceholders={testDataSourcePlaceholders}
+                 {loading}
+                 {applying}
+                 validateNames={validateNames}
+                 currentActiveIndex={currentActiveIndex}
+                 on:add-indico={openAddIndicoDialog}
+                 on:delete={(e) => openDeleteConfirm(e.detail)}
+                 on:toggle={(e) => toggleSource(e.detail)} />
 
-        {#each configData.dataSources as dataSource, i (i)}
-        <div class="bg-gray-50 dark:bg-gray-750 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
-          <!-- Header -->
-          <div
-            role="button"
-            tabindex="0"
-            on:click={() => toggleSource(i)}
-            on:keydown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleSource(i); } }}
-            class="w-full flex items-center justify-between p-2 hover:bg-gray-50 dark:hover:bg-gray-750 transition-colors"
-          >
-            <span class="flex items-center gap-3">
-              <!-- Make the name editable -->
-              <input
-                id={`ds-name-${i}`}
-                type="text"
-                bind:value={dataSource.name}
-                on:input={validateNames}
-                placeholder="Data source name"
-                title="Edit data source name"
-                aria-label={`Data source name ${i}`}
-                class="text-xl md:text-lg font-semibold text-gray-900 dark:text-gray-100 bg-transparent border-b-2 border-transparent focus:border-indigo-500 px-1 py-0.5 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-sm transition-colors placeholder-gray-400 cursor-text"
-              />
-              {#if nameErrors[i]}
-                <span class="ml-2 text-red-500 text-xs font-medium" title={nameErrors[i]}>{nameErrors[i]}</span>
-              {/if}
-              <!-- pencil icon to indicate editability -->
-              <svg aria-hidden="true" class="w-4 h-4 text-gray-400 ml-1" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M12 20h9" />
-                <path d="M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4 12.5-12.5z" />
-              </svg>
-              <span class="px-2 py-0.5 text-xs rounded-full {dataSource.type === 'indico' ? 'bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200' : 'bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200'}">
-                {dataSource.type === 'indico' ? 'API' : 'Test Data'}
-              </span>
-              {#if currentActiveIndex === i}
-                <span class="px-2 py-0.5 text-xs rounded-full bg-indigo-100 dark:bg-indigo-900 text-indigo-800 dark:text-indigo-200">Active</span>
-              {/if}
-            </span>
-            <svg class="w-5 h-5 text-gray-500 dark:text-gray-400 transform transition-transform {expandedSources[i] ? 'rotate-180' : ''}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
-            </svg>
+    <!-- IndicoConfig component for adding new Indico sources -->
+    <IndicoConfig bind:open={indicoDialogOpen}
+                 initialName={indicoDialogInitialName}
+                 existingNames={(configData?.dataSources || []).map(ds => ds.name)}
+                 placeholders={indicoDataSourcePlaceholders}
+                 saving={applying}
+                 on:create={handleCreateIndico}
+                 on:cancel={cancelCreateIndico} />
+
+    <!-- Delete Confirmation Modal -->
+    {#if showDeleteConfirm}
+      <div class="fixed inset-0 z-40 flex items-center justify-center">
+        <div class="absolute inset-0 bg-black/40" role="button" tabindex="0" aria-label="Close dialog" on:click={cancelDelete} on:keydown={(e) => { if (e.key === 'Enter' || e.key === ' ' || e.key === 'Spacebar') { e.preventDefault(); cancelDelete(); } }}></div>
+        <div role="dialog" aria-modal="true" tabindex="0" on:keydown|stopPropagation={(e) => { if (e.key === 'Escape') cancelDelete(); }} class="relative z-50 w-full max-w-md mx-4 bg-white dark:bg-gray-800 rounded-lg shadow-lg p-4 pointer-events-auto">
+          <h4 class="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-3">Delete Data Source</h4>
+          <p class="text-sm text-gray-700 dark:text-gray-300">Are you sure you want to delete <strong>{deleteName || 'this data source'}</strong>? This action cannot be undone.</p>
+          <div class="mt-4 flex justify-end gap-2">
+            <button type="button" class="px-3 py-1 rounded bg-gray-200 dark:bg-gray-700 text-sm" on:click={cancelDelete}>Cancel</button>
+            <button type="button" class="px-3 py-1 rounded bg-red-600 text-white text-sm hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-red-400"
+                    on:click={confirmDelete}
+                    disabled={applying}
+            >
+              {applying ? 'Deleting...' : 'Delete'}
+            </button>
           </div>
-
-          <!-- Content -->
-          {#if expandedSources[i]}
-            <div class="px-4 pb-4 pt-2 border-t border-gray-200 dark:border-gray-700 space-y-2">
-              {#if dataSource.type === 'indico' && dataSource.indico}
-                <!-- Indico API Configuration -->
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
-                  <div>
-                    <label for={`ds-${i}-baseUrl`} class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Base URL</label>
-                    <input
-                      id={`ds-${i}-baseUrl`}
-                      type="text"
-                      bind:value={dataSource.indico.baseUrl}
-                      placeholder="https://indico.example.org"
-                      class="w-full rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                    />
-                  </div>
-                  <div>
-                    <label for={`ds-${i}-eventId`} class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Event ID</label>
-                    <input
-                      id={`ds-${i}-eventId`}
-                      type="number"
-                      bind:value={dataSource.indico.eventId}
-                      placeholder="123"
-                      class="w-full rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                    />
-                  </div>
-                  <div class="md:col-span-2">
-                    <label for={`ds-${i}-apiToken`} class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">API Token</label>
-                    <input
-                      id={`ds-${i}-apiToken`}
-                      type="password"
-                      bind:value={dataSource.indico.apiToken}
-                      placeholder="indp_..."
-                      class="w-full rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                    />
-                  </div>
-                  <div>
-                    <label for={`ds-${i}-timeout`} class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Timeout</label>
-                    <input
-                      id={`ds-${i}-timeout`}
-                      type="text"
-                      bind:value={dataSource.indico.timeout}
-                      placeholder="15s"
-                      class="w-full rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                    />
-                    <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">e.g., 15s, 1m, 500ms</p>
-                  </div>
-                </div>
-              {:else if dataSource.type === 'test' && dataSource.test}
-                <!-- Test Data Configuration -->
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
-                  <div class="md:col-span-2">
-                    <label for={`ds-${i}-test-dataDir`} class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Data Directory</label>
-                    <input
-                      id={`ds-${i}-test-dataDir`}
-                      type="text"
-                      bind:value={dataSource.test.dataDir}
-                      placeholder="./testdata"
-                      class="w-full rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                    />
-                  </div>
-                  <div>
-                    <label for={`ds-${i}-test-eventInfo`} class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Event Info File</label>
-                    <input
-                      id={`ds-${i}-test-eventInfo`}
-                      type="text"
-                      bind:value={dataSource.test.eventInfo}
-                      placeholder="info.json"
-                      class="w-full rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                    />
-                  </div>
-                  <div>
-                    <label for={`ds-${i}-test-abstracts`} class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Abstracts File</label>
-                    <input
-                      id={`ds-${i}-test-abstracts`}
-                      type="text"
-                      bind:value={dataSource.test.abstracts}
-                      placeholder="abstracts.json"
-                      class="w-full rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                    />
-                  </div>
-                  <div>
-                    <label for={`ds-${i}-test-contribs`} class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Contributions File</label>
-                    <input
-                      id={`ds-${i}-test-contribs`}
-                      type="text"
-                      bind:value={dataSource.test.contribs}
-                      placeholder="contribs.json"
-                      class="w-full rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                    />
-                  </div>
-                </div>
-              {/if}
-              <!-- Error message for data source name -->
-              {#if nameErrors[i]}
-                <div class="text-red-500 text-sm mt-1">{nameErrors[i]}</div>
-              {/if}
-            </div>
-          {/if}
         </div>
-        {/each}
       </div>
-    </div>
+    {/if}
 
     <!-- Cache Configuration -->
-    <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-4 border border-gray-200 dark:border-gray-700">
-      <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-3">Cache Configuration</h3>
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+    <div class="bg-gray-50 dark:bg-gray-800 rounded-lg shadow p-4 border border-gray-200 dark:border-gray-700">
+      <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">Cache Configuration</h3>
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-2">
         <div>
           <label for="cache-ttl" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
             TTL (Time-To-Live)
@@ -373,7 +471,7 @@
         tabindex="0"
         on:click={() => showConfigFile = !showConfigFile}
         on:keydown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); showConfigFile = !showConfigFile; } }}
-        class="w-full flex items-center justify-between p-3 hover:bg-gray-100 dark:hover:bg-gray-750 transition-colors"
+        class="w-full flex items-center justify-between p-3 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
       >
         <h4 class="text-sm font-semibold text-gray-700 dark:text-gray-300">Configuration File</h4>
         <svg class="w-5 h-5 text-gray-500 dark:text-gray-400 transform transition-transform {showConfigFile ? 'rotate-180' : ''}" fill="none" stroke="currentColor" viewBox="0 0 24 24">

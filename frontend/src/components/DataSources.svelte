@@ -1,0 +1,203 @@
+<script>
+  import { createEventDispatcher } from 'svelte';
+  const dispatch = createEventDispatcher();
+
+  export let configData = { dataSources: [] };
+  export let expandedSources = {};
+  export let nameErrors = {};
+  export let indicoDataSourcePlaceholders = {};
+  export let testDataSourcePlaceholders = {};
+  export let loading = false;
+  export let applying = false;
+  export let validateNames = () => {};
+  export let currentActiveIndex = 0;
+
+  function onAddIndico() {
+    dispatch('add-indico');
+  }
+
+  function onDelete(index) {
+    dispatch('delete', index);
+  }
+
+  function onToggle(index) {
+    dispatch('toggle', index);
+  }
+</script>
+
+<div class="bg-gray-50 dark:bg-gray-800 rounded-lg shadow p-4 border border-gray-200 dark:border-gray-700">
+  <div class="flex items-center justify-between">
+    <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">Data Sources</h3>
+    <!-- Add Indico Source button -->
+    <div class="flex items-center gap-2">
+      <button
+        type="button"
+        class="px-2 py-1 rounded-lg bg-green-600 text-white text-sm font-medium hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed dark:bg-green-500 dark:hover:bg-green-600 focus:outline-none focus:ring-2 focus:ring-green-400"
+        on:click={onAddIndico}
+        disabled={loading || applying}
+        title="Add a new Indico data source"
+      >
+        + Add Indico Source
+      </button>
+    </div>
+  </div>
+  <div class="space-y-1">
+
+    {#each configData.dataSources as dataSource, i (i)}
+    <div class="bg-gray-50 dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+      <!-- Header -->
+      <div
+        role="button"
+        tabindex="0"
+        on:click={() => onToggle(i)}
+        on:keydown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onToggle(i); } }}
+        class="w-full flex items-center justify-between p-1 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+      >
+        <span class="flex items-center gap-2">
+          <!-- Make the name editable -->
+          <input
+            id={`ds-name-${i}`}
+            type="text"
+            bind:value={dataSource.name}
+            on:input={validateNames}
+            placeholder="Data source name"
+            title="Edit data source name"
+            aria-label={`Data source name ${i}`}
+            class="text-xl md:text-lg font-semibold text-gray-900 dark:text-gray-100 bg-transparent border-b-2 border-transparent focus:border-indigo-500 px-1 py-0.5 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-sm transition-colors placeholder-gray-400 cursor-text"
+          />
+          {#if nameErrors[i]}
+            <span class="ml-2 text-red-500 text-xs font-medium" title={nameErrors[i]}>{nameErrors[i]}</span>
+          {/if}
+          <!-- pencil icon to indicate editability -->
+          <svg aria-hidden="true" class="w-4 h-4 text-gray-400 ml-1" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 20h9" />
+            <path d="M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4 12.5-12.5z" />
+          </svg>
+          <span class="px-2 py-0.5 text-xs rounded-full {dataSource.type === 'indico' ? 'bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200' : 'bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200'}">
+            {dataSource.type === 'indico' ? 'API' : 'Test Data'}
+          </span>
+          {#if currentActiveIndex === i}
+            <span class="px-2 py-0.5 text-xs rounded-full bg-indigo-100 dark:bg-indigo-900 text-indigo-800 dark:text-indigo-200">Active</span>
+          {/if}
+        </span>
+        <div class="flex items-center gap-2">
+          <!-- Delete button: stop propagation so header click doesn't toggle -->
+          <button
+            type="button"
+            class="text-red-500 hover:text-red-700 p-1 rounded focus:outline-none focus:ring-2 focus:ring-red-300"
+            on:click|preventDefault|stopPropagation={() => onDelete(i)}
+            aria-label={`Delete data source ${dataSource.name || i}`}
+            title="Delete data source"
+          >
+            <!-- reuse icon payload (parent uses flowbite variant) -->
+            🗑
+          </button>
+          <svg class="w-5 h-5 text-gray-500 dark:text-gray-400 transform transition-transform {expandedSources[i] ? 'rotate-180' : ''}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+          </svg>
+        </div>
+      </div>
+
+      <!-- Content -->
+      {#if expandedSources[i]}
+        <div class="px-4 pb-4 pt-2 border-t border-gray-200 dark:border-gray-700 space-y-2">
+          {#if dataSource.type === 'indico' && dataSource.indico}
+            <!-- Indico API Configuration -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
+              <div>
+                <label for={`ds-${i}-baseUrl`} class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Base URL</label>
+                <input
+                  id={`ds-${i}-baseUrl`}
+                  type="text"
+                  bind:value={dataSource.indico.baseUrl}
+                  placeholder={indicoDataSourcePlaceholders.baseUrl}
+                  class="w-full rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                />
+              </div>
+              <div>
+                <label for={`ds-${i}-eventId`} class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Event ID</label>
+                <input
+                  id={`ds-${i}-eventId`}
+                  type="number"
+                  bind:value={dataSource.indico.eventId}
+                  placeholder={indicoDataSourcePlaceholders.eventId}
+                  class="w-full rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                />
+              </div>
+              <div class="md:col-span-2">
+                <label for={`ds-${i}-apiToken`} class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">API Token</label>
+                <input
+                  id={`ds-${i}-apiToken`}
+                  type="password"
+                  bind:value={dataSource.indico.apiToken}
+                  placeholder={indicoDataSourcePlaceholders.apiToken}
+                  class="w-full rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                />
+              </div>
+              <div>
+                <label for={`ds-${i}-timeout`} class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Timeout</label>
+                <input
+                  id={`ds-${i}-timeout`}
+                  type="text"
+                  bind:value={dataSource.indico.timeout}
+                  placeholder={indicoDataSourcePlaceholders.timeout}
+                  class="w-full rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                />
+                <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">e.g., 15s, 1m, 500ms</p>
+              </div>
+            </div>
+          {:else if dataSource.type === 'test' && dataSource.test}
+            <!-- Test Data Configuration -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
+              <div class="md:col-span-2">
+                <label for={`ds-${i}-test-dataDir`} class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Data Directory</label>
+                <input
+                  id={`ds-${i}-test-dataDir`}
+                  type="text"
+                  bind:value={dataSource.test.dataDir}
+                  placeholder={testDataSourcePlaceholders.dataDir}
+                  class="w-full rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                />
+              </div>
+              <div>
+                <label for={`ds-${i}-test-eventInfo`} class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Event Info File</label>
+                <input
+                  id={`ds-${i}-test-eventInfo`}
+                  type="text"
+                  bind:value={dataSource.test.eventInfo}
+                  placeholder={testDataSourcePlaceholders.eventInfo}
+                  class="w-full rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                />
+              </div>
+              <div>
+                <label for={`ds-${i}-test-abstracts`} class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Abstracts File</label>
+                <input
+                  id={`ds-${i}-test-abstracts`}
+                  type="text"
+                  bind:value={dataSource.test.abstracts}
+                  placeholder={testDataSourcePlaceholders.abstracts}
+                  class="w-full rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                />
+              </div>
+              <div>
+                <label for={`ds-${i}-test-contribs`} class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Contributions File</label>
+                <input
+                  id={`ds-${i}-test-contribs`}
+                  type="text"
+                  bind:value={dataSource.test.contribs}
+                  placeholder={testDataSourcePlaceholders.contribs}
+                  class="w-full rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                />
+              </div>
+            </div>
+          {/if}
+          <!-- Error message for data source name -->
+          {#if nameErrors[i]}
+            <div class="text-red-500 text-sm mt-1">{nameErrors[i]}</div>
+          {/if}
+        </div>
+      {/if}
+    </div>
+    {/each}
+  </div>
+</div>
