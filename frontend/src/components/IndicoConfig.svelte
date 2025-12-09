@@ -61,8 +61,8 @@
     // eventId
     if (newIndico.eventId === null || newIndico.eventId === undefined) {
       newIndicoErrors.eventId = 'Event ID is required';
-    } else if (isNaN(Number(newIndico.eventId)) || Number(newIndico.eventId) <= 0) {
-      newIndicoErrors.eventId = 'Event ID must be a positive number';
+    } else if (isNaN(Number(newIndico.eventId)) || Number(newIndico.eventId) < 0) {
+      newIndicoErrors.eventId = 'Event ID must be a positive number (zero or greater)';
     } else if (!Number.isInteger(Number(newIndico.eventId))) {
       newIndicoErrors.eventId = 'Event ID must be an integer';
     }
@@ -103,7 +103,11 @@
         <div>
           <label for="new-indico-baseUrl" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Base URL</label>
           <input id="new-indico-baseUrl" type="text" bind:value={newIndico.baseUrl} class="w-full rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm"
-                 placeholder={placeholders.baseUrl} />
+                 placeholder={placeholders.baseUrl} list="baseUrl-suggestions" />
+          <datalist id="baseUrl-suggestions">
+            <option value="https://indico.global">https://indico.global</option>
+            <option value="https://indico.jacow.org">https://indico.jacow.org</option>
+          </datalist>
           {#if newIndicoErrors.baseUrl}
             <p class="text-red-500 text-xs mt-1">{newIndicoErrors.baseUrl}</p>
           {/if}
@@ -122,7 +126,8 @@
                  placeholder={placeholders.apiToken} />
         </div>
         <div>
-          <label for="new-indico-timeout" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Timeout</label>
+          <label for="new-indico-timeout" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            Timeout <span class="text-xs text-gray-500 dark:text-gray-400 ml-2" title="Duration formats: 500ms, 15s, 1m, 2h">e.g. 60s, 2m</span></label>
           <input id="new-indico-timeout" type="text" bind:value={newIndico.timeout} class="w-full rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm"
                  placeholder={placeholders.timeout} />
           {#if newIndicoErrors.timeout}

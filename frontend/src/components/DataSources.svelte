@@ -32,12 +32,15 @@
     <div class="flex items-center gap-2">
       <button
         type="button"
-        class="px-2 py-1 rounded-lg bg-green-600 text-white text-sm font-medium hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed dark:bg-green-500 dark:hover:bg-green-600 focus:outline-none focus:ring-2 focus:ring-green-400"
+        class="w-7 h-7 flex items-center justify-center gap-2 rounded-full bg-gray-500 text-white text-sm font-medium hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed dark:bg-gray-600 dark:hover:bg-gray-700 border border-transparent focus:outline-none focus:ring-2 focus:ring-gray-400 px-0 py-0"
         on:click={onAddIndico}
         disabled={loading || applying}
+        aria-label="Add Indico Source"
         title="Add a new Indico data source"
       >
-        + Add Indico Source
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v14M5 12h14"/>
+        </svg>
       </button>
     </div>
   </div>
@@ -63,7 +66,7 @@
             placeholder="Data source name"
             title="Edit data source name"
             aria-label={`Data source name ${i}`}
-            class="text-xl md:text-lg font-semibold text-gray-900 dark:text-gray-100 bg-transparent border-b-2 border-transparent focus:border-indigo-500 px-1 py-0.5 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-sm transition-colors placeholder-gray-400 cursor-text"
+            class="text-md font-semibold text-gray-900 dark:text-gray-100 bg-transparent border-b-2 border-transparent focus:border-indigo-500 px-1 py-0.5 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-sm transition-colors placeholder-gray-400 cursor-text"
           />
           {#if nameErrors[i]}
             <span class="ml-2 text-red-500 text-xs font-medium" title={nameErrors[i]}>{nameErrors[i]}</span>
@@ -73,7 +76,7 @@
             <path d="M12 20h9" />
             <path d="M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4 12.5-12.5z" />
           </svg>
-          <span class="px-2 py-0.5 text-xs rounded-full {dataSource.type === 'indico' ? 'bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200' : 'bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200'}">
+          <span class="px-2 py-0.5 text-xs rounded-full {dataSource.type === 'indico' ? 'bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200' : 'bg-gray-100 dark:bg-gray-900 text-gray-800 dark:text-gray-200'}">
             {dataSource.type === 'indico' ? 'API' : 'Test Data'}
           </span>
           {#if currentActiveIndex === i}

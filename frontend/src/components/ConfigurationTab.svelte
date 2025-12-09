@@ -144,6 +144,51 @@
     });
   }
 
+  // New: sort dataSources by name (case-insensitive), but place items with type 'test' at the end.
+  // Preserve the active data source selection by name.
+  function sortDataSources() {
+    if (!configData || !Array.isArray(configData.dataSources)) return;
+
+    // remember active name so we can restore selection after sort
+    const activeName = configData.activeDataSourceName || (configData.dataSources[selectedActiveIndex] && configData.dataSources[selectedActiveIndex].name) || null;
+
+    configData.dataSources.sort((a, b) => {
+      const aIsTest = a && a.type === 'test';
+      const bIsTest = b && b.type === 'test';
+      if (aIsTest !== bIsTest) {
+        // push test types to the end
+        return aIsTest ? 1 : -1;
+      }
+      const na = (a && a.name) ? String(a.name).toLowerCase() : '';
+      const nb = (b && b.name) ? String(b.name).toLowerCase() : '';
+      if (na < nb) return -1;
+      if (na > nb) return 1;
+      return 0;
+    });
+
+    // rebuild expandedSources to avoid stale keys; default to collapsed
+    const newExpanded = {};
+    (configData.dataSources || []).forEach((_, idx) => {
+      newExpanded[idx] = false;
+    });
+    expandedSources = newExpanded;
+
+    // restore selected/current active indices based on activeName if available
+    if (activeName) {
+      const newIndex = (configData.dataSources || []).findIndex(ds => ds && ds.name === activeName);
+      if (newIndex >= 0) {
+        selectedActiveIndex = newIndex;
+        currentActiveIndex = newIndex;
+      } else {
+        selectedActiveIndex = 0;
+        currentActiveIndex = 0;
+      }
+    } else {
+      selectedActiveIndex = 0;
+      currentActiveIndex = 0;
+    }
+  }
+
   // Re-validate whenever configData changes
   $: if (configData) validateNames();
 
@@ -161,16 +206,15 @@
           cacheDir: ''
         };
       }
-      // Initialize all sources as collapsed (by index)
-      (configData.dataSources || []).forEach((ds, i) => {
-        expandedSources[i] = false;
-      });
-
-      // ensure names are validated for the loaded config
+      // Trim and validate names first so sorting uses normalized names
       validateNames();
 
-      // find active index from name provided by backend; default to 0
+      // sort data sources and initialize expandedSources
+      sortDataSources();
+
+      // find active index from name provided by backend; default to 0 (sortDataSources already attempts to restore)
       selectedActiveIndex = (configData.dataSources || []).findIndex(ds => ds.name === configData.activeDataSourceName);
+      if (selectedActiveIndex < 0) selectedActiveIndex = selectedActiveIndex = selectedActiveIndex = (selectedActiveIndex = selectedActiveIndex) || selectedActiveIndex; // no-op to keep code location stable
       if (selectedActiveIndex < 0) selectedActiveIndex = 0;
       currentActiveIndex = selectedActiveIndex;
       loading = false;
@@ -203,8 +247,8 @@
           const ds = configData.dataSources[i];
           if (ds && ds.type === 'indico' && ds.indico) {
             const ev = ds.indico.eventId;
-            if (ev === '' || ev === null || ev === undefined || isNaN(Number(ev)) || Number(ev) <= 0 || !Number.isInteger(Number(ev))) {
-              applyError = `Event ID for data source "${ds.name || ('#' + i)}" must be a positive integer`;
+            if (ev === '' || ev === null || ev === undefined || isNaN(Number(ev)) || Number(ev) < 0 || !Number.isInteger(Number(ev))) {
+              applyError = `Event ID for data source "${ds.name || ('#' + i)}" must be a positive integer (zero or greater).`;
               return false;
             }
             // coerce to integer
@@ -216,6 +260,10 @@
       if (configData && configData.dataSources && configData.dataSources[selectedActiveIndex]) {
         configData.activeDataSourceName = configData.dataSources[selectedActiveIndex].name;
       }
+
+      // sort before sending so backend receives a consistent ordering (test types go to the bottom)
+      sortDataSources();
+
       await ApplyStructuredConfigUI(configData);
       currentActiveIndex = selectedActiveIndex;
       applySuccess = 'Configuration applied successfully';
@@ -260,17 +308,9 @@
     });
     expandedSources = newExpanded;
 
-    // adjust selectedActiveIndex and currentActiveIndex
-    if (selectedActiveIndex === deleteIndex) {
-      selectedActiveIndex = 0;
-    } else if (selectedActiveIndex > deleteIndex) {
-      selectedActiveIndex = Math.max(0, selectedActiveIndex - 1);
-    }
-    if (currentActiveIndex === deleteIndex) {
-      currentActiveIndex = 0;
-    } else if (currentActiveIndex > deleteIndex) {
-      currentActiveIndex = Math.max(0, currentActiveIndex - 1);
-    }
+    // After removal, sort so test types are pushed to end and names are ordered
+    validateNames();
+    sortDataSources();
 
     // re-run name validation
     validateNames();
