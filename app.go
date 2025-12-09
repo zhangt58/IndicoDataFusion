@@ -22,7 +22,7 @@ var embeddedSample []byte
 const (
 	AppName     = "IndicoDataFusion"
 	AppNameAbbr = "IDF"
-	AppVersion  = "v0.2.0"
+	AppVersion  = "v1.0.0"
 	Author      = "Tong Zhang"
 	Company     = "Michigan State University"
 	AuthorEmail = "zhangt@frib.msu.edu"
