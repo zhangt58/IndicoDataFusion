@@ -21,6 +21,7 @@
 
   let isSidebarOpen = false;
   let settingsOpen = false;
+  let settingsTab = 'about';
 
   // Keep onMount in case other init logic is needed
   onMount(() => {
@@ -55,7 +56,13 @@
     settingsOpen = !settingsOpen;
   }
 
-  function openSettingsHandler() {
+  function openSettingsHandler(e) {
+    // If the event provides a tab, use it; otherwise default to 'about'
+    try {
+      settingsTab = (e && e.detail && e.detail.tab) ? e.detail.tab : 'about';
+    } catch (err) {
+      settingsTab = 'about';
+    }
     settingsOpen = true;
   }
 
@@ -156,7 +163,7 @@
 </div>
 
 <!-- Settings Modal -->
-<Settings bind:open={settingsOpen} />
+<Settings bind:open={settingsOpen} bind:activeTab={settingsTab} />
 
 <style>
   /* Animation for sliding in from right */

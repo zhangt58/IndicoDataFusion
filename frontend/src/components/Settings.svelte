@@ -1,5 +1,5 @@
 <script>
-  import { onMount } from 'svelte';
+  import { onMount, onDestroy } from 'svelte';
   import { Modal } from 'flowbite-svelte';
   import { InfoCircleSolid, WindowSolid, CogOutline, DatabaseSolid } from 'flowbite-svelte-icons';
   import { GetAppInfo } from '../../wailsjs/go/main/App';
@@ -15,6 +15,27 @@
   let activeTab = 'about';
   let appInfo = null;
   let loading = true;
+
+  // Handle global events requesting the settings modal to open and switch tabs
+  function handleOpenSettingsEvent(e) {
+    try {
+      const tab = (e && e.detail && e.detail.tab) ? e.detail.tab : 'about';
+      activeTab = tab || 'about';
+      open = true;
+    } catch (err) {
+      console.error('open:settings handler error', err);
+      open = true;
+      activeTab = 'about';
+    }
+  }
+
+  onMount(() => {
+    window.addEventListener('open:settings', handleOpenSettingsEvent);
+  });
+
+  onDestroy(() => {
+    window.removeEventListener('open:settings', handleOpenSettingsEvent);
+  });
 
   function setTab(tab) {
     activeTab = tab;
