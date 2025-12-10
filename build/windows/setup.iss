@@ -33,7 +33,7 @@ Source: ".\icon.ico"; DestDir: "{app}"; Flags: ignoreversion
 
 [Run]
 // User selected... these files are shown for launch after everything is done
-Filename: "{app}\idf.exe"; WorkingDir: "{app}"; Description: "Launch {#MyAppName}"; Flags: postinstall runascurrentuser runhidden skipifsilent;
+Filename: "{app}\idf.exe"; WorkingDir: "{app}"; Description: "Launch {#MyAppName}"; Flags: postinstall runascurrentuser skipifsilent;
 
 [Icons]
 Name: "{group}\{#MyAppName}"; Filename: "{app}\idf.exe"; WorkingDir: "{app}"; Comment: "Launch {#MyAppName}"; IconFilename: "{app}\icon.ico"
