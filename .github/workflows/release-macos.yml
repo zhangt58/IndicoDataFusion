@@ -1,0 +1,85 @@
+name: Release macOS
+
+on:
+  release:
+    types:
+      - created
+
+permissions:
+  contents: write
+
+env:
+  NODE_OPTIONS: "--max-old-space-size=4096"
+
+jobs:
+  build:
+    name: Build and package (macOS)
+    runs-on: macos-latest
+    strategy:
+      matrix:
+        arch: [arm64]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+        with:
+          submodules: recursive
+
+      - name: Get Package Info
+        id: pkginfo
+        shell: bash
+        run: |
+          # Extract the version from app.go
+          ver=$(grep 'AppVersion' app.go | awk -F'v' '{print $2}' | tr -d "',\"")  # 1.0.0
+          echo "pkg_version=${ver}" >> $GITHUB_OUTPUT
+
+      - name: Build App
+        uses: zhangt58/wails-build-action@d6591b923bfae2f9350207b7cf6ff0cb59dd97ce
+        with:
+          build-name: 'idf'
+          build-platform: "darwin/${{ matrix.arch }}"
+          package: true
+          go-version: '1.25'
+          wails-version: 'v2.11.0'
+          node-version: '24'
+
+      - name: Prepare macOS .pkg
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p ./dist ./pkgroot/Applications
+          cp -R ./build/bin/IndicoDataFusion.app ./pkgroot/Applications
+          pkg_identifier="io.github.zhangt58.idf"
+          pkg_name="IndicoDataFusion_${{ steps.pkginfo.outputs.pkg_version }}_macos_${{ matrix.arch }}.pkg"
+
+          pkgbuild --root ./pkgroot --identifier "${pkg_identifier}" --version "${{ steps.pkginfo.outputs.pkg_version }}" --install-location / "./dist/${pkg_name}"
+
+          ls -lh ./dist
+
+      - name: Upload macOS package
+        uses: actions/upload-artifact@v4
+        with:
+          name: macos-pkg-${{ matrix.arch }}
+          path: ./dist/*.pkg
+          retention-days: 1
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download macOS artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: macos-pkg-arm64
+          path: ./dist
+
+      - name: List downloaded files
+        run: |
+          ls -lhtr ./dist
+          echo "Artifacts downloaded above."
+
+      - name: Create a new release
+        uses: softprops/action-gh-release@v2
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          files: ./dist/*.pkg
