@@ -38,7 +38,7 @@ jobs:
         with:
           build-name: 'idf'
           build-platform: "darwin/${{ matrix.arch }}"
-          package: true
+          package: false
           go-version: '1.25'
           wails-version: 'v2.11.0'
           node-version: '24'
@@ -48,11 +48,46 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p ./dist ./pkgroot/Applications
-          cp -R ./build/bin/IndicoDataFusion.app ./pkgroot/Applications
-          pkg_identifier="io.github.zhangt58.idf"
-          pkg_name="IndicoDataFusion_${{ steps.pkginfo.outputs.pkg_version }}_macos_${{ matrix.arch }}.pkg"
 
-          pkgbuild --root ./pkgroot --identifier "${pkg_identifier}" --version "${{ steps.pkginfo.outputs.pkg_version }}" --install-location / "./dist/${pkg_name}"
+          # Determine package version (from earlier step output if present)
+          PKG_VERSION="${{ steps.pkginfo.outputs.pkg_version }}"
+
+          # App metadata (falls back to values in app.go)
+          APP_NAME="IndicoDataFusion"
+          BIN_NAME="idf"
+
+          # Prefer pre-built .app in the wails myapp-root; copy into pkgroot then replace the executable
+          if [ -d "./build/darwin/myapp-root/Applications/${APP_NAME}.app" ]; then
+            echo "Found prebuilt .app in build/darwin/myapp-root; copying to pkgroot and replacing executable"
+            cp -R "./build/darwin/myapp-root/Applications/${APP_NAME}.app" "./pkgroot/Applications/"
+
+            # Overwrite the executable inside the copied .app with the freshly built binary
+            if [ -f "./pkgroot/Applications/${APP_NAME}.app/Contents/MacOS/${BIN_NAME}" ]; then
+              echo "Replacing ${APP_NAME}.app/Contents/MacOS/${BIN_NAME} with new build/bin/${BIN_NAME}"
+            else
+              echo "Warning: target executable not present in .app; creating path"
+              mkdir -p "./pkgroot/Applications/${APP_NAME}.app/Contents/MacOS"
+            fi
+            chmod +x ./build/bin/${BIN_NAME}
+            cp ./build/bin/${BIN_NAME} "./pkgroot/Applications/${APP_NAME}.app/Contents/MacOS/${BIN_NAME}"
+
+          elif [ -d "./build/${APP_NAME}.app" ]; then
+            echo "Found prebuilt .app in build/; copying to pkgroot and replacing executable"
+            cp -R "./build/${APP_NAME}.app" "./pkgroot/Applications/"
+            chmod +x ./build/bin/${BIN_NAME}
+            cp ./build/bin/${BIN_NAME} "./pkgroot/Applications/${APP_NAME}.app/Contents/MacOS/${BIN_NAME}"
+
+          else
+            echo "No prebuilt .app found in build/darwin/myapp-root or build/. Cannot proceed." >&2
+            ls -lh ./build || true
+            exit 1
+          fi
+
+          pkg_identifier="com.example.indicodatafusion"
+          pkg_name="${APP_NAME}_${PKG_VERSION}_macos_${{ matrix.arch }}.pkg"
+
+          # Build the pkg; install-location / so Applications maps correctly
+          pkgbuild --root ./pkgroot --identifier "${pkg_identifier}" --version "${PKG_VERSION}" --install-location / "./dist/${pkg_name}"
 
           ls -lh ./dist
 
