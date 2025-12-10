@@ -34,7 +34,7 @@ jobs:
           echo "pkg_version=${ver}" >> $GITHUB_OUTPUT
 
       - name: Build App
-        uses: zhangt58/wails-build-action@d6591b923bfae2f9350207b7cf6ff0cb59dd97ce
+        uses: zhangt58/wails-build-action@95fcde28bd605c1289f2beda7cfe12a82eb27650
         with:
           build-name: 'idf'
           build-platform: "darwin/${{ matrix.arch }}"
@@ -46,7 +46,6 @@ jobs:
       - name: Prepare macOS .pkg
         shell: bash
         run: |
-          set -euo pipefail
           mkdir -p ./dist ./pkgroot/Applications
 
           # Determine package version (from earlier step output if present)

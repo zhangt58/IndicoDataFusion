@@ -35,7 +35,7 @@ jobs:
           echo "pkg_name=IndicoDataFusion_${ver}.exe" >> $GITHUB_OUTPUT
 
       - name: Build App
-        uses: zhangt58/wails-build-action@d6591b923bfae2f9350207b7cf6ff0cb59dd97ce
+        uses: zhangt58/wails-build-action@95fcde28bd605c1289f2beda7cfe12a82eb27650
         id: build
         with:
           build-name: 'idf.exe'
