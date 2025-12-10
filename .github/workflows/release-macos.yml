@@ -34,7 +34,7 @@ jobs:
           echo "pkg_version=${ver}" >> $GITHUB_OUTPUT
 
       - name: Build App
-        uses: zhangt58/wails-build-action@eca40d7e8b4045165ee3320f0ad5013f0e425912
+        uses: zhangt58/wails-build-action@98e3b7dd700da518ca8304b3aa0e0993a3ca33a8
         with:
           build-name: 'idf'
           build-platform: "darwin/${{ matrix.arch }}"
