@@ -15,24 +15,27 @@ cache:
   # Custom cache directory path (leave empty for default: ~/.cache/IndicoDataFusion)
   # cache_dir: /path/to/custom/cache
 
+api-tokens:
+  - name: <token-name>
+    base_urrl: <indico-base-url>
+    token: <your-api-token>
+    username: <your-username>
+  - name: <another-token-name>
+    base_url: <another-indico-base-url>
+    token: <another-api-token>
+    username: <another-username>
+
 # the data source defines an actual Indico conference: <conference-name>
-api1:
+conf1:
   # the base URL of the Indico server, e.g. https://indico.jacow.org
   base_url: <indico-base-url>
   # the event ID of Indico event, e.g. 82
   event_id: <event-id>
   # the API token, get it from your account settings, e.g. indp_xxx
-  api_token: <your-token>
+  api_token_name: <token-name>
   # the request timeout duration
   timeout: 15s
   # is indico API?
-  indico: true
-
-api2:
-  base_url: <indico-base-url>
-  event_id: <event-id>
-  api_token: <your-token>
-  timeout: 15s
   indico: true
 
 test-data:
