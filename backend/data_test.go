@@ -13,14 +13,17 @@ func TestNewDataSourceHandler(t *testing.T) {
 		Name: "indico",
 		Type: "indico",
 		Indico: &IndicoConfig{
-			BaseURL:  "https://example.com",
-			EventID:  123,
-			APIToken: "token",
-			Timeout:  "10s",
+			BaseURL:      "https://example.com",
+			EventID:      123,
+			APITokenName: "token",
+			Timeout:      "10s",
 		},
 	}
 
-	handler, err := NewDataSourceHandler(indicoDS)
+	// Provide api token entries so the token name can be resolved
+	tokens := []APITokenEntry{{Name: "token", BaseURL: "https://example.com", Token: "token"}}
+
+	handler, err := NewDataSourceHandler(indicoDS, nil, tokens)
 	if err != nil {
 		t.Fatalf("NewDataSourceHandler(indico) failed: %v", err)
 	}
@@ -43,7 +46,7 @@ func TestNewDataSourceHandler(t *testing.T) {
 		},
 	}
 
-	handler, err = NewDataSourceHandler(testDS)
+	handler, err = NewDataSourceHandler(testDS, nil, nil)
 	if err != nil {
 		t.Fatalf("NewDataSourceHandler(test) failed: %v", err)
 	}
@@ -57,7 +60,7 @@ func TestNewDataSourceHandler(t *testing.T) {
 
 	// Test with invalid config
 	invalidDS := &DataSource{Name: "invalid"}
-	_, err = NewDataSourceHandler(invalidDS)
+	_, err = NewDataSourceHandler(invalidDS, nil, nil)
 	if err == nil {
 		t.Fatalf("Expected error for invalid data source, got nil")
 	}
@@ -75,7 +78,7 @@ func TestDataSourceHandlerGetInfo(t *testing.T) {
 		},
 	}
 
-	handler, err := NewDataSourceHandler(testDS)
+	handler, err := NewDataSourceHandler(testDS, nil, nil)
 	if err != nil {
 		t.Fatalf("NewDataSourceHandler failed: %v", err)
 	}
@@ -110,7 +113,7 @@ func TestDataSourceHandlerGetAbstracts(t *testing.T) {
 		},
 	}
 
-	handler, err := NewDataSourceHandler(testDS)
+	handler, err := NewDataSourceHandler(testDS, nil, nil)
 	if err != nil {
 		t.Fatalf("NewDataSourceHandler failed: %v", err)
 	}
@@ -145,7 +148,7 @@ func TestDataSourceHandlerGetContributions(t *testing.T) {
 		},
 	}
 
-	handler, err := NewDataSourceHandler(testDS)
+	handler, err := NewDataSourceHandler(testDS, nil, nil)
 	if err != nil {
 		t.Fatalf("NewDataSourceHandler failed: %v", err)
 	}
@@ -217,7 +220,7 @@ func TestGetAbstractsByState(t *testing.T) {
 		},
 	}
 
-	handler, err := NewDataSourceHandler(testDS)
+	handler, err := NewDataSourceHandler(testDS, nil, nil)
 	if err != nil {
 		t.Fatalf("NewDataSourceHandler failed: %v", err)
 	}
@@ -248,7 +251,7 @@ func TestGetContributionsBySession(t *testing.T) {
 		},
 	}
 
-	handler, err := NewDataSourceHandler(testDS)
+	handler, err := NewDataSourceHandler(testDS, nil, nil)
 	if err != nil {
 		t.Fatalf("NewDataSourceHandler failed: %v", err)
 	}

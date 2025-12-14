@@ -33,7 +33,7 @@ func TestCacheConfigWithCustomDirectory(t *testing.T) {
 	}
 
 	// Create handler with custom cache config
-	handler, err := NewDataSourceHandlerWithCache(ds, cacheConfig)
+	handler, err := NewDataSourceHandler(ds, cacheConfig, nil)
 	if err != nil {
 		t.Fatalf("Failed to create handler: %v", err)
 	}
@@ -68,7 +68,7 @@ func TestCacheConfigDefaults(t *testing.T) {
 	}
 
 	// Create handler with nil cache config (should use defaults)
-	handler, err := NewDataSourceHandlerWithCache(ds, nil)
+	handler, err := NewDataSourceHandler(ds, nil, nil)
 	if err != nil {
 		t.Fatalf("Failed to create handler: %v", err)
 	}
@@ -107,7 +107,7 @@ func TestGetCacheEntries(t *testing.T) {
 		MaxSize:  "100MB",
 	}
 
-	handler, err := NewDataSourceHandlerWithCache(ds, cacheConfig)
+	handler, err := NewDataSourceHandler(ds, cacheConfig, nil)
 	if err != nil {
 		t.Fatalf("Failed to create handler: %v", err)
 	}

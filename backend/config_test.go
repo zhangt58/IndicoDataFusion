@@ -42,13 +42,21 @@ func TestSaveLoadConfig(t *testing.T) {
 		ActiveDataSource: ActiveDataSource{
 			Use: "test",
 		},
+		APITokens: []APITokenEntry{
+			{
+				Name:     "bot",
+				BaseURL:  "https://example.test",
+				Username: "bot",
+				Token:    "secret",
+			},
+		},
 		DataSources: map[string]map[string]any{
 			"indico": {
-				"indico":    true,
-				"base_url":  "https://example.test",
-				"api_token": "secret",
-				"event_id":  42,
-				"timeout":   "7s",
+				"indico":         true,
+				"base_url":       "https://example.test",
+				"api_token_name": "bot",
+				"event_id":       42,
+				"timeout":        "7s",
 			},
 			"test": {
 				"indico":     false,
@@ -92,6 +100,9 @@ func TestSaveLoadConfig(t *testing.T) {
 	}
 	if indicoDS.Indico.Timeout != "7s" {
 		t.Fatalf("Indico Timeout mismatch: got %q want %q", indicoDS.Indico.Timeout, "7s")
+	}
+	if indicoDS.Indico.APITokenName != "bot" {
+		t.Fatalf("Indico APITokenName mismatch: got %q want %q", indicoDS.Indico.APITokenName, "bot")
 	}
 
 	// Test GetDataSource for Test
