@@ -12,12 +12,15 @@
     timeout: '60s'
   };
   export let saving = false;
+  // New: accept top-level api tokens list (array of {name, baseUrl, username})
+  export let apiTokens = [];
 
   let newIndico = {
     name: '',
     baseUrl: 'https://',
     eventId: 0,
-    apiToken: '',
+    // store the selected token name (reference), not the raw token value
+    apiTokenName: '',
     timeout: '60s'
   };
   let newIndicoErrors = {};
@@ -29,7 +32,8 @@
     newIndico.name = initialName || getUniqueName('Conference Name');
     newIndico.baseUrl = placeholders.baseUrl || 'https://';
     newIndico.eventId = parseInt(String(placeholders.eventId || '0'), 10) || 0;
-    newIndico.apiToken = placeholders.apiToken || '';
+    // If there are apiTokens available, default to the first name; otherwise, use placeholder
+    newIndico.apiTokenName = (apiTokens && apiTokens.length > 0) ? (apiTokens[0].name || '') : (placeholders.apiToken || '');
     newIndico.timeout = placeholders.timeout || '60s';
     newIndicoErrors = {};
   }
@@ -81,8 +85,15 @@
 
   function onSave() {
     if (!validateNewIndico()) return;
-    // emit the raw newIndico payload; parent will coerce/validate further
-    dispatch('create', newIndico);
+    // emit the newIndico payload with apiTokenName (reference) instead of raw token
+    const payload = {
+      name: newIndico.name,
+      baseUrl: newIndico.baseUrl,
+      eventId: newIndico.eventId,
+      apiTokenName: newIndico.apiTokenName,
+      timeout: newIndico.timeout
+    };
+    dispatch('create', payload);
   }
 </script>
 
@@ -121,9 +132,17 @@
           {/if}
         </div>
         <div>
-          <label for="new-indico-apiToken" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">API Token</label>
-          <input id="new-indico-apiToken" type="text" bind:value={newIndico.apiToken} class="w-full rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm font-mono"
-                 placeholder={placeholders.apiToken} />
+          <label for="new-indico-apiTokenName" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">API Token</label>
+          {#if apiTokens && apiTokens.length > 0}
+            <select id="new-indico-apiTokenName" bind:value={newIndico.apiTokenName} class="w-full rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-indigo-500">
+              {#each apiTokens as t}
+                <option value={t.name}>{t.name}{t.username?` — ${t.username}`:''}</option>
+              {/each}
+            </select>
+          {:else}
+            <!-- Fallback free-text for token name if no tokens defined -->
+            <input id="new-indico-apiTokenName" type="text" bind:value={newIndico.apiTokenName} class="w-full rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm font-mono" placeholder={placeholders.apiToken} />
+          {/if}
         </div>
         <div>
           <label for="new-indico-timeout" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
