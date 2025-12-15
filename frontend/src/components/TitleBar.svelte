@@ -34,6 +34,8 @@
       // Update state after toggle
       setTimeout(async () => {
         isMaximised = await WindowIsMaximised();
+        // Trigger resize event to update table size
+        window.dispatchEvent(new Event('resize'));
       }, 100);
     } catch (e) {
       console.error('Failed to toggle maximize:', e);
