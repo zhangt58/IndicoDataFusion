@@ -215,6 +215,8 @@ func LoadConfigFromBytes(b []byte) (*Config, error) {
 	// All remaining sections are data sources
 	for name, val := range rawConfig {
 		if section, ok := val.(map[string]any); ok {
+			// NOTE: legacy `api_token` migration removed — we expect callers/UI to supply
+			// named api tokens (api_token_name) and top-level `api-tokens` list.
 			cfg.DataSources[name] = section
 		}
 	}
@@ -262,6 +264,8 @@ type ConfigDataUI struct {
 	DataSources          []DataSource   `json:"dataSources"`
 	Cache                *CacheConfig   `json:"cache,omitempty"`
 	PathInfo             ConfigPathInfo `json:"pathInfo"`
+	// Include APITokens so the UI can present/manage named tokens
+	APITokens []APITokenEntry `json:"apiTokens,omitempty"`
 }
 
 // GetStructuredConfigUI converts a Config to structured format for the UI.
@@ -271,6 +275,7 @@ func GetStructuredConfigUI(cfg *Config, pathInfo ConfigPathInfo) *ConfigDataUI {
 		DataSources:          make([]DataSource, 0, len(cfg.DataSources)),
 		Cache:                cfg.Cache,
 		PathInfo:             pathInfo,
+		APITokens:            cfg.APITokens,
 	}
 
 	// Use GetDataSource to build each entry
@@ -295,6 +300,7 @@ func BuildConfigFromStructuredUI(configData *ConfigDataUI) *Config {
 		},
 		Cache:       configData.Cache,
 		DataSources: make(map[string]map[string]any),
+		APITokens:   configData.APITokens,
 	}
 
 	// Convert each data source
