@@ -23,13 +23,9 @@ type DataSourceHandler struct {
 	cache      *Cache
 }
 
-// NewDataSourceHandler creates a new data source handler from a DataSource configuration.
-func NewDataSourceHandler(ds *DataSource) (*DataSourceHandler, error) {
-	return NewDataSourceHandlerWithCache(ds, nil)
-}
-
-// NewDataSourceHandlerWithCache creates a new data source handler with optional cache config
-func NewDataSourceHandlerWithCache(ds *DataSource, cacheConfig *CacheConfig) (*DataSourceHandler, error) {
+// NewDataSourceHandler creates a new data source handler with optional cache config
+// and a list of APITokenEntry to resolve api tokens referenced by name.
+func NewDataSourceHandler(ds *DataSource, cacheConfig *CacheConfig, tokens []APITokenEntry) (*DataSourceHandler, error) {
 	handler := &DataSourceHandler{
 		config: ds,
 	}
@@ -74,11 +70,34 @@ func NewDataSourceHandlerWithCache(ds *DataSource, cacheConfig *CacheConfig) (*D
 	handler.cache = cache
 
 	if ds.Indico != nil {
+		// Resolve API token: require a token name and find it in provided tokens by Name only.
+		apiToken := ""
+		// APITokenName is required now
+		if ds.Indico.APITokenName == "" {
+			return nil, fmt.Errorf("indico data source %s must specify api_token_name", ds.Name)
+		}
+		// tokens must be provided to resolve api_token_name
+		if tokens == nil {
+			return nil, fmt.Errorf("api tokens not provided for data source %s; api_token_name %s cannot be resolved", ds.Name, ds.Indico.APITokenName)
+		}
+		// Match by Name only
+		target := ds.Indico.APITokenName
+		for _, e := range tokens {
+			if e.Name == target {
+				apiToken = e.Token
+				break
+			}
+		}
+		// If not found, error out
+		if apiToken == "" {
+			return nil, fmt.Errorf("api token %q for data source %s not found in provided api-tokens", ds.Indico.APITokenName, ds.Name)
+		}
+
 		// Initialize Indico client
 		client := NewIndicoClient(
 			ds.Indico.BaseURL,
 			ds.Indico.EventID,
-			ds.Indico.APIToken,
+			apiToken,
 		)
 		if ds.Indico.Timeout != "" {
 			if timeout, err := time.ParseDuration(ds.Indico.Timeout); err == nil {
@@ -131,11 +150,17 @@ func parseSize(sizeStr string) (int64, error) {
 
 // NewDataSourceHandlerFromConfig creates a handler from a full Config using the default data source.
 func NewDataSourceHandlerFromConfig(cfg *Config) (*DataSourceHandler, error) {
+	// Validate config before using it
+	if err := cfg.Validate(); err != nil {
+		return nil, fmt.Errorf("config validation failed: %w", err)
+	}
+
 	ds, err := cfg.GetActiveDataSource()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get active data source: %w", err)
 	}
-	return NewDataSourceHandlerWithCache(ds, cfg.Cache)
+	// Forward cfg.APITokens so token resolution uses tokens loaded from the config
+	return NewDataSourceHandler(ds, cfg.Cache, cfg.APITokens)
 }
 
 // NewDataSourceHandlerFromConfigFile creates a handler by loading a config file.

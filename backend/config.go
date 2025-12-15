@@ -1,8 +1,10 @@
 package backend
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"gopkg.in/yaml.v3"
@@ -36,11 +38,13 @@ type ActiveDataSource struct {
 }
 
 // IndicoConfig holds Indico API configuration.
+// NOTE: APIToken (raw token value) has been removed. Use APITokenName to refer
+// to an entry in the top-level API tokens list (identified by base URL + username).
 type IndicoConfig struct {
-	BaseURL  string `yaml:"base_url" json:"baseUrl"`
-	EventID  int    `yaml:"event_id" json:"eventId"`
-	APIToken string `yaml:"api_token" json:"apiToken"`
-	Timeout  string `yaml:"timeout,omitempty" json:"timeout,omitempty"`
+	BaseURL      string `yaml:"base_url" json:"baseUrl"`
+	EventID      int    `yaml:"event_id" json:"eventId"`
+	APITokenName string `yaml:"api_token_name" json:"apiTokenName"`
+	Timeout      string `yaml:"timeout,omitempty" json:"timeout,omitempty"`
 }
 
 // TestConfig holds test/local data configuration.
@@ -66,10 +70,19 @@ type CacheConfig struct {
 	CacheDir string `yaml:"cache_dir,omitempty" json:"cacheDir,omitempty"` // Custom cache directory path
 }
 
+// APITokenEntry represents a stored API token referenced by base URL and username.
+type APITokenEntry struct {
+	Name     string `yaml:"name" json:"name"`
+	BaseURL  string `yaml:"base_url" json:"baseUrl"`
+	Username string `yaml:"username" json:"username"`
+	Token    string `yaml:"token" json:"token"`
+}
+
 // Config holds the complete configuration with multiple data sources.
 type Config struct {
 	ActiveDataSource ActiveDataSource          `yaml:"data-source"`
 	Cache            *CacheConfig              `yaml:"cache,omitempty"`
+	APITokens        []APITokenEntry           `yaml:"api-tokens,omitempty"`
 	DataSources      map[string]map[string]any `yaml:",inline"`
 }
 
@@ -98,8 +111,9 @@ func (c *Config) GetDataSource(name string) (*DataSource, error) {
 		if eventID, ok := rawData["event_id"].(int); ok {
 			ic.EventID = eventID
 		}
-		if apiToken, ok := rawData["api_token"].(string); ok {
-			ic.APIToken = apiToken
+		// New: api_token_name references a token entry (username) stored in top-level api_tokens
+		if apiTokenName, ok := rawData["api_token_name"].(string); ok {
+			ic.APITokenName = apiTokenName
 		}
 		if timeout, ok := rawData["timeout"].(string); ok {
 			ic.Timeout = timeout
@@ -175,9 +189,34 @@ func LoadConfigFromBytes(b []byte) (*Config, error) {
 		delete(rawConfig, "cache")
 	}
 
+	// Extract api-tokens section (list)
+	if apiTokensSection, ok := rawConfig["api-tokens"].([]any); ok {
+		for _, item := range apiTokensSection {
+			if m, ok := item.(map[string]any); ok {
+				entry := APITokenEntry{}
+				if n, ok := m["name"].(string); ok {
+					entry.Name = n
+				}
+				if bu, ok := m["base_url"].(string); ok {
+					entry.BaseURL = bu
+				}
+				if un, ok := m["username"].(string); ok {
+					entry.Username = un
+				}
+				if tok, ok := m["token"].(string); ok {
+					entry.Token = tok
+				}
+				cfg.APITokens = append(cfg.APITokens, entry)
+			}
+		}
+		delete(rawConfig, "api-tokens")
+	}
+
 	// All remaining sections are data sources
 	for name, val := range rawConfig {
 		if section, ok := val.(map[string]any); ok {
+			// NOTE: legacy `api_token` migration removed — we expect callers/UI to supply
+			// named api tokens (api_token_name) and top-level `api-tokens` list.
 			cfg.DataSources[name] = section
 		}
 	}
@@ -225,6 +264,8 @@ type ConfigDataUI struct {
 	DataSources          []DataSource   `json:"dataSources"`
 	Cache                *CacheConfig   `json:"cache,omitempty"`
 	PathInfo             ConfigPathInfo `json:"pathInfo"`
+	// Include APITokens so the UI can present/manage named tokens
+	APITokens []APITokenEntry `json:"apiTokens,omitempty"`
 }
 
 // GetStructuredConfigUI converts a Config to structured format for the UI.
@@ -234,6 +275,7 @@ func GetStructuredConfigUI(cfg *Config, pathInfo ConfigPathInfo) *ConfigDataUI {
 		DataSources:          make([]DataSource, 0, len(cfg.DataSources)),
 		Cache:                cfg.Cache,
 		PathInfo:             pathInfo,
+		APITokens:            cfg.APITokens,
 	}
 
 	// Use GetDataSource to build each entry
@@ -258,6 +300,7 @@ func BuildConfigFromStructuredUI(configData *ConfigDataUI) *Config {
 		},
 		Cache:       configData.Cache,
 		DataSources: make(map[string]map[string]any),
+		APITokens:   configData.APITokens,
 	}
 
 	// Convert each data source
@@ -268,7 +311,7 @@ func BuildConfigFromStructuredUI(configData *ConfigDataUI) *Config {
 			rawData["indico"] = true
 			rawData["base_url"] = ds.Indico.BaseURL
 			rawData["event_id"] = ds.Indico.EventID
-			rawData["api_token"] = ds.Indico.APIToken
+			rawData["api_token_name"] = ds.Indico.APITokenName
 			if ds.Indico.Timeout != "" {
 				rawData["timeout"] = ds.Indico.Timeout
 			}
@@ -284,4 +327,36 @@ func BuildConfigFromStructuredUI(configData *ConfigDataUI) *Config {
 	}
 
 	return cfg
+}
+
+// Validate checks configuration consistency and returns an error listing problems.
+func (c *Config) Validate() error {
+	var issues []string
+
+	// Build a set of token names for quick lookup
+	tokenNames := make(map[string]bool)
+	for _, t := range c.APITokens {
+		if t.Name != "" {
+			tokenNames[t.Name] = true
+		}
+	}
+
+	// Check each data source
+	for name, raw := range c.DataSources {
+		// raw is map[string]any
+		if indicoFlag, ok := raw["indico"].(bool); ok && indicoFlag {
+			if apiTokenName, ok := raw["api_token_name"].(string); !ok || strings.TrimSpace(apiTokenName) == "" {
+				issues = append(issues, fmt.Sprintf("data source %q: missing or empty api_token_name", name))
+			} else {
+				if !tokenNames[apiTokenName] {
+					issues = append(issues, fmt.Sprintf("data source %q: api_token_name %q not found in api-tokens", name, apiTokenName))
+				}
+			}
+		}
+	}
+
+	if len(issues) > 0 {
+		return fmt.Errorf("config validation errors:\n%s", strings.Join(issues, "\n"))
+	}
+	return nil
 }

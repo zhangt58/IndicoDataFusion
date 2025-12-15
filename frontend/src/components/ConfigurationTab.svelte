@@ -3,6 +3,7 @@
   import { GetStructuredConfigUI, ApplyStructuredConfigUI } from '../../wailsjs/go/main/App';
   import DataSources from './DataSources.svelte';
   import IndicoConfig from './IndicoConfig.svelte';
+  import ApiTokens from './ApiTokens.svelte';
 
   let configData = null;
   let loading = true;
@@ -14,6 +15,9 @@
   let toastMessage = '';
   let toastType = 'success'; // 'success' | 'error' | 'info'
   let toastTimeoutId = null;
+
+  // exposed list of API tokens (from configData.APITokens)
+  $: apiTokens = (configData && configData.apiTokens) ? configData.apiTokens : [];
 
   function showToastMsg(msg, type = 'success', duration = 3500) {
     // clear previous timeout
@@ -85,7 +89,8 @@
       indico: {
         baseUrl: (payload.baseUrl || '').trim(),
         eventId: Number.isInteger(Number(payload.eventId)) ? parseInt(String(payload.eventId), 10) : Number(payload.eventId),
-        apiToken: payload.apiToken || '',
+        // use token name reference (payload may contain apiTokenName)
+        apiTokenName: payload.apiTokenName || payload.apiToken || '',
         timeout: payload.timeout || '60s'
       }
     };
@@ -324,6 +329,29 @@
       // apply() will have set applyError and shown toast
     }
   }
+
+  // API tokens handlers for the token manager UI
+  function handleAddApiToken(entry) {
+    if (!configData) configData = {};
+    if (!Array.isArray(configData.apiTokens)) configData.apiTokens = [];
+    configData.apiTokens.push(entry);
+  }
+
+  function handleEditApiToken(evt) {
+    const { index, entry } = evt.detail || evt;
+    if (!configData || !Array.isArray(configData.apiTokens)) return;
+    if (index >= 0 && index < configData.apiTokens.length) {
+      configData.apiTokens[index] = entry;
+    }
+  }
+
+  function handleDeleteApiToken(evt) {
+    const idx = evt.detail || evt;
+    if (!configData || !Array.isArray(configData.apiTokens)) return;
+    if (idx >= 0 && idx < configData.apiTokens.length) {
+      configData.apiTokens.splice(idx, 1);
+    }
+  }
 </script>
 
 <style>
@@ -398,6 +426,7 @@
                  {applying}
                  validateNames={validateNames}
                  currentActiveIndex={currentActiveIndex}
+                 apiTokens={apiTokens}
                  on:add-indico={openAddIndicoDialog}
                  on:delete={(e) => openDeleteConfirm(e.detail)}
                  on:toggle={(e) => toggleSource(e.detail)} />
@@ -408,6 +437,7 @@
                  existingNames={(configData?.dataSources || []).map(ds => ds.name)}
                  placeholders={indicoDataSourcePlaceholders}
                  saving={applying}
+                 apiTokens={apiTokens}
                  on:create={handleCreateIndico}
                  on:cancel={cancelCreateIndico} />
 
@@ -479,6 +509,12 @@
         </div>
       </div>
     </div>
+
+    <!-- API Tokens Manager -->
+    <ApiTokens apiTokens={apiTokens}
+               on:add={(e) => { handleAddApiToken(e.detail || e); }}
+               on:edit={(e) => { handleEditApiToken(e.detail || e); }}
+               on:delete={(e) => { handleDeleteApiToken(e.detail || e); }} />
 
     <!-- Status Messages -->
     {#if applyError}
