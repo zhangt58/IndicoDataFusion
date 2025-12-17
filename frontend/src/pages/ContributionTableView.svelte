@@ -27,6 +27,9 @@
   let showSessionDialog = false;
   let selectedSessions = [];
 
+  // Column filters state
+  let activeFilters = {};
+
   // Aggregate all unique sessions from contributions
   $: allAvailableSessions = contributionData.reduce((acc, c) => {
     const title = c.session || c.Session || null;
@@ -188,8 +191,43 @@
   $: tableItems = getTableItems(contributionData);
   $: dataTableOptions = createDataTableOptions(); // kept for potential external use
 
+  // columnFilters derived from tableItems
+  function getUniqueValuesWithCounts(items, header) {
+    const counts = {};
+    (items || []).forEach(it => {
+      const val = it && it[header];
+      if (Array.isArray(val)) {
+        val.forEach(v => { const s = String(v ?? ''); counts[s] = (counts[s] || 0) + 1; });
+      } else {
+        const s = String(val ?? ''); counts[s] = (counts[s] || 0) + 1;
+      }
+    });
+    const uniqueValues = Object.keys(counts).sort();
+    return { uniqueValues, counts };
+  }
+
+  $: columnFilters = columns.map(c => {
+    const { uniqueValues, counts } = getUniqueValuesWithCounts(tableItems || [], c.title);
+    return { key: c.title, label: c.title, uniqueValues, counts };
+  });
+
   // Filtering
   $: filteredItems = tableItems.filter(item => {
+    // apply active column filters first
+    if (Object.keys(activeFilters).length > 0) {
+      for (const [columnKey, selectedValues] of Object.entries(activeFilters)) {
+        if (!selectedValues || selectedValues.length === 0) continue;
+        const itemValue = item[columnKey];
+        if (Array.isArray(itemValue)) {
+          const itemStrings = itemValue.map(v => String(v ?? ''));
+          if (!selectedValues.some(val => itemStrings.includes(val))) return false;
+        } else {
+          const itemStr = String(itemValue ?? '');
+          if (!selectedValues.includes(itemStr)) return false;
+        }
+      }
+    }
+
     if (!searchQuery) return true;
     const q = searchQuery.toLowerCase();
     return visibleKeys.some(k => String(item[k] ?? '').toLowerCase().includes(q));
@@ -286,9 +324,11 @@
 
 <!-- svelte-ignore a11y_click_events_have_key_events -->
 <!-- svelte-ignore a11y_no_static_element_interactions -->
-<div class="flex flex-col overflow-hidden mt-8 px-1" style="height: calc(100vh - 8rem);">
+<div class="flex flex-col overflow-auto mt-8 px-1 h-[calc(100vh - 8rem)]">
   <!-- Sticky Controls at top -->
-  <div class="sticky top-0 z-10 bg-transparent py-1 border-b border-gray-200 dark:border-gray-700 mb-2 shrink-0">
+  <div class="sticky top-0 z-10 bg-transparent
+              px-2 py-2 rounded-md border-gray-200 dark:border-gray-700
+              mb-2 mt-2 shrink-0 shadow-md dark:shadow-black/40">
     <DataTableControls
       search={searchQuery}
       currentPage={currentPage}
@@ -296,6 +336,10 @@
       {totalItems}
       pagechange={(payload) => { currentPage = payload.currentPage }}
       searchchange={(payload) => { searchQuery = payload.search }}
+      columnFilters={columnFilters}
+      activeFilters={activeFilters}
+      filterChange={({ allFilters }) => { activeFilters = { ...allFilters }; currentPage = 1 }}
+      filtersVisible={false}
     />
   </div>
 
