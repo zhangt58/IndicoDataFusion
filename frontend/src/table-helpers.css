@@ -1,0 +1,35 @@
+/* Shared small helpers for tables used across pages */
+
+/* Title link styling for non-Svelte-rendered DOM (keeps DataTable/renderer-produced anchors styled) */
+.title-link {
+  color: #0d6efd;
+  text-decoration: none;
+  cursor: pointer;
+  display: inline-flex !important;
+  align-items: flex-start !important;
+  justify-content: flex-start !important;
+  text-align: left !important;
+  padding: 0 !important;
+  background: transparent !important;
+  border: none !important;
+  font-size: 0.875rem;
+  font-weight: 400;
+}
+.title-link:hover { color: #0a58ca; text-decoration: underline; }
+.dark .title-link { color: #60a5fa; }
+.dark .title-link:hover { color: #93c5fd; }
+
+/* Small badge sizing that complements vtable badges if used */
+.datatable-table .badge {
+  font-size: 0.75rem;
+  padding: 0.25rem 0.5rem;
+}
+
+/* Track/track-link basic rule (visual click affordance) */
+.track-link {
+  cursor: pointer;
+  text-decoration: none;
+}
+.track-link:hover {
+  text-decoration: underline;
+}
