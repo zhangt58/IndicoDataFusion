@@ -324,7 +324,7 @@
 
 <!-- svelte-ignore a11y_click_events_have_key_events -->
 <!-- svelte-ignore a11y_no_static_element_interactions -->
-<div class="flex flex-col overflow-auto mt-8 px-1 h-[calc(100vh - 8rem)]">
+<div class="flex flex-col overflow-auto" style="height:calc(100vh - 8rem);">
   <!-- Sticky Controls at top -->
   <div class="sticky top-0 z-10 bg-transparent
               px-2 py-2 rounded-md border-gray-200 dark:border-gray-700
@@ -343,16 +343,14 @@
     />
   </div>
 
-  <!-- Table area: scrollable content -->
-  <section class="flex-1 overflow-hidden flex flex-col min-h-0" onclick={handleTableClick}>
+  <section class="flex-1 overflow-auto flex flex-col max-h-screen min-h-0" onclick={handleTableClick}>
     <VirtualDataTable
        items={visibleItems}
        {visibleKeys}
        sortKey={sortKey}
        sortDir={sortDir}
        sortCallback={(k) => setSort(k)}
-       className="datatable-table"
-       style="width:100%;height:100%;"
+       className="datatable-table w-full mt-0.5 mb-2 overflow-auto min-h-0"
        colWidths={colWidths}
        rowSnippet={rowSnippet}
      />

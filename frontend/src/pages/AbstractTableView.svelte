@@ -292,7 +292,7 @@
   </tr>
 {/snippet}
 
-<div class="flex flex-col overflow-auto mt-8 px-1 h-[calc(100vh-8rem)]">
+<div class="flex flex-col overflow-auto px-1" style="height:calc(100vh - 8rem);">
   <div class="sticky top-0 z-10 bg-transparent
               px-2 py-2 rounded-md border-gray-200 dark:border-gray-700
               mb-2 mt-2 shrink-0 shadow-md dark:shadow-black/40">
@@ -310,15 +310,14 @@
     />
   </div>
 
-  <section class="flex flex-col flex-1 max-h-screen overflow-hidden">
+  <section class="flex-1 overflow-auto flex flex-col max-h-screen min-h-0">
     <VirtualDataTable
       items={visibleItems}
       {visibleKeys}
       sortKey={sortKey}
       sortDir={sortDir}
       sortCallback={onSort}
-      className="datatable-table"
-      style="width:100%;height:100%;"
+      className="datatable-table w-full mt-0.5 mb-2 overflow-auto min-h-0"
       colWidths={colWidths}
       rowSnippet={rowSnippet}
     />
