@@ -1,5 +1,6 @@
 <script>
   import { createEventDispatcher } from 'svelte';
+  import { AddAPIToken, DeleteAPIToken, HasAPITokenSecret, RevealAPIToken } from '../../wailsjs/go/main/App';
   const dispatch = createEventDispatcher();
 
   export let apiTokens = [];
@@ -8,6 +9,7 @@
   let showModal = false;
   let editingIndex = -1;
   let token = { name: '', baseUrl: '', username: '', token: '' };
+  let checkingPresence = false;
 
   function openAdd() {
     editingIndex = -1;
@@ -25,20 +27,49 @@
     showModal = false;
   }
 
-  function onSave() {
-    // basic validation
+  async function onSave() {
     if (!token.name || token.name.trim() === '') return;
-    if (editingIndex >= 0) {
-      dispatch('edit', { index: editingIndex, entry: token });
-    } else {
-      dispatch('add', token);
+    try {
+      await AddAPIToken(token, token.token || '');
+      // notify parent to reload configData (so tokens list updates and token field is cleared)
+      dispatch('changed');
+    } catch (e) {
+      alert('Failed to save token: ' + e);
+    } finally {
+      showModal = false;
     }
-    showModal = false;
   }
 
-  function onDelete(i) {
+  async function onDelete(i) {
     if (!confirm(`Delete API token "${apiTokens[i].name}"?`)) return;
-    dispatch('delete', i);
+    try {
+      await DeleteAPIToken(apiTokens[i].name);
+      dispatch('changed');
+    } catch (e) {
+      alert('Failed to delete token: ' + e);
+    }
+  }
+
+  async function checkPresence(name) {
+    checkingPresence = true;
+    try {
+      const ok = await HasAPITokenSecret(name);
+      return ok;
+    } catch (e) {
+      return false;
+    } finally {
+      checkingPresence = false;
+    }
+  }
+
+  async function reveal(name) {
+    try {
+      const val = await RevealAPIToken(name);
+      // reveal carefully
+      alert('Token for ' + name + ': ' + val);
+    } catch (e) {
+      alert('Failed to reveal token: ' + e);
+    }
   }
 </script>
 
@@ -60,6 +91,7 @@
           <div class="flex items-center gap-2">
             <button class="text-sm px-2 py-1 rounded bg-gray-200 dark:bg-gray-600" on:click={() => openEdit(i)} disabled={disabled}>Edit</button>
             <button class="text-sm px-2 py-1 rounded bg-red-600 text-white" on:click={() => onDelete(i)} disabled={disabled}>Delete</button>
+            <button class="text-sm px-2 py-1 rounded bg-gray-100" on:click={async () => reveal(t.name)}>Reveal</button>
           </div>
         </li>
       {/each}

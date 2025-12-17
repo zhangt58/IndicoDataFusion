@@ -512,9 +512,7 @@
 
     <!-- API Tokens Manager -->
     <ApiTokens apiTokens={apiTokens}
-               on:add={(e) => { handleAddApiToken(e.detail || e); }}
-               on:edit={(e) => { handleEditApiToken(e.detail || e); }}
-               on:delete={(e) => { handleDeleteApiToken(e.detail || e); }} />
+               on:changed={() => { loadConfig(); }} />
 
     <!-- Status Messages -->
     {#if applyError}
