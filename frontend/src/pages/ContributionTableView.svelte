@@ -164,7 +164,7 @@
 
   // --- Virtualized table client-side controls (search/sort/pagination) ---
   let searchQuery = '';
-  let perPage = 25;  // Fixed value, not user-configurable
+  let perPage = 25;
   let currentPage = 1;
   let sortKey = null;
   let sortDir = 'asc';
@@ -332,7 +332,7 @@
     <DataTableControls
       search={searchQuery}
       currentPage={currentPage}
-      perPage={perPage}
+      bind:perPage={perPage}
       {totalItems}
       pagechange={(payload) => { currentPage = payload.currentPage }}
       searchchange={(payload) => { searchQuery = payload.search }}
@@ -352,6 +352,7 @@
        sortCallback={(k) => setSort(k)}
        className="datatable-table w-full mt-0.5 mb-2 overflow-auto min-h-0"
        colWidths={colWidths}
+       virtualize={false}
        rowSnippet={rowSnippet}
      />
   </section>

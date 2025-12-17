@@ -24,7 +24,7 @@
   // Simple client-side controls (search/sort/pagination)
   // We will use the event-based API like the example: DataTableControls emits pagechange/searchchange
   let searchQuery = '';
-  let perPage = 25;  // Default page size
+  let perPage = 25;
   let currentPage = 1;
   let sortKey = null; // e.g. 'Title' or 'Score'
   let sortDir = 'asc'; // 'asc' | 'desc'
@@ -299,7 +299,7 @@
     <DataTableControls
       search={searchQuery}
       currentPage={currentPage}
-      perPage={perPage}
+      bind:perPage={perPage}
       {totalItems}
       pagechange={(payload) => { currentPage = payload.currentPage }}
       searchchange={(payload) => { searchQuery = payload.search }}
@@ -319,6 +319,7 @@
       sortCallback={onSort}
       className="datatable-table w-full mt-0.5 mb-2 overflow-auto min-h-0"
       colWidths={colWidths}
+      virtualize={false}
       rowSnippet={rowSnippet}
     />
   </section>
