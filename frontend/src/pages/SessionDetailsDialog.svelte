@@ -2,17 +2,10 @@
   import { Modal } from 'flowbite-svelte';
   import { CloseOutline } from 'flowbite-svelte-icons';
 
-  /** @type {boolean} */
-  export let open = false;
-
-  /** @type {Array<{title?: string, name?: string, items?: any[]}>} */
-  export let sessions = [];
-
-  /** @type {Array<{title?: string, name?: string}>} */
-  export let allSessions = [];
+  let { open = $bindable(false), sessions = [], allSessions = [] } = $props();
 
   // Local UI state (track per-session toggles / expansions by session title)
-  let expandedOmitted = {};
+  let expandedOmitted = $state({});
 
   function toggleExpanded(title) {
     expandedOmitted = { ...expandedOmitted, [title]: !expandedOmitted[title] };
@@ -24,9 +17,9 @@
   }
 
   // Unique sorted sessions (alphabetical)
-  $: uniqueSessions = allSessions
+  let uniqueSessions = $derived(allSessions
     .filter((s, i, arr) => i === arr.findIndex(x => x.title === s.title))
-    .sort((a,b) => a.title.localeCompare(b.title));
+    .sort((a,b) => a.title.localeCompare(b.title)));
 
   // Check if a session is current
   function isCurrentSession(title) {
@@ -42,7 +35,7 @@
   }
 
   // Aggregate metadata from session items for display (location, time range, rooms, speakers)
-  $: sessionAggregates = sessions.map(s => {
+  let sessionAggregates = $derived(sessions.map(s => {
     const items = collectItemsForSession(s) || [];
 
     // helper to compute start millis from various possible fields
@@ -135,7 +128,7 @@
       validCount,
       excludedCount
     };
-  });
+  }));
 
   // Formatting helpers
   function fmtDate(d) {
@@ -163,13 +156,13 @@
 
   // Reactive mapping of omitted-toggle labels per session title.
   // Updates automatically when `sessionAggregates` or `expandedOmitted` change.
-  $: omittedToggleLabels = (sessionAggregates || []).reduce((m, sa) => {
+  let omittedToggleLabels = $derived((sessionAggregates || []).reduce((m, sa) => {
     const title = sa?.title || String(sa);
     const count = sa?.excludedCount || 0;
     const expanded = !!expandedOmitted[title];
     m[title] = expanded ? `Hide omitted (${count})` : `Show omitted (${count})`;
     return m;
-  }, {});
+  }, {}));
 </script>
 
 <Modal bind:open={open} size="lg" dismissable={false} class="session-dialog">
@@ -178,7 +171,7 @@
     <button
       type="button"
       class="text-gray-400 bg-transparent hover:bg-gray-200 hover:text-gray-900 rounded-lg text-sm p-1.5 ml-auto inline-flex items-center dark:hover:bg-gray-600 dark:hover:text-white"
-      on:click={closeDialog}
+      onclick={closeDialog}
     >
       <CloseOutline class="shrink-0 h-6 w-6" />
     </button>
@@ -241,7 +234,7 @@
 
           {#if sa.excludedCount > 0}
             <div class="mt-2">
-              <button class="text-xs text-blue-600 dark:text-blue-400 hover:underline" type="button" on:click={() => toggleExpanded(sa.title)}>
+              <button class="text-xs text-blue-600 dark:text-blue-400 hover:underline" type="button" onclick={() => toggleExpanded(sa.title)}>
                 {omittedToggleLabels[sa.title] || ''}
               </button>
 

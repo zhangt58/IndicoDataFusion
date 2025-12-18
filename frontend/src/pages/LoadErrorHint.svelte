@@ -1,8 +1,6 @@
 <script>
   import { onMount } from 'svelte';
-  export let error = null;
-  export let message = null;
-  export let title = 'Failed to load information';
+  let { error = null, message = null, title = 'Failed to load information' } = $props();
 
   function openSettings() {
     // Dispatch a window-level event so the top-level App can open the Settings modal
@@ -34,7 +32,7 @@
         Hint: Click the top <strong>Settings</strong> button and modify the data sources in <strong>ConfigurationTab</strong> to point the app at a valid Indico data source.
       </p>
       <div class="flex gap-2">
-        <button on:click={openSettings} class="px-3 py-1 bg-yellow-600 text-white rounded hover:bg-yellow-700">Open Settings</button>
+        <button onclick={openSettings} class="px-3 py-1 bg-yellow-600 text-white rounded hover:bg-yellow-700">Open Settings</button>
       </div>
     </div>
   </div>

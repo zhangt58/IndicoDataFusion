@@ -4,16 +4,16 @@
   import { GetCacheStats, GetCacheEntries, RefreshCache, ClearCache, DeleteCacheEntry, IsTestMode } from '../../wailsjs/go/main/App';
   import { Modal } from 'flowbite-svelte';
 
-  let cacheStats = null;
+  let cacheStats = $state(null);
   /** @type {Record<string, any[]>} */
-  let cacheEntries = {};
-  let loading = true;
-  let refreshing = {};
-  let errorMsg = '';
-  let successMsg = '';
-  let isTestMode = false;
-  let showClearConfirm = false;
-  let expandedDataSources = {};
+  let cacheEntries = $state({});
+  let loading = $state(true);
+  let refreshing = $state({});
+  let errorMsg = $state('');
+  let successMsg = $state('');
+  let isTestMode = $state(false);
+  let showClearConfirm = $state(false);
+  let expandedDataSources = $state({});
 
   async function loadCacheInfo() {
     try {
@@ -140,7 +140,7 @@
   }
 
   // Reactive transform: compute per-entry expiry flags so template can rely on reactive fields
-  $: groupedEntries = (() => {
+  let groupedEntries = $derived((() => {
     const out = {};
     if (!cacheEntries || typeof cacheEntries !== 'object') return out;
 
@@ -220,14 +220,14 @@
     }
 
     return out;
-  })();
+  })());
 
   // Reactive: sorted array of [dataSourceName, entries] sorted by data source name
-  $: groupedEntriesList = Object.entries(groupedEntries).sort((a, b) => {
+  let groupedEntriesList = $derived(Object.entries(groupedEntries).sort((a, b) => {
     const ka = a && a[0] != null ? String(a[0]) : '';
     const kb = b && b[0] != null ? String(b[0]) : '';
     return ka.localeCompare(kb, undefined, { numeric: true, sensitivity: 'base' });
-  });
+  }));
 </script>
 
 <div class="p-2 space-y-2 max-w-5xl mx-auto">
@@ -316,7 +316,7 @@
             <!-- Data Source Header -->
             <button
               type="button"
-              on:click={() => {
+              onclick={() => {
                 expandedDataSources[dataSourceName] = !expandedDataSources[dataSourceName];
                 expandedDataSources = { ...expandedDataSources };
               }}
@@ -369,7 +369,7 @@
                           <div class="flex gap-2 ml-4">
                             <button
                               type="button"
-                              on:click={() => handleRefresh(entry.key)}
+                              onclick={() => handleRefresh(entry.key)}
                               disabled={refreshing[entry.key]}
                               class="px-2 py-1 rounded bg-indigo-600 text-white text-sm hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors whitespace-nowrap"
                               title="Refresh from API"
@@ -378,7 +378,7 @@
                             </button>
                             <button
                               type="button"
-                              on:click={() => handleDeleteEntry(entry.key)}
+                              onclick={() => handleDeleteEntry(entry.key)}
                               class="px-2 py-1 rounded bg-red-600 text-white text-sm hover:bg-red-700 transition-colors whitespace-nowrap"
                               title="Delete this cache entry"
                             >
@@ -411,7 +411,7 @@
       <div class="space-y-2">
         <button
           type="button"
-          on:click={handleClearAll}
+          onclick={handleClearAll}
           class="w-full px-4 py-3 rounded-lg bg-red-600 text-white font-medium hover:bg-red-700 transition-colors flex items-center justify-center gap-2"
         >
           <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -448,14 +448,14 @@
     <div class="flex justify-center gap-2">
       <button
         type="button"
-        on:click={confirmClearCache}
+        onclick={confirmClearCache}
         class="text-white bg-red-600 hover:bg-red-700 focus:ring-4 focus:outline-none focus:ring-red-300 dark:focus:ring-red-800 font-medium rounded-lg text-sm inline-flex items-center px-5 py-2.5 text-center"
       >
         Yes, clear it
       </button>
       <button
         type="button"
-        on:click={cancelClearCache}
+        onclick={cancelClearCache}
         class="text-gray-500 bg-white hover:bg-gray-100 focus:ring-4 focus:outline-none focus:ring-gray-200 rounded-lg border border-gray-200 text-sm font-medium px-5 py-2.5 hover:text-gray-900 focus:z-10 dark:bg-gray-700 dark:text-gray-300 dark:border-gray-500 dark:hover:text-white dark:hover:bg-gray-600 dark:focus:ring-gray-600"
       >
         No, cancel

@@ -3,17 +3,7 @@
   import { CloseOutline } from 'flowbite-svelte-icons';
   import { getShortTrackName } from './AbstractTableItem.js';
 
-  /** @type {boolean} */
-  export let open = false;
-
-  /** @type {Array<{title: string, type: string}>} */
-  export let tracks = [];
-
-  /** @type {Array<{title: string, type: string}>} */
-  export let allTracks = [];
-
-  /** @type {boolean} */
-  export let showTypes = true;
+  let { open = $bindable(false), tracks = [], allTracks = [], showTypes = true } = $props();
 
   // Close dialog
   function closeDialog() {
@@ -47,11 +37,11 @@
   }
 
   // Get unique full track names for the list, sorted
-  $: uniqueTracks = allTracks
-    .filter((track, index, self) => 
+  let uniqueTracks = $derived(allTracks
+    .filter((track, index, self) =>
       index === self.findIndex(t => t.title === track.title)
     )
-    .sort(sortTracks);
+    .sort(sortTracks));
 
   // Check if a track is one of the current abstract's tracks
   function isCurrentTrack(trackTitle) {
@@ -73,7 +63,7 @@
     <button 
       type="button"
       class="text-gray-400 bg-transparent hover:bg-gray-200 hover:text-gray-900 rounded-lg text-sm p-1.5 ml-auto inline-flex items-center dark:hover:bg-gray-600 dark:hover:text-white"
-      on:click={closeDialog}
+      onclick={closeDialog}
     >
       <CloseOutline class="shrink-0 h-6 w-6" />
     </button>

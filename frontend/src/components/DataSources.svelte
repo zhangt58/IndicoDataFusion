@@ -1,30 +1,19 @@
 <script>
-  import { createEventDispatcher } from 'svelte';
-  const dispatch = createEventDispatcher();
-
-  export let configData = { dataSources: [] };
-  export let expandedSources = {};
-  export let nameErrors = {};
-  export let indicoDataSourcePlaceholders = {};
-  export let testDataSourcePlaceholders = {};
-  export let loading = false;
-  export let applying = false;
-  export let validateNames = () => {};
-  export let currentActiveIndex = 0;
-  // accept top-level tokens to populate selects
-  export let apiTokens = [];
-
-  function onAddIndico() {
-    dispatch('add-indico');
-  }
-
-  function onDelete(index) {
-    dispatch('delete', index);
-  }
-
-  function onToggle(index) {
-    dispatch('toggle', index);
-  }
+  let {
+    configData = { dataSources: [] },
+    expandedSources = {},
+    nameErrors = {},
+    indicoDataSourcePlaceholders = {},
+    testDataSourcePlaceholders = {},
+    loading = false,
+    applying = false,
+    validateNames = () => {},
+    currentActiveIndex = 0,
+    apiTokens = [],
+    onAddIndico = () => {},
+    onDelete = (_index) => {},
+    onToggle = (_index) => {}
+  } = $props();
 </script>
 
 <div class="bg-gray-50 dark:bg-gray-800 rounded-lg shadow p-4 border border-gray-200 dark:border-gray-700">
@@ -35,7 +24,7 @@
       <button
         type="button"
         class="w-7 h-7 flex items-center justify-center gap-2 rounded-full bg-gray-500 text-white text-sm font-medium hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed dark:bg-gray-600 dark:hover:bg-gray-700 border border-transparent focus:outline-none focus:ring-2 focus:ring-gray-400 px-0 py-0"
-        on:click={onAddIndico}
+        onclick={() => onAddIndico()}
         disabled={loading || applying}
         aria-label="Add Indico Source"
         title="Add a new Indico data source"
@@ -54,8 +43,8 @@
       <div
         role="button"
         tabindex="0"
-        on:click={() => onToggle(i)}
-        on:keydown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onToggle(i); } }}
+        onclick={() => onToggle(i)}
+        onkeydown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onToggle(i); } }}
         class="w-full flex items-center justify-between p-1 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
       >
         <span class="flex items-center gap-2">
@@ -64,7 +53,7 @@
             id={`ds-name-${i}`}
             type="text"
             bind:value={dataSource.name}
-            on:input={validateNames}
+            oninput={() => validateNames()}
             placeholder="Data source name"
             title="Edit data source name"
             aria-label={`Data source name ${i}`}
@@ -90,7 +79,7 @@
           <button
             type="button"
             class="text-red-500 hover:text-red-700 p-1 rounded focus:outline-none focus:ring-2 focus:ring-red-300"
-            on:click|preventDefault|stopPropagation={() => onDelete(i)}
+            onclick={(e) => { e.preventDefault(); e.stopPropagation(); onDelete(i); }}
             aria-label={`Delete data source ${dataSource.name || i}`}
             title="Delete data source"
           >

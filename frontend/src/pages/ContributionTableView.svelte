@@ -11,32 +11,31 @@
   import TrackDetailsDialog from './TrackDetailsDialog.svelte';
   import SessionDetailsDialog from './SessionDetailsDialog.svelte';
 
-  /** @type {Array} */
-  export let contributionData = [];
+  let { contributionData = [] } = $props();
 
   // Contribution dialog state (can be extended later for contribution details dialog)
-  let showContributionDialog = false;
-  let selectedContribution = null;
+  let showContributionDialog = $state(false);
+  let selectedContribution = $state(null);
 
   // Track dialog state
-  let showTrackDialog = false;
-  let selectedTracks = [];
+  let showTrackDialog = $state(false);
+  let selectedTracks = $state([]);
 
   // Session dialog state
-  let showSessionDialog = false;
-  let selectedSessions = [];
+  let showSessionDialog = $state(false);
+  let selectedSessions = $state([]);
 
   // Column filters state
-  let activeFilters = {};
+  let activeFilters = $state({});
 
   // Aggregate all unique sessions from contributions
-  $: allAvailableSessions = contributionData.reduce((acc, c) => {
+  let allAvailableSessions = $derived(contributionData.reduce((acc, c) => {
     const title = c.session || c.Session || null;
     if (title && !acc.some(s => s.title === title)) {
       acc.push({ title });
     }
     return acc;
-  }, []);
+  }, []));
 
   // Open session dialog - accepts a string or array/object
   function openSession(sessionFull) {
@@ -86,14 +85,14 @@
   }
 
   // Aggregate all unique tracks from contributions
-  $: allAvailableTracks = contributionData.reduce((acc, c) => {
+  let allAvailableTracks = $derived(contributionData.reduce((acc, c) => {
     const title = c.track || c.Track || null;
     if (title && !acc.some(t => t.title === title)) {
       // contribution source doesn't carry accepted/reviewed flag, mark as unknown
       acc.push({ title, type: 'unknown' });
     }
     return acc;
-  }, []);
+  }, []));
 
   // Open track dialog - accepts JSON string/array/object or plain title string
   function openTrack(trackFull) {
@@ -162,11 +161,11 @@
   }
 
   // --- Virtualized table client-side controls (search/sort/pagination) ---
-  let searchQuery = '';
-  let perPage = 25;
-  let currentPage = 1;
-  let sortKey = null;
-  let sortDir = 'asc';
+  let searchQuery = $state('');
+  let perPage = $state(25);
+  let currentPage = $state(1);
+  let sortKey = $state(null);
+  let sortDir = $state('asc');
 
   // Visible columns for contributions (matches ContributionTableItem.js visibleColumnNames)
   const columns = [
@@ -187,7 +186,7 @@
   const mappedColumns = columns.map(c => ({ id: c.id, title: c.title, nowrap: false, stretch: c.stretch }));
   const colWidths = mappedColumns.reduce((acc, c) => { acc[c.title] = c.stretch; return acc; }, {});
 
-  $: tableItems = getTableItems(contributionData);
+  let tableItems = $derived(getTableItems(contributionData));
 
   // columnFilters derived from tableItems
   function getUniqueValuesWithCounts(items, header) {
@@ -204,13 +203,13 @@
     return { uniqueValues, counts };
   }
 
-  $: columnFilters = columns.map(c => {
+  let columnFilters = $derived(columns.map(c => {
     const { uniqueValues, counts } = getUniqueValuesWithCounts(tableItems || [], c.title);
     return { key: c.title, label: c.title, uniqueValues, counts };
-  });
+  }));
 
   // Filtering
-  $: filteredItems = tableItems.filter(item => {
+  let filteredItems = $derived(tableItems.filter(item => {
     // apply active column filters first
     if (Object.keys(activeFilters).length > 0) {
       for (const [columnKey, selectedValues] of Object.entries(activeFilters)) {
@@ -229,7 +228,7 @@
     if (!searchQuery) return true;
     const q = searchQuery.toLowerCase();
     return visibleKeys.some(k => String(item[k] ?? '').toLowerCase().includes(q));
-  });
+  }));
 
   // Sorting (string compare for all columns)
   function compare(a,b,key) {
@@ -291,7 +290,7 @@
     return 0;
   }
 
-  $: sortedItems = (() => {
+  let sortedItems = $derived((() => {
     if (!sortKey) return filteredItems;
     const copy = filteredItems.slice();
     copy.sort((a,b) => {
@@ -299,16 +298,22 @@
       return sortDir === 'asc' ? res : -res;
     });
     return copy;
-  })();
+  })());
 
   // total items available after filtering/sorting
-  $: totalItems = sortedItems.length;
+  let totalItems = $derived(sortedItems.length);
 
   // Pagination
-  $: totalPages = Math.max(1, Math.ceil(sortedItems.length / perPage));
-  $: currentPage = Math.min(currentPage, totalPages);
-  $: paginatedItems = sortedItems.slice((currentPage-1)*perPage, currentPage*perPage);
-  $: visibleItems = paginatedItems;
+  let totalPages = $derived(Math.max(1, Math.ceil(sortedItems.length / perPage)));
+
+  $effect(() => {
+    if (currentPage > totalPages) {
+      currentPage = totalPages;
+    }
+  });
+
+  let paginatedItems = $derived(sortedItems.slice((currentPage-1)*perPage, currentPage*perPage));
+  let visibleItems = $derived(paginatedItems);
 
   function setSort(key) {
     if (sortKey === key) {
@@ -381,7 +386,7 @@
         {:else if col.id === 'Code'}
           {item.Code}
         {:else if col.id === 'Title'}
-          <TitleLink as="button" data-id={item.ID} on:click={() => openContribution(item.ID)}>{item.Title}</TitleLink>
+          <TitleLink as="button" data-id={item.ID} onclick={() => openContribution(item.ID)}>{item.Title}</TitleLink>
         {:else if col.id === 'Type'}
           {#if item.Type}
             <TypeBadge text={item.Type} />

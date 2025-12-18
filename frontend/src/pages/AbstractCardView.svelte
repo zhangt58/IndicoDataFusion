@@ -2,8 +2,7 @@
   import AbstractCardItem from './AbstractCardItem.svelte';
   import { VirtualList } from 'svelte-virtuallists';
 
-  /** @type {Array} */
-  export let abstractData = [];
+  let { abstractData = [] } = $props();
 </script>
 
 {#if abstractData && abstractData.length > 0}

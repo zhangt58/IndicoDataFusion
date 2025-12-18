@@ -5,19 +5,19 @@
   import IndicoConfig from './IndicoConfig.svelte';
   import ApiTokens from './ApiTokens.svelte';
 
-  let configData = null;
-  let loading = true;
-  let applying = false;
-  let applyError = '';
-  let applySuccess = '';
+  let configData = $state(null);
+  let loading = $state(true);
+  let applying = $state(false);
+  let applyError = $state('');
+  let applySuccess = $state('');
   // Toast state
-  let showToast = false;
-  let toastMessage = '';
-  let toastType = 'success'; // 'success' | 'error' | 'info'
+  let showToast = $state(false);
+  let toastMessage = $state('');
+  let toastType = $state('success'); // 'success' | 'error' | 'info'
   let toastTimeoutId = null;
 
   // exposed list of API tokens (from configData.APITokens)
-  $: apiTokens = (configData && configData.apiTokens) ? configData.apiTokens : [];
+  let apiTokens = $derived((configData && configData.apiTokens) ? configData.apiTokens : []);
 
   function showToastMsg(msg, type = 'success', duration = 3500) {
     // clear previous timeout
@@ -36,13 +36,13 @@
   }
 
   // expandedSources keyed by data-source index to avoid problems when renaming
-  let expandedSources = {};
+  let expandedSources = $state({});
   // track active selection by index so we can rename sources safely
-  let currentActiveIndex = 0;
-  let selectedActiveIndex = 0;
-  let showConfigFile = false;
+  let currentActiveIndex = $state(0);
+  let selectedActiveIndex = $state(0);
+  let showConfigFile = $state(false);
   // name validation errors keyed by data-source index
-  let nameErrors = {};
+  let nameErrors = $state({});
 
   let indicoDataSourcePlaceholders = {
     baseUrl: 'https://indico.example.org',
@@ -59,8 +59,8 @@
   }
 
   // -- Indico dialog integration: we use the extracted component --
-  let indicoDialogOpen = false;
-  let indicoDialogInitialName = '';
+  let indicoDialogOpen = $state(false);
+  let indicoDialogInitialName = $state('');
 
   function openAddIndicoDialog() {
     indicoDialogInitialName = getUniqueName('Conference Name');
@@ -195,10 +195,12 @@
   }
 
   // Re-validate whenever configData changes
-  $: if (configData) validateNames();
+  $effect(() => {
+    if (configData) validateNames();
+  });
 
   // Derived flag used to disable Apply when there are name validation errors
-  $: hasNameErrors = Object.values(nameErrors).some(Boolean);
+  let hasNameErrors = $derived(Object.values(nameErrors).some(Boolean));
 
   async function loadConfig() {
     try {
@@ -286,9 +288,9 @@
   }
 
   // -- Delete data source state and handlers --
-  let showDeleteConfirm = false;
+  let showDeleteConfirm = $state(false);
   let deleteIndex = null;
-  let deleteName = '';
+  let deleteName = $state('');
 
   function openDeleteConfirm(i) {
     deleteIndex = i;
@@ -382,7 +384,7 @@
           <div class="flex-1 text-sm leading-tight">
             <div class="font-medium">{toastMessage}</div>
           </div>
-          <button class="ml-2 text-xs text-gray-500 hover:text-gray-700" on:click={() => { showToast = false; if (toastTimeoutId) { clearTimeout(toastTimeoutId); toastTimeoutId = null; } }} aria-label="Dismiss toast">×</button>
+          <button class="ml-2 text-xs text-gray-500 hover:text-gray-700" onclick={() => { showToast = false; if (toastTimeoutId) { clearTimeout(toastTimeoutId); toastTimeoutId = null; } }} aria-label="Dismiss toast">×</button>
         </div>
       </div>
     </div>
@@ -427,9 +429,9 @@
                  validateNames={validateNames}
                  currentActiveIndex={currentActiveIndex}
                  apiTokens={apiTokens}
-                 on:add-indico={openAddIndicoDialog}
-                 on:delete={(e) => openDeleteConfirm(e.detail)}
-                 on:toggle={(e) => toggleSource(e.detail)} />
+                 onAddIndico={openAddIndicoDialog}
+                 onDelete={(index) => openDeleteConfirm(index)}
+                 onToggle={(index) => toggleSource(index)} />
 
     <!-- IndicoConfig component for adding new Indico sources -->
     <IndicoConfig bind:open={indicoDialogOpen}
@@ -438,20 +440,20 @@
                  placeholders={indicoDataSourcePlaceholders}
                  saving={applying}
                  apiTokens={apiTokens}
-                 on:create={handleCreateIndico}
-                 on:cancel={cancelCreateIndico} />
+                 onCreate={handleCreateIndico}
+                 onCancel={cancelCreateIndico} />
 
     <!-- Delete Confirmation Modal -->
     {#if showDeleteConfirm}
       <div class="fixed inset-0 z-40 flex items-center justify-center">
-        <div class="absolute inset-0 bg-black/40" role="button" tabindex="0" aria-label="Close dialog" on:click={cancelDelete} on:keydown={(e) => { if (e.key === 'Enter' || e.key === ' ' || e.key === 'Spacebar') { e.preventDefault(); cancelDelete(); } }}></div>
-        <div role="dialog" aria-modal="true" tabindex="0" on:keydown|stopPropagation={(e) => { if (e.key === 'Escape') cancelDelete(); }} class="relative z-50 w-full max-w-md mx-4 bg-white dark:bg-gray-800 rounded-lg shadow-lg p-4 pointer-events-auto">
+        <div class="absolute inset-0 bg-black/40" role="button" tabindex="0" aria-label="Close dialog" onclick={cancelDelete} onkeydown={(e) => { if (e.key === 'Enter' || e.key === ' ' || e.key === 'Spacebar') { e.preventDefault(); cancelDelete(); } }}></div>
+        <div role="dialog" aria-modal="true" tabindex="0" onkeydown={(e) => { if (e.key === 'Escape') { e.stopPropagation(); cancelDelete(); } }} class="relative z-50 w-full max-w-md mx-4 bg-white dark:bg-gray-800 rounded-lg shadow-lg p-4 pointer-events-auto">
           <h4 class="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-3">Delete Data Source</h4>
           <p class="text-sm text-gray-700 dark:text-gray-300">Are you sure you want to delete <strong>{deleteName || 'this data source'}</strong>? This action cannot be undone.</p>
           <div class="mt-4 flex justify-end gap-2">
-            <button type="button" class="px-3 py-1 rounded bg-gray-200 dark:bg-gray-700 text-sm" on:click={cancelDelete}>Cancel</button>
+            <button type="button" class="px-3 py-1 rounded bg-gray-200 dark:bg-gray-700 text-sm" onclick={cancelDelete}>Cancel</button>
             <button type="button" class="px-3 py-1 rounded bg-red-600 text-white text-sm hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-red-400"
-                    on:click={confirmDelete}
+                    onclick={confirmDelete}
                     disabled={applying}
             >
               {applying ? 'Deleting...' : 'Delete'}
@@ -512,9 +514,9 @@
 
     <!-- API Tokens Manager -->
     <ApiTokens apiTokens={apiTokens}
-               on:add={(e) => { handleAddApiToken(e.detail || e); }}
-               on:edit={(e) => { handleEditApiToken(e.detail || e); }}
-               on:delete={(e) => { handleDeleteApiToken(e.detail || e); }} />
+               onAdd={(entry) => handleAddApiToken(entry)}
+               onEdit={(payload) => handleEditApiToken(payload)}
+               onDelete={(index) => handleDeleteApiToken(index)} />
 
     <!-- Status Messages -->
     {#if applyError}
@@ -533,7 +535,7 @@
       <button
         type="button"
         class="px-2 py-1.5 rounded-lg bg-indigo-600 text-white font-medium hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed dark:bg-indigo-500 dark:hover:bg-indigo-600 focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:ring-offset-2 transition-colors"
-        on:click={apply}
+        onclick={apply}
         disabled={applying || hasNameErrors}
       >
         {applying ? 'Applying...' : 'Apply'}
@@ -545,8 +547,8 @@
       <div
         role="button"
         tabindex="0"
-        on:click={() => showConfigFile = !showConfigFile}
-        on:keydown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); showConfigFile = !showConfigFile; } }}
+        onclick={() => showConfigFile = !showConfigFile}
+        onkeydown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); showConfigFile = !showConfigFile; } }}
         class="w-full flex items-center justify-between p-3 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
       >
         <h4 class="text-sm font-semibold text-gray-700 dark:text-gray-300">Configuration File</h4>

@@ -9,27 +9,26 @@
     getTableItems, 
   } from './AbstractTableItem.js';
 
-  /** @type {Array} */
-  export let abstractData = [];
+  let { abstractData = [] } = $props();
 
   // Abstract dialog state
-  let showAbstractDialog = false;
-  let selectedAbstract = null;
+  let showAbstractDialog = $state(false);
+  let selectedAbstract = $state(null);
 
   // Track dialog state
-  let showTrackDialog = false;
-  let selectedTracks = [];
+  let showTrackDialog = $state(false);
+  let selectedTracks = $state([]);
 
   // Simple client-side controls (search/sort/pagination)
   // We will use the event-based API like the example: DataTableControls emits pagechange/searchchange
-  let searchQuery = '';
-  let perPage = 25;
-  let currentPage = 1;
-  let sortKey = null; // e.g. 'Title' or 'Score'
-  let sortDir = 'asc'; // 'asc' | 'desc'
+  let searchQuery = $state('');
+  let perPage = $state(25);
+  let currentPage = $state(1);
+  let sortKey = $state(null); // e.g. 'Title' or 'Score'
+  let sortDir = $state('asc'); // 'asc' | 'desc'
 
   // Column filters state (added) - map of { headerTitle: [selectedValues] }
-  let activeFilters = {};
+  let activeFilters = $state({});
 
   // Columns definition (id matches keys in tableItems)
   const columns = [
@@ -58,7 +57,7 @@
   }, {});
 
   // Collect all unique tracks from all abstracts
-  $: allAvailableTracks = abstractData.reduce((acc, abstract) => {
+  let allAvailableTracks = $derived(abstractData.reduce((acc, abstract) => {
     if (abstract.accepted_track && !acc.some(t => t.title === abstract.accepted_track.title)) {
       acc.push({ title: abstract.accepted_track.title, type: 'accepted' });
     }
@@ -70,7 +69,7 @@
       });
     }
     return acc;
-  }, []);
+  }, []));
 
   // Find abstract by ID
   function findAbstractById(id) {
@@ -103,7 +102,7 @@
   }
 
   // Build table items and options
-  $: tableItems = getTableItems(abstractData);
+  let tableItems = $derived(getTableItems(abstractData));
 
   // columnFilters derived from tableItems (for DataTableControls/DataTableFilters)
   function getUniqueValuesWithCounts(items, header) {
@@ -120,10 +119,10 @@
     return { uniqueValues, counts };
   }
 
-  $: columnFilters = columns.map(c => {
+  let columnFilters = $derived(columns.map(c => {
     const { uniqueValues, counts } = getUniqueValuesWithCounts(tableItems || [], c.title);
     return { key: c.title, label: c.title, uniqueValues, counts };
-  });
+  }));
 
   // Handle filter changes from DataTableControls/DataTableFilters
   function handleFilterChange({ allFilters }) {
@@ -148,14 +147,14 @@
   }
 
   // Filtering (apply active column filters first, then search)
-  $: filteredItems = tableItems.filter(item => {
+  let filteredItems = $derived(tableItems.filter(item => {
     if (Object.keys(activeFilters).length > 0) {
       if (!matchesFilters(item, activeFilters)) return false;
     }
     if (!searchQuery) return true;
     const q = searchQuery.toLowerCase();
     return visibleKeys.some(k => String(item[k] ?? '').toLowerCase().includes(q));
-  });
+  }));
 
   // Sorting helper (handles ID numeric, Score numeric, Submitted timestamp, and Track numeric extraction)
   function compare(a,b,key) {
@@ -218,7 +217,7 @@
     return sa < sb ? -1 : sa > sb ? 1 : 0;
   }
 
-  $: sortedItems = (() => {
+  let sortedItems = $derived((() => {
     if (!sortKey) return filteredItems;
     const copy = filteredItems.slice();
     copy.sort((a,b) => {
@@ -226,18 +225,24 @@
       return sortDir === 'asc' ? res : -res;
     });
     return copy;
-  })();
+  })());
 
   // expose total items for DataTableControls
-  $: totalItems = sortedItems.length;
+  let totalItems = $derived(sortedItems.length);
 
   // Pagination
-  $: totalPages = Math.max(1, Math.ceil(sortedItems.length / perPage));
-  $: currentPage = Math.min(currentPage, totalPages);
-  $: paginatedItems = sortedItems.slice((currentPage-1)*perPage, currentPage*perPage);
+  let totalPages = $derived(Math.max(1, Math.ceil(sortedItems.length / perPage)));
+
+  $effect(() => {
+    if (currentPage > totalPages) {
+      currentPage = totalPages;
+    }
+  });
+
+  let paginatedItems = $derived(sortedItems.slice((currentPage-1)*perPage, currentPage*perPage));
 
   // For VirtualList we pass the paginatedItems so the visible window is virtualized per page
-  $: visibleItems = paginatedItems;
+  let visibleItems = $derived(paginatedItems);
 
   // sort callback used by DataTable (event-based)
   function onSort(key) {
@@ -265,7 +270,7 @@
         {#if col.id === 'ID'}
           {item.ID}
         {:else if col.id === 'Title'}
-          <TitleLink as="button" onClick={() => openAbstract(item.ID)} data-id={item.ID} data-title={item.Title}>{item.Title}</TitleLink>
+          <TitleLink as="button" onclick={() => openAbstract(item.ID)} data-id={item.ID} data-title={item.Title}>{item.Title}</TitleLink>
         {:else if col.id === 'State'}
           {#if item.State}
             <span class={item.State.toLowerCase() === 'accepted' ? 'state-badge state-accepted' : (item.State.toLowerCase() === 'rejected' ? 'state-badge state-rejected' : 'state-badge state-other')}>{item.State}</span>

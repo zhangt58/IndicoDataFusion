@@ -9,7 +9,7 @@
   import { MinusOutline, CloseOutline } from 'flowbite-svelte-icons';
   import iconImage from '../assets/images/icon.png';
 
-  let isMaximised = false;
+  let isMaximised = $state(false);
 
   onMount(async () => {
     // Check initial maximised state
@@ -57,8 +57,8 @@
   role="button"
   tabindex="0"
   aria-label="Application title bar"
-  on:dblclick={handleMaximise}
-  on:keydown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleMaximise(); } }}
+  ondblclick={handleMaximise}
+  onkeydown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleMaximise(); } }}
 >
   <!-- Left: App title/icon -->
   <div class="flex items-center px-3 gap-2">
@@ -70,8 +70,8 @@
   <div class="flex items-center h-full" style="--wails-draggable: no-drag">
     <!-- Minimize -->
     <button
-      on:click={handleMinimise}
-      on:dblclick|stopPropagation={() => {}}
+      onclick={handleMinimise}
+      ondblclick={(e) => { e.stopPropagation(); }}
       class="h-full px-4 hover:bg-gray-200 dark:hover:bg-gray-800 transition-colors flex items-center justify-center group"
       aria-label="Minimize"
       title="Minimize"
@@ -82,8 +82,8 @@
 
     <!-- Maximize/Restore -->
     <button
-      on:click={handleMaximise}
-      on:dblclick|stopPropagation={() => {}}
+      onclick={handleMaximise}
+      ondblclick={(e) => { e.stopPropagation(); }}
       class="h-full px-4 hover:bg-gray-200 dark:hover:bg-gray-800 transition-colors flex items-center justify-center group"
       aria-label={isMaximised ? 'Restore' : 'Maximize'}
       title={isMaximised ? 'Restore' : 'Maximize'}
@@ -121,8 +121,8 @@
 
     <!-- Close -->
     <button
-      on:click={handleClose}
-      on:dblclick|stopPropagation={() => {}}
+      onclick={handleClose}
+      ondblclick={(e) => { e.stopPropagation(); }}
       class="h-full px-4 hover:bg-red-500 dark:hover:bg-red-600 transition-colors flex items-center justify-center group"
       aria-label="Close"
       title="Close"

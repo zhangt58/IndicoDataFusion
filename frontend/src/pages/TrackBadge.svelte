@@ -1,13 +1,11 @@
 <script>
-  export let text = '';
-  export let as = 'button';
-  export let className = '';
+  let { text = '', as = 'button', className = '', ...rest } = $props();
 </script>
 
 {#if as === 'button'}
-  <button class={"track-badge " + className} {...$$restProps}>{text}</button>
+  <button class={"track-badge " + className} {...rest}>{text}</button>
 {:else}
-  <span class={"track-badge " + className} {...$$restProps}>{text}</span>
+  <span class={"track-badge " + className} {...rest}>{text}</span>
 {/if}
 
 <style>

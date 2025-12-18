@@ -7,14 +7,14 @@
   import { RefreshOutline } from 'flowbite-svelte-icons';
   import LoadErrorHint from './LoadErrorHint.svelte';
 
-  let loading = false;
-  let refreshing = false;
-  let error = null;
-  let errorString = null;
-  let isTestMode = false;
-  let cacheExpired = false;
+  let loading = $state(false);
+  let refreshing = $state(false);
+  let error = $state(null);
+  let errorString = $state(null);
+  let isTestMode = $state(false);
+  let cacheExpired = $state(false);
 
-  let eventInfo = null;
+  let eventInfo = $state(null);
   let currentDataSource = null;
 
   async function loadData() {
