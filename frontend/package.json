@@ -16,7 +16,7 @@
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.1.17",
-    "@zhangt58/svelte-vtable": "^0.1.0",
+    "@zhangt58/svelte-vtable": "^0.1.1",
     "flowbite": "^4.0.1",
     "flowbite-svelte": "^1.28.1",
     "flowbite-svelte-icons": "^3.0.0",
