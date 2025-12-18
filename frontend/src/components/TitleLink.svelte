@@ -3,11 +3,11 @@
 </script>
 
 {#if as === 'button'}
-  <button class={"title-link " + className} {...rest}>
+  <button class={'title-link ' + className} {...rest}>
     {@render children()}
   </button>
 {:else}
-  <a class={"title-link " + className} {...rest}>
+  <a class={'title-link ' + className} {...rest}>
     {@render children()}
   </a>
 {/if}

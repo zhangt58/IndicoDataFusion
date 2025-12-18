@@ -33,8 +33,12 @@
   const { handleRefresh, handleCacheEvent } = createCachePage(
     'contributions',
     loadData,
-    (v) => { refreshing = v; },
-    (err) => { error = err; }
+    (v) => {
+      refreshing = v;
+    },
+    (err) => {
+      error = err;
+    },
   );
 
   onMount(async () => {
@@ -87,8 +91,12 @@
 {:else if error}
   <LoadErrorHint {error} message="Failed to load contributions." />
 {:else}
-  <div class="fixed bg-indigo-300 dark:bg-indigo-800 top-12 left-2 shadow-md px-2 py-1 rounded-sm flex items-center gap-2 z-10">
-    <h2 class="text-xl font-semibold text-gray-800 dark:text-gray-100">Contributions ({contributionData.length})</h2>
+  <div
+    class="fixed bg-indigo-300 dark:bg-indigo-800 top-12 left-2 shadow-md px-2 py-1 rounded-sm flex items-center gap-2 z-10"
+  >
+    <h2 class="text-xl font-semibold text-gray-800 dark:text-gray-100">
+      Contributions ({contributionData.length})
+    </h2>
     <div class="flex gap-1 ml-2">
       {#if !isTestMode}
         <div class="relative">
@@ -96,28 +104,37 @@
             onclick={() => handleRefresh()}
             disabled={refreshing}
             class="p-1.5 rounded transition-colors hover:bg-indigo-100 disabled:opacity-50"
-            title={cacheExpired ? "Cache expired - Click to refresh" : "Refresh from API"}
+            title={cacheExpired ? 'Cache expired - Click to refresh' : 'Refresh from API'}
           >
             <RefreshOutline class={`shrink-0 h-6 w-6 ${refreshing ? 'animate-spin' : ''}`} />
           </button>
           {#if cacheExpired && !refreshing}
             <span class="absolute -top-1 -right-1 flex h-3 w-3">
-              <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-              <span class="relative inline-flex rounded-full h-3 w-3 bg-red-500" title="Cache expired"></span>
+              <span
+                class="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"
+              ></span>
+              <span
+                class="relative inline-flex rounded-full h-3 w-3 bg-red-500"
+                title="Cache expired"
+              ></span>
             </span>
           {/if}
         </div>
       {/if}
       <button
-        onclick={() => viewMode = 'card'}
-        class="p-1.5 rounded transition-colors {viewMode === 'card' ? 'bg-indigo-400' : 'hover:bg-indigo-100'}"
+        onclick={() => (viewMode = 'card')}
+        class="p-1.5 rounded transition-colors {viewMode === 'card'
+          ? 'bg-indigo-400'
+          : 'hover:bg-indigo-100'}"
         title="Card View"
       >
         <CreditCardOutline class="shrink-0 h-6 w-6" />
       </button>
       <button
-        onclick={() => viewMode = 'table'}
-        class="p-1.5 rounded transition-colors {viewMode === 'table' ? 'bg-indigo-400' : 'hover:bg-indigo-100'}"
+        onclick={() => (viewMode = 'table')}
+        class="p-1.5 rounded transition-colors {viewMode === 'table'
+          ? 'bg-indigo-400'
+          : 'hover:bg-indigo-100'}"
         title="Table View"
       >
         <GridOutline class="shrink-0 h-6 w-6" />
@@ -125,12 +142,14 @@
     </div>
   </div>
 
-  <div class="max-w-full overflow-x-auto overflow-y-hidden rounded-md
-              mt-8 mb-4 h-[calc(100vh-9rem)]">
-  {#if viewMode === 'table'}
-    <ContributionTableView {contributionData} />
-  {:else}
-    <ContributionCardView {contributionData} />
-  {/if}
+  <div
+    class="max-w-full overflow-x-auto overflow-y-hidden rounded-md
+              mt-8 mb-4 h-[calc(100vh-9rem)]"
+  >
+    {#if viewMode === 'table'}
+      <ContributionTableView {contributionData} />
+    {:else}
+      <ContributionCardView {contributionData} />
+    {/if}
   </div>
 {/if}

@@ -1,9 +1,7 @@
 <script>
   import { DataTable, DataTableControls } from '@zhangt58/svelte-vtable';
   import ContributionDetailsDialog from './ContributionDetailsDialog.svelte';
-  import { 
-    getTableItems, 
-  } from './ContributionTableItem.js';
+  import { getTableItems } from './ContributionTableItem.js';
   import SessionBadge from './SessionBadge.svelte';
   import TrackBadge from './TrackBadge.svelte';
   import TypeBadge from './TypeBadge.svelte';
@@ -29,18 +27,23 @@
   let activeFilters = $state({});
 
   // Aggregate all unique sessions from contributions
-  let allAvailableSessions = $derived(contributionData.reduce((acc, c) => {
-    const title = c.session || c.Session || null;
-    if (title && !acc.some(s => s.title === title)) {
-      acc.push({ title });
-    }
-    return acc;
-  }, []));
+  let allAvailableSessions = $derived(
+    contributionData.reduce((acc, c) => {
+      const title = c.session || c.Session || null;
+      if (title && !acc.some((s) => s.title === title)) {
+        acc.push({ title });
+      }
+      return acc;
+    }, []),
+  );
 
   // Open session dialog - accepts a string or array/object
   function openSession(sessionFull) {
     try {
-      if (!sessionFull) { selectedSessions = []; return; }
+      if (!sessionFull) {
+        selectedSessions = [];
+        return;
+      }
       // If it's a simple title string, gather matching table items to show additional fields
       if (typeof sessionFull === 'string') {
         // try parsing JSON first
@@ -51,15 +54,19 @@
         } catch (e) {
           // not JSON, keep the raw title
         }
-        const matches = tableItems.filter(it => it.Session === title);
+        const matches = tableItems.filter((it) => it.Session === title);
         selectedSessions = [{ title, items: matches }];
       } else if (Array.isArray(sessionFull)) {
         // try to normalize array entries
-        selectedSessions = sessionFull.map(s => (typeof s === 'string' ? { title: s, items: tableItems.filter(it => it.Session === s) } : s));
+        selectedSessions = sessionFull.map((s) =>
+          typeof s === 'string'
+            ? { title: s, items: tableItems.filter((it) => it.Session === s) }
+            : s,
+        );
       } else if (sessionFull && typeof sessionFull === 'object') {
         // object may contain a title
         const title = sessionFull.title || sessionFull.name || '';
-        const matches = title ? tableItems.filter(it => it.Session === title) : [];
+        const matches = title ? tableItems.filter((it) => it.Session === title) : [];
         selectedSessions = [{ ...sessionFull, items: matches }];
       } else {
         selectedSessions = [];
@@ -74,7 +81,7 @@
 
   // Find contribution by ID
   function findContributionById(id) {
-    return contributionData.find(c => String(c.friendly_id || c.id) === String(id));
+    return contributionData.find((c) => String(c.friendly_id || c.id) === String(id));
   }
 
   // Open contribution details by id (used by title button)
@@ -85,14 +92,16 @@
   }
 
   // Aggregate all unique tracks from contributions
-  let allAvailableTracks = $derived(contributionData.reduce((acc, c) => {
-    const title = c.track || c.Track || null;
-    if (title && !acc.some(t => t.title === title)) {
-      // contribution source doesn't carry accepted/reviewed flag, mark as unknown
-      acc.push({ title, type: 'unknown' });
-    }
-    return acc;
-  }, []));
+  let allAvailableTracks = $derived(
+    contributionData.reduce((acc, c) => {
+      const title = c.track || c.Track || null;
+      if (title && !acc.some((t) => t.title === title)) {
+        // contribution source doesn't carry accepted/reviewed flag, mark as unknown
+        acc.push({ title, type: 'unknown' });
+      }
+      return acc;
+    }, []),
+  );
 
   // Open track dialog - accepts JSON string/array/object or plain title string
   function openTrack(trackFull) {
@@ -126,7 +135,7 @@
   // Handle clicks on the table (keeps existing delegation behavior)
   function handleTableClick(event) {
     const target = event.target;
-    
+
     // Handle title link click
     if (target.classList.contains('title-link')) {
       event.preventDefault();
@@ -142,19 +151,33 @@
     }
 
     // Handle track badge click (support clicks on inner elements too)
-    if (target.classList.contains('track-link') || (target.closest && target.closest('.track-link'))) {
+    if (
+      target.classList.contains('track-link') ||
+      (target.closest && target.closest('.track-link'))
+    ) {
       event.preventDefault();
       const el = target.classList.contains('track-link') ? target : target.closest('.track-link');
-      const data = el && (el.dataset && el.dataset.tracks) ? el.dataset.tracks : el && el.getAttribute && el.getAttribute('data-tracks');
+      const data =
+        el && el.dataset && el.dataset.tracks
+          ? el.dataset.tracks
+          : el && el.getAttribute && el.getAttribute('data-tracks');
       // openTrack will handle JSON or plain string
       openTrack(data || el.textContent || '');
     }
 
     // Handle session badge click (support clicks on inner elements too)
-    if (target.classList.contains('session-link') || (target.closest && target.closest('.session-link'))) {
+    if (
+      target.classList.contains('session-link') ||
+      (target.closest && target.closest('.session-link'))
+    ) {
       event.preventDefault();
-      const el = target.classList.contains('session-link') ? target : target.closest('.session-link');
-      const data = el && (el.dataset && el.dataset.session) ? el.dataset.session : el && el.getAttribute && el.getAttribute('data-session');
+      const el = target.classList.contains('session-link')
+        ? target
+        : target.closest('.session-link');
+      const data =
+        el && el.dataset && el.dataset.session
+          ? el.dataset.session
+          : el && el.getAttribute && el.getAttribute('data-session');
       // openSession will handle string or array/object
       openSession(data || el.textContent || '');
     }
@@ -178,60 +201,80 @@
     { id: 'StartDate', title: 'Start', stretch: 2 },
     { id: 'Duration', title: 'Duration', stretch: 1 },
     { id: 'Room', title: 'Room', stretch: 1 },
-    { id: 'Speakers', title: 'Speakers', stretch: 2 }
+    { id: 'Speakers', title: 'Speakers', stretch: 2 },
   ];
 
-  const visibleKeys = columns.map(c => c.title);
+  const visibleKeys = columns.map((c) => c.title);
 
-  const mappedColumns = columns.map(c => ({ id: c.id, title: c.title, nowrap: false, stretch: c.stretch }));
-  const colWidths = mappedColumns.reduce((acc, c) => { acc[c.title] = c.stretch; return acc; }, {});
+  const mappedColumns = columns.map((c) => ({
+    id: c.id,
+    title: c.title,
+    nowrap: false,
+    stretch: c.stretch,
+  }));
+  const colWidths = mappedColumns.reduce((acc, c) => {
+    acc[c.title] = c.stretch;
+    return acc;
+  }, {});
 
   let tableItems = $derived(getTableItems(contributionData));
 
   // columnFilters derived from tableItems
   function getUniqueValuesWithCounts(items, header) {
     const counts = {};
-    (items || []).forEach(it => {
+    (items || []).forEach((it) => {
       const val = it && it[header];
       if (Array.isArray(val)) {
-        val.forEach(v => { const s = String(v ?? ''); counts[s] = (counts[s] || 0) + 1; });
+        val.forEach((v) => {
+          const s = String(v ?? '');
+          counts[s] = (counts[s] || 0) + 1;
+        });
       } else {
-        const s = String(val ?? ''); counts[s] = (counts[s] || 0) + 1;
+        const s = String(val ?? '');
+        counts[s] = (counts[s] || 0) + 1;
       }
     });
     const uniqueValues = Object.keys(counts).sort();
     return { uniqueValues, counts };
   }
 
-  let columnFilters = $derived(columns.map(c => {
-    const { uniqueValues, counts } = getUniqueValuesWithCounts(tableItems || [], c.title);
-    return { key: c.title, label: c.title, uniqueValues, counts };
-  }));
+  let columnFilters = $derived(
+    columns.map((c) => {
+      const { uniqueValues, counts } = getUniqueValuesWithCounts(tableItems || [], c.title);
+      return { key: c.title, label: c.title, uniqueValues, counts };
+    }),
+  );
 
   // Filtering
-  let filteredItems = $derived(tableItems.filter(item => {
-    // apply active column filters first
-    if (Object.keys(activeFilters).length > 0) {
-      for (const [columnKey, selectedValues] of Object.entries(activeFilters)) {
-        if (!selectedValues || selectedValues.length === 0) continue;
-        const itemValue = item[columnKey];
-        if (Array.isArray(itemValue)) {
-          const itemStrings = itemValue.map(v => String(v ?? ''));
-          if (!selectedValues.some(val => itemStrings.includes(val))) return false;
-        } else {
-          const itemStr = String(itemValue ?? '');
-          if (!selectedValues.includes(itemStr)) return false;
+  let filteredItems = $derived(
+    tableItems.filter((item) => {
+      // apply active column filters first
+      if (Object.keys(activeFilters).length > 0) {
+        for (const [columnKey, selectedValues] of Object.entries(activeFilters)) {
+          if (!selectedValues || selectedValues.length === 0) continue;
+          const itemValue = item[columnKey];
+          if (Array.isArray(itemValue)) {
+            const itemStrings = itemValue.map((v) => String(v ?? ''));
+            if (!selectedValues.some((val) => itemStrings.includes(val))) return false;
+          } else {
+            const itemStr = String(itemValue ?? '');
+            if (!selectedValues.includes(itemStr)) return false;
+          }
         }
       }
-    }
 
-    if (!searchQuery) return true;
-    const q = searchQuery.toLowerCase();
-    return visibleKeys.some(k => String(item[k] ?? '').toLowerCase().includes(q));
-  }));
+      if (!searchQuery) return true;
+      const q = searchQuery.toLowerCase();
+      return visibleKeys.some((k) =>
+        String(item[k] ?? '')
+          .toLowerCase()
+          .includes(q),
+      );
+    }),
+  );
 
   // Sorting (string compare for all columns)
-  function compare(a,b,key) {
+  function compare(a, b, key) {
     // Special-case ID: numeric sort if IDNumber exists
     if (key === 'ID') {
       const na = a.IDNumber != null ? Number(a.IDNumber) : NaN;
@@ -290,15 +333,17 @@
     return 0;
   }
 
-  let sortedItems = $derived((() => {
-    if (!sortKey) return filteredItems;
-    const copy = filteredItems.slice();
-    copy.sort((a,b) => {
-      const res = compare(a,b,sortKey);
-      return sortDir === 'asc' ? res : -res;
-    });
-    return copy;
-  })());
+  let sortedItems = $derived(
+    (() => {
+      if (!sortKey) return filteredItems;
+      const copy = filteredItems.slice();
+      copy.sort((a, b) => {
+        const res = compare(a, b, sortKey);
+        return sortDir === 'asc' ? res : -res;
+      });
+      return copy;
+    })(),
+  );
 
   // total items available after filtering/sorting
   let totalItems = $derived(sortedItems.length);
@@ -312,7 +357,9 @@
     }
   });
 
-  let paginatedItems = $derived(sortedItems.slice((currentPage-1)*perPage, currentPage*perPage));
+  let paginatedItems = $derived(
+    sortedItems.slice((currentPage - 1) * perPage, currentPage * perPage),
+  );
   let visibleItems = $derived(paginatedItems);
 
   function setSort(key) {
@@ -329,35 +376,47 @@
 <!-- svelte-ignore a11y_no_static_element_interactions -->
 <div class="flex flex-col overflow-auto" style="height:calc(100vh - 8rem);">
   <!-- Sticky Controls at top -->
-  <div class="sticky top-0 z-10 bg-transparent
+  <div
+    class="sticky top-0 z-10 bg-transparent
               px-2 py-2 rounded-md border-gray-200 dark:border-gray-700
-              mb-2 mt-2 shrink-0 shadow-md dark:shadow-black/40">
+              mb-2 mt-2 shrink-0 shadow-md dark:shadow-black/40"
+  >
     <DataTableControls
       search={searchQuery}
-      currentPage={currentPage}
-      bind:perPage={perPage}
+      {currentPage}
+      bind:perPage
       {totalItems}
-      pagechange={(payload) => { currentPage = payload.currentPage }}
-      searchchange={(payload) => { searchQuery = payload.search }}
-      columnFilters={columnFilters}
-      activeFilters={activeFilters}
-      filterChange={({ allFilters }) => { activeFilters = { ...allFilters }; currentPage = 1 }}
+      pagechange={(payload) => {
+        currentPage = payload.currentPage;
+      }}
+      searchchange={(payload) => {
+        searchQuery = payload.search;
+      }}
+      {columnFilters}
+      {activeFilters}
+      filterChange={({ allFilters }) => {
+        activeFilters = { ...allFilters };
+        currentPage = 1;
+      }}
       filtersVisible={false}
     />
   </div>
 
-  <section class="flex-1 overflow-auto flex flex-col max-h-screen min-h-0" onclick={handleTableClick}>
+  <section
+    class="flex-1 overflow-auto flex flex-col max-h-screen min-h-0"
+    onclick={handleTableClick}
+  >
     <DataTable
-       items={visibleItems}
-       {visibleKeys}
-       sortKey={sortKey}
-       sortDir={sortDir}
-       sortCallback={(k) => setSort(k)}
-       className="datatable-table w-full mt-0.5 mb-2 overflow-auto min-h-0"
-       colWidths={colWidths}
-       virtualize={false}
-       rowSnippet={rowSnippet}
-     />
+      items={visibleItems}
+      {visibleKeys}
+      {sortKey}
+      {sortDir}
+      sortCallback={(k) => setSort(k)}
+      className="datatable-table w-full mt-0.5 mb-2 overflow-auto min-h-0"
+      {colWidths}
+      virtualize={false}
+      {rowSnippet}
+    />
   </section>
 </div>
 
@@ -365,15 +424,28 @@
 <ContributionDetailsDialog bind:open={showContributionDialog} contribution={selectedContribution} />
 
 <!-- Track Details Dialog -->
-<TrackDetailsDialog bind:open={showTrackDialog} tracks={selectedTracks} allTracks={allAvailableTracks} showTypes={false} />
+<TrackDetailsDialog
+  bind:open={showTrackDialog}
+  tracks={selectedTracks}
+  allTracks={allAvailableTracks}
+  showTypes={false}
+/>
 
 <!-- Session Details Dialog -->
-<SessionDetailsDialog bind:open={showSessionDialog} sessions={selectedSessions} allSessions={allAvailableSessions} />
+<SessionDetailsDialog
+  bind:open={showSessionDialog}
+  sessions={selectedSessions}
+  allSessions={allAvailableSessions}
+/>
 
 <!-- Row snippet for ContributionTableView (moved out of <script>) -->
 {#snippet rowSnippet({ item, index, select, selected })}
   <tr
-    onclick={() => { try { select && select(); } catch (e) {} }}
+    onclick={() => {
+      try {
+        select && select();
+      } catch (e) {}
+    }}
     tabindex="0"
     class="cursor-pointer"
     class:selected-row={selected && String(selected.ID) === String(item.ID)}
@@ -386,18 +458,31 @@
         {:else if col.id === 'Code'}
           {item.Code}
         {:else if col.id === 'Title'}
-          <TitleLink as="button" data-id={item.ID} onclick={() => openContribution(item.ID)}>{item.Title}</TitleLink>
+          <TitleLink as="button" data-id={item.ID} onclick={() => openContribution(item.ID)}
+            >{item.Title}</TitleLink
+          >
         {:else if col.id === 'Type'}
           {#if item.Type}
             <TypeBadge text={item.Type} />
           {/if}
         {:else if col.id === 'Session'}
           {#if item.Session}
-            <SessionBadge text={item.Session} as="button" className="session-link" onclick={() => openSession(item.Session)} {...{ 'data-session': item.Session }} />
+            <SessionBadge
+              text={item.Session}
+              as="button"
+              className="session-link"
+              onclick={() => openSession(item.Session)}
+              {...{ 'data-session': item.Session }}
+            />
           {/if}
         {:else if col.id === 'Track'}
           {#if item.Track}
-            <TrackBadge text={item.Track} className="track-link" onclick={() => openTrack(item.Track)} {...{ 'data-tracks': item.Track }} />
+            <TrackBadge
+              text={item.Track}
+              className="track-link"
+              onclick={() => openTrack(item.Track)}
+              {...{ 'data-tracks': item.Track }}
+            />
           {/if}
         {:else if col.id === 'Speakers'}
           {#if item.Speakers}

@@ -9,23 +9,25 @@
     <!-- App Logo/Header -->
     <div class="text-center">
       <div class="inline-flex items-center justify-center mb-1">
-        <img
-          src={ iconImage }
-          alt="{appInfo.name} Icon"
-          class="w-30 h-30 object-contain"
-        />
+        <img src={iconImage} alt="{appInfo.name} Icon" class="w-30 h-30 object-contain" />
       </div>
       <h2 class="text-2xl font-bold text-gray-900 dark:text-white mb-1">{appInfo.name}</h2>
-      <p class="text-sm text-gray-500 dark:text-gray-400">Aggregating Indico data into one desktop app</p>
+      <p class="text-sm text-gray-500 dark:text-gray-400">
+        Aggregating Indico data into one desktop app
+      </p>
     </div>
 
     <!-- Version Information -->
     <div class="bg-gray-50 dark:bg-gray-800 rounded-lg p-2 space-y-1">
-      <div class="flex justify-between items-center py-2 border-b border-gray-200 dark:border-gray-700">
+      <div
+        class="flex justify-between items-center py-2 border-b border-gray-200 dark:border-gray-700"
+      >
         <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Version</span>
         <span class="text-sm text-gray-600 dark:text-gray-400">{appInfo.version}</span>
       </div>
-      <div class="flex justify-between items-center py-2 border-b border-gray-200 dark:border-gray-700">
+      <div
+        class="flex justify-between items-center py-2 border-b border-gray-200 dark:border-gray-700"
+      >
         <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Build Date</span>
         <span class="text-sm text-gray-600 dark:text-gray-400">{appInfo.buildDate}</span>
       </div>
@@ -33,11 +35,15 @@
 
     <!-- Author Information -->
     <div class="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-2 space-y-1">
-      <div class="flex justify-between items-center py-2 border-b border-blue-200 dark:border-blue-800">
+      <div
+        class="flex justify-between items-center py-2 border-b border-blue-200 dark:border-blue-800"
+      >
         <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Author</span>
         <span class="text-sm text-gray-600 dark:text-gray-400">{appInfo.author}</span>
       </div>
-      <div class="flex justify-between items-center py-2 border-b border-blue-200 dark:border-blue-800">
+      <div
+        class="flex justify-between items-center py-2 border-b border-blue-200 dark:border-blue-800"
+      >
         <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Organization</span>
         <span class="text-sm text-gray-600 dark:text-gray-400">{appInfo.company}</span>
       </div>
@@ -56,12 +62,11 @@
     <!-- Copyright & Links -->
     <div class="pt-2 border-t border-gray-200 dark:border-gray-700 text-center space-y-1">
       <p class="text-xs text-gray-500 dark:text-gray-400">
-        © {new Date().getFullYear()} {appInfo.author}. All rights reserved.
+        © {new Date().getFullYear()}
+        {appInfo.author}. All rights reserved.
       </p>
     </div>
   </div>
 {:else}
-  <div class="text-center p-4 text-gray-500">
-    No application information available.
-  </div>
+  <div class="text-center p-4 text-gray-500">No application information available.</div>
 {/if}

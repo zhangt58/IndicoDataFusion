@@ -7,15 +7,20 @@
   let { contribution = {} } = $props();
 </script>
 
-<div class="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 border border-gray-200 dark:border-gray-700">
+<div
+  class="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 border border-gray-200 dark:border-gray-700"
+>
   <!-- Title and Code -->
   <div class="flex justify-between items-start mb-3">
     <div class="flex-1">
       <h3 class="text-xl font-bold text-gray-800 dark:text-white">{contribution.title}</h3>
       <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
-        ID: {contribution.id} {#if contribution.friendly_id}(#{contribution.friendly_id}){/if}
+        ID: {contribution.id}
+        {#if contribution.friendly_id}(#{contribution.friendly_id}){/if}
         {#if contribution.code}
-          <span class="ml-2 px-2 py-0.5 bg-gray-200 dark:bg-gray-700 rounded">Code: {contribution.code}</span>
+          <span class="ml-2 px-2 py-0.5 bg-gray-200 dark:bg-gray-700 rounded"
+            >Code: {contribution.code}</span
+          >
         {/if}
       </p>
     </div>
@@ -43,7 +48,9 @@
     {#if contribution.track}
       <div>
         <p class="text-xs font-semibold text-gray-600 dark:text-gray-400">Track:</p>
-        <span class="text-sm px-2 py-1 bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 rounded">
+        <span
+          class="text-sm px-2 py-1 bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 rounded"
+        >
           {contribution.track}
         </span>
       </div>
@@ -83,7 +90,9 @@
     {#if contribution.room || contribution.roomFullname}
       <div>
         <p class="text-xs font-semibold text-gray-600 dark:text-gray-400">Room:</p>
-        <p class="text-gray-700 dark:text-gray-300">{contribution.roomFullname || contribution.room}</p>
+        <p class="text-gray-700 dark:text-gray-300">
+          {contribution.roomFullname || contribution.room}
+        </p>
       </div>
     {/if}
 
@@ -136,7 +145,9 @@
   <!-- Co-Authors -->
   {#if contribution.coauthors && contribution.coauthors.length > 0}
     <div class="mb-3">
-      <p class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Co-Authors ({contribution.coauthors.length}):</p>
+      <p class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+        Co-Authors ({contribution.coauthors.length}):
+      </p>
       <div class="flex gap-2 flex-wrap">
         {#each contribution.coauthors as coauthor}
           <div class="px-3 py-1 bg-gray-100 dark:bg-gray-700 rounded text-sm">
@@ -160,7 +171,9 @@
           <p class="text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1">Keywords:</p>
           <div class="flex gap-1 flex-wrap">
             {#each contribution.keywords as keyword}
-              <span class="px-2 py-0.5 bg-teal-100 dark:bg-teal-900 text-teal-800 dark:text-teal-200 rounded text-xs">
+              <span
+                class="px-2 py-0.5 bg-teal-100 dark:bg-teal-900 text-teal-800 dark:text-teal-200 rounded text-xs"
+              >
                 {keyword}
               </span>
             {/each}
@@ -170,7 +183,9 @@
 
       {#if contribution.references && contribution.references.length > 0}
         <div>
-          <p class="text-xs font-semibold text-gray-600 dark:text-gray-400">References: {contribution.references.length}</p>
+          <p class="text-xs font-semibold text-gray-600 dark:text-gray-400">
+            References: {contribution.references.length}
+          </p>
         </div>
       {/if}
     </div>
@@ -184,7 +199,9 @@
           Materials: {contribution.material.length}
         {/if}
         {#if contribution.folders && contribution.folders.length > 0}
-          {#if contribution.material && contribution.material.length > 0} | {/if}
+          {#if contribution.material && contribution.material.length > 0}
+            |
+          {/if}
           Folders: {contribution.folders.length}
         {/if}
       </p>
@@ -194,17 +211,19 @@
   <!-- Link to Indico -->
   {#if contribution.url}
     <div class="mt-3 pt-3 border-t border-gray-200 dark:border-gray-600">
-      <a href={contribution.url}
-         onclick={async (e) => {
-           e.preventDefault();
-           try {
-             await BrowserOpenURL(contribution.url);
-           } catch (e) {
-             console.error('BrowserOpenURL failed', e);
-           }
-         }}
-         class="text-sm text-blue-600 dark:text-blue-400 hover:underline"
-         title="Open contribution link in web-browser">
+      <a
+        href={contribution.url}
+        onclick={async (e) => {
+          e.preventDefault();
+          try {
+            await BrowserOpenURL(contribution.url);
+          } catch (e) {
+            console.error('BrowserOpenURL failed', e);
+          }
+        }}
+        class="text-sm text-blue-600 dark:text-blue-400 hover:underline"
+        title="Open contribution link in web-browser"
+      >
         View on Indico →
       </a>
     </div>

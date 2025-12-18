@@ -29,8 +29,10 @@
   function updateCurrentFromLocation() {
     if (typeof window === 'undefined') return;
     current = useHash
-      ? (window.location.hash ? window.location.hash.slice(1) : '/')
-      : (window.location.pathname || '/');
+      ? window.location.hash
+        ? window.location.hash.slice(1)
+        : '/'
+      : window.location.pathname || '/';
   }
 
   function onPop() {
@@ -98,5 +100,5 @@
 {/if}
 
 <style>
-/* minimal styles for loading fallback */
+  /* minimal styles for loading fallback */
 </style>

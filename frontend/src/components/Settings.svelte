@@ -17,7 +17,7 @@
   // Handle global events requesting the settings modal to open and switch tabs
   function handleOpenSettingsEvent(e) {
     try {
-      const tab = (e && e.detail && e.detail.tab) ? e.detail.tab : 'about';
+      const tab = e && e.detail && e.detail.tab ? e.detail.tab : 'about';
       activeTab = tab || 'about';
       open = true;
     } catch (err) {
@@ -58,8 +58,10 @@
   });
 </script>
 
-<Modal bind:open={open} size="lg" dismissable={true} class="settings-dialog">
-  <div class="flex justify-between items-center mb-4 border-b border-gray-200 dark:border-gray-700 pb-4">
+<Modal bind:open size="lg" dismissable={true} class="settings-dialog">
+  <div
+    class="flex justify-between items-center mb-4 border-b border-gray-200 dark:border-gray-700 pb-4"
+  >
     <h3 class="text-xl font-semibold text-gray-900 dark:text-white">Settings</h3>
   </div>
 
@@ -67,7 +69,10 @@
   <div class="flex border-b border-gray-200 dark:border-gray-700 mb-4">
     <button
       type="button"
-      class="flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors {activeTab === 'about' ? 'text-blue-600 dark:text-blue-500' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'}"
+      class="flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors {activeTab ===
+      'about'
+        ? 'text-blue-600 dark:text-blue-500'
+        : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'}"
       onclick={() => setTab('about')}
     >
       <InfoCircleSolid class="w-4 h-4" />
@@ -75,7 +80,10 @@
     </button>
     <button
       type="button"
-      class="flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors {activeTab === 'window' ? 'text-blue-600 dark:text-blue-500' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'}"
+      class="flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors {activeTab ===
+      'window'
+        ? 'text-blue-600 dark:text-blue-500'
+        : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'}"
       onclick={() => setTab('window')}
     >
       <WindowSolid class="w-4 h-4" />
@@ -83,7 +91,10 @@
     </button>
     <button
       type="button"
-      class="flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors {activeTab === 'config' ? 'text-blue-600 dark:text-blue-500' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'}"
+      class="flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors {activeTab ===
+      'config'
+        ? 'text-blue-600 dark:text-blue-500'
+        : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'}"
       onclick={() => setTab('config')}
     >
       <CogOutline class="w-4 h-4" />
@@ -91,7 +102,10 @@
     </button>
     <button
       type="button"
-      class="flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors {activeTab === 'cache' ? 'text-blue-600 dark:text-blue-500' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'}"
+      class="flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors {activeTab ===
+      'cache'
+        ? 'text-blue-600 dark:text-blue-500'
+        : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'}"
       onclick={() => setTab('cache')}
     >
       <DatabaseSolid class="w-4 h-4" />
@@ -110,7 +124,7 @@
           </div>
         </div>
       {:else}
-        <AboutTab {appInfo} reportIssue={reportIssue} />
+        <AboutTab {appInfo} {reportIssue} />
       {/if}
     {:else if activeTab === 'window'}
       <WindowTab active={true} />

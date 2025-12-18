@@ -1,0 +1,7 @@
+node_modules
+dist
+wailsjs
+__tests__
+.prettierrc
+pacakge*.json
+package.json.md5

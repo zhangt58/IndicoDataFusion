@@ -5,5 +5,5 @@ import svelteConfig from './svelte.config.js';
 
 // https://vitejs.dev/config/
 export default defineConfig({
-  plugins: [tailwindcss(), svelte(svelteConfig)]
+  plugins: [tailwindcss(), svelte(svelteConfig)],
 });

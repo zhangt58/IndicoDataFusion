@@ -3,11 +3,19 @@
 </script>
 
 {#if as === 'button'}
-  <button class={"session-badge text-sm px-2 py-1 bg-purple-100 dark:bg-purple-900 text-purple-800 dark:text-purple-200 rounded " + className} {...rest}>
+  <button
+    class={'session-badge text-sm px-2 py-1 bg-purple-100 dark:bg-purple-900 text-purple-800 dark:text-purple-200 rounded ' +
+      className}
+    {...rest}
+  >
     {text}
   </button>
 {:else}
-  <span class={"session-badge text-sm px-2 py-1 bg-purple-100 dark:bg-purple-900 text-purple-800 dark:text-purple-200 rounded " + className} {...rest}>
+  <span
+    class={'session-badge text-sm px-2 py-1 bg-purple-100 dark:bg-purple-900 text-purple-800 dark:text-purple-200 rounded ' +
+      className}
+    {...rest}
+  >
     {text}
   </span>
 {/if}
@@ -23,7 +31,10 @@
     font-size: 0.75rem;
     background-color: #f3e8ff !important;
     color: #6b21a8 !important;
-    transition: background-color 120ms ease, transform 100ms ease, box-shadow 120ms ease;
+    transition:
+      background-color 120ms ease,
+      transform 100ms ease,
+      box-shadow 120ms ease;
     cursor: default;
   }
   .session-badge:hover,
@@ -31,7 +42,7 @@
     /* Slightly darker background and subtle lift to indicate interactivity (similar to track hover feel) */
     filter: brightness(0.95);
     transform: translateY(-1px);
-    box-shadow: 0 1px 4px rgba(16,24,40,0.06);
+    box-shadow: 0 1px 4px rgba(16, 24, 40, 0.06);
   }
   .session-badge:active {
     transform: translateY(0);
@@ -44,7 +55,7 @@
   }
 
   :global(.dark .session-badge) {
-      background-color: #581c87 !important;
-      color: #e9d5ff !important;
+    background-color: #581c87 !important;
+    color: #e9d5ff !important;
   }
 </style>

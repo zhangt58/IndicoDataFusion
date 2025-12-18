@@ -7,7 +7,7 @@ import { formatDate } from '../utils/dateUtils.js';
  */
 export function getSpeakersDisplay(speakers) {
   if (!speakers || speakers.length === 0) return '';
-  
+
   const first = speakers[0];
   const name = first.fullName || `${first.first_name} ${first.last_name}`;
   return speakers.length > 1 ? `${name} ...` : name;
@@ -20,11 +20,13 @@ export function getSpeakersDisplay(speakers) {
  */
 export function getSpeakersTooltip(speakers) {
   if (!speakers || speakers.length === 0) return '';
-  return speakers.map(s => {
-    const name = s.fullName || `${s.first_name} ${s.last_name}`;
-    const affiliation = s.affiliation ? ` (${s.affiliation})` : '';
-    return `🎤 ${name}${affiliation}`;
-  }).join('\n');
+  return speakers
+    .map((s) => {
+      const name = s.fullName || `${s.first_name} ${s.last_name}`;
+      const affiliation = s.affiliation ? ` (${s.affiliation})` : '';
+      return `🎤 ${name}${affiliation}`;
+    })
+    .join('\n');
 }
 
 /**
@@ -34,7 +36,7 @@ export function getSpeakersTooltip(speakers) {
  */
 export function getPrimaryAuthorsDisplay(authors) {
   if (!authors || authors.length === 0) return '';
-  
+
   const first = authors[0];
   const name = first.fullName || `${first.first_name} ${first.last_name}`;
   return authors.length > 1 ? `${name} ...` : name;
@@ -48,26 +50,26 @@ export function getPrimaryAuthorsDisplay(authors) {
  */
 export function getAllAuthorsTooltip(primaryauthors, coauthors) {
   const lines = [];
-  
+
   if (primaryauthors && primaryauthors.length > 0) {
     lines.push('Primary Authors:');
-    primaryauthors.forEach(a => {
+    primaryauthors.forEach((a) => {
       const name = a.fullName || `${a.first_name} ${a.last_name}`;
       const affiliation = a.affiliation ? ` (${a.affiliation})` : '';
       lines.push(`  ${name}${affiliation}`);
     });
   }
-  
+
   if (coauthors && coauthors.length > 0) {
     if (lines.length > 0) lines.push('');
     lines.push('Co-Authors:');
-    coauthors.forEach(a => {
+    coauthors.forEach((a) => {
       const name = a.fullName || `${a.first_name} ${a.last_name}`;
       const affiliation = a.affiliation ? ` (${a.affiliation})` : '';
       lines.push(`  ${name}${affiliation}`);
     });
   }
-  
+
   return lines.join('\n');
 }
 
@@ -82,7 +84,12 @@ export function transformContributionToTableItem(contribution) {
   const idNum = Number(rawId);
 
   // compute duration minutes (backend provides duration as number in minutes)
-  const durationMinutes = typeof contribution.duration === 'number' ? contribution.duration : (contribution.duration ? Number(contribution.duration) : NaN);
+  const durationMinutes =
+    typeof contribution.duration === 'number'
+      ? contribution.duration
+      : contribution.duration
+        ? Number(contribution.duration)
+        : NaN;
 
   // compute ISO datetime and millis for Start (if startDate object present)
   let startISO = '';
@@ -115,7 +122,7 @@ export function transformContributionToTableItem(contribution) {
     SpeakersTooltip: getSpeakersTooltip(contribution.speakers),
     Authors: getPrimaryAuthorsDisplay(contribution.primaryauthors),
     AuthorsTooltip: getAllAuthorsTooltip(contribution.primaryauthors, contribution.coauthors),
-    URL: contribution.url || ''
+    URL: contribution.url || '',
   };
 }
 
@@ -135,7 +142,7 @@ export function getTableItems(data) {
  */
 export function buildTableItemsMap(tableItems) {
   const map = new Map();
-  tableItems.forEach(item => {
+  tableItems.forEach((item) => {
     map.set(String(item.ID), item);
   });
   return map;
@@ -146,19 +153,19 @@ export function buildTableItemsMap(tableItems) {
  * @returns {Function} Render function
  */
 export function createRenderTitle() {
-  return function(data, cell, dataIndex, cellIndex) {
+  return function (data, cell, dataIndex, cellIndex) {
     const titleStr = String(data || '');
     cell.childNodes = [
       {
         nodeName: 'A',
-        attributes: { 
+        attributes: {
           class: 'title-link',
           href: '#',
           'data-id': '',
-          'data-title': titleStr
+          'data-title': titleStr,
         },
-        childNodes: [{ nodeName: '#text', data: titleStr }]
-      }
+        childNodes: [{ nodeName: '#text', data: titleStr }],
+      },
     ];
   };
 }
@@ -169,13 +176,13 @@ export function createRenderTitle() {
 export function renderType(data, cell, dataIndex, cellIndex) {
   const typeStr = String(data || '');
   if (!typeStr) return;
-  
+
   cell.childNodes = [
     {
       nodeName: 'SPAN',
       attributes: { class: 'type-badge' },
-      childNodes: [{ nodeName: '#text', data: typeStr }]
-    }
+      childNodes: [{ nodeName: '#text', data: typeStr }],
+    },
   ];
 }
 
@@ -185,13 +192,13 @@ export function renderType(data, cell, dataIndex, cellIndex) {
 export function renderSession(data, cell, dataIndex, cellIndex) {
   const sessionStr = String(data || '');
   if (!sessionStr) return;
-  
+
   cell.childNodes = [
     {
       nodeName: 'SPAN',
       attributes: { class: 'session-badge' },
-      childNodes: [{ nodeName: '#text', data: sessionStr }]
-    }
+      childNodes: [{ nodeName: '#text', data: sessionStr }],
+    },
   ];
 }
 
@@ -201,13 +208,13 @@ export function renderSession(data, cell, dataIndex, cellIndex) {
 export function renderTrack(data, cell, dataIndex, cellIndex) {
   const trackStr = String(data || '');
   if (!trackStr) return;
-  
+
   cell.childNodes = [
     {
       nodeName: 'SPAN',
       attributes: { class: 'track-badge' },
-      childNodes: [{ nodeName: '#text', data: trackStr }]
-    }
+      childNodes: [{ nodeName: '#text', data: trackStr }],
+    },
   ];
 }
 
@@ -216,19 +223,19 @@ export function renderTrack(data, cell, dataIndex, cellIndex) {
  * @returns {Function} Render function
  */
 export function createRenderSpeakers() {
-  return function(data, cell, dataIndex, cellIndex) {
+  return function (data, cell, dataIndex, cellIndex) {
     const speakersStr = String(data || '');
     if (!speakersStr) return;
-    
+
     cell.childNodes = [
       {
         nodeName: 'SPAN',
-        attributes: { 
+        attributes: {
           class: 'speakers-cell',
-          title: ''
+          title: '',
         },
-        childNodes: [{ nodeName: '#text', data: speakersStr }]
-      }
+        childNodes: [{ nodeName: '#text', data: speakersStr }],
+      },
     ];
   };
 }
@@ -238,19 +245,19 @@ export function createRenderSpeakers() {
  * @returns {Function} Render function
  */
 export function createRenderAuthors() {
-  return function(data, cell, dataIndex, cellIndex) {
+  return function (data, cell, dataIndex, cellIndex) {
     const authorsStr = String(data || '');
     if (!authorsStr) return;
-    
+
     cell.childNodes = [
       {
         nodeName: 'SPAN',
-        attributes: { 
+        attributes: {
           class: 'authors-cell',
-          title: ''
+          title: '',
         },
-        childNodes: [{ nodeName: '#text', data: authorsStr }]
-      }
+        childNodes: [{ nodeName: '#text', data: authorsStr }],
+      },
     ];
   };
 }
@@ -266,10 +273,10 @@ export function rowRender(row, tr, index) {
   // Visible column indices (tr.childNodes) - hidden columns are excluded:
   // 0=ID, 1=Code, 2=Title, 3=Type, 4=Session, 5=Track, 6=StartDate, 7=Duration,
   // 8=Room, 9=Speakers
-  
+
   const id = row.cells[0]?.data || '';
   const speakersTooltip = row.cells[11]?.data || '';
-  
+
   // Update Title link (visible column 2) with data-id
   if (tr.childNodes && tr.childNodes[2]) {
     const titleCell = tr.childNodes[2];
@@ -277,7 +284,7 @@ export function rowRender(row, tr, index) {
       titleCell.childNodes[0].attributes['data-id'] = String(id);
     }
   }
-  
+
   // Update Speakers span (visible column 9) with tooltip
   if (tr.childNodes && tr.childNodes[9]) {
     const speakersCell = tr.childNodes[9];
@@ -285,13 +292,24 @@ export function rowRender(row, tr, index) {
       speakersCell.childNodes[0].attributes.title = speakersTooltip;
     }
   }
-  
+
   return tr;
 }
 
 // Column names for filter placeholders (visible columns only)
 // Visible: 0=ID, 1=Code, 2=Title, 3=Type, 4=Session, 5=Track, 6=Start, 7=Duration, 8=Room, 9=Speakers
-const visibleColumnNames = ['ID', 'Code', 'Title', 'Type', 'Session', 'Track', 'Start', 'Duration', 'Room', 'Speakers'];
+const visibleColumnNames = [
+  'ID',
+  'Code',
+  'Title',
+  'Type',
+  'Session',
+  'Track',
+  'Start',
+  'Duration',
+  'Room',
+  'Speakers',
+];
 
 // Mapping from visible column index to actual data column index
 // Visible: 0=ID, 1=Code, 2=Title, 3=Type, 4=Session, 5=Track, 6=Start, 7=Duration, 8=Room, 9=Speakers
@@ -315,7 +333,7 @@ export function tableRender(_data, table, type) {
   const filterHeaders = {
     nodeName: 'TR',
     attributes: {
-      class: 'search-filtering-row'
+      class: 'search-filtering-row',
     },
     childNodes: tHead.childNodes[0].childNodes.map((_th, index) => ({
       nodeName: 'TH',
@@ -326,11 +344,11 @@ export function tableRender(_data, table, type) {
             class: 'datatable-input column-filter',
             type: 'search',
             placeholder: visibleColumnNames[index] || `Col ${index + 1}`,
-            'data-columns': `[${visibleToDataColumnIndex[index]}]`
-          }
-        }
-      ]
-    }))
+            'data-columns': `[${visibleToDataColumnIndex[index]}]`,
+          },
+        },
+      ],
+    })),
   };
 
   tHead.childNodes.push(filterHeaders);
@@ -351,21 +369,21 @@ export function createDataTableOptions() {
     rowRender: rowRender,
     tableRender: tableRender,
     columns: [
-      { select: 0, sortable: true, type: 'number' },  // ID
-      { select: 1, sortable: true, type: 'string' },  // Code
-      { select: 2, render: createRenderTitle(), sortable: true, type: 'string' },  // Title
-      { select: 3, render: renderType, sortable: true, type: 'string' },  // Type
-      { select: 4, render: renderSession, sortable: true, type: 'string' },  // Session
-      { select: 5, render: renderTrack, sortable: true, type: 'string' },  // Track
-      { select: 6, sortable: true, type: 'string' },  // StartDate
-      { select: 7, sortable: true, type: 'string' },  // Duration
-      { select: 8, sortable: true, hidden: true, type: 'string' },  // Location
-      { select: 9, sortable: true, type: 'string' },  // Room
-      { select: 10, render: createRenderSpeakers(), sortable: true, type: 'string' },  // Speakers
-      { select: 11, hidden: true, type: 'string' },  // SpeakersTooltip (hidden)
-      { select: 12, hidden: true, render: createRenderAuthors(), sortable: true, type: 'string' },  // Authors
-      { select: 13, hidden: true, type: 'string' },  // AuthorsTooltip (hidden)
-      { select: 14, hidden: true, type: 'string' }   // URL (hidden)
-    ]
+      { select: 0, sortable: true, type: 'number' }, // ID
+      { select: 1, sortable: true, type: 'string' }, // Code
+      { select: 2, render: createRenderTitle(), sortable: true, type: 'string' }, // Title
+      { select: 3, render: renderType, sortable: true, type: 'string' }, // Type
+      { select: 4, render: renderSession, sortable: true, type: 'string' }, // Session
+      { select: 5, render: renderTrack, sortable: true, type: 'string' }, // Track
+      { select: 6, sortable: true, type: 'string' }, // StartDate
+      { select: 7, sortable: true, type: 'string' }, // Duration
+      { select: 8, sortable: true, hidden: true, type: 'string' }, // Location
+      { select: 9, sortable: true, type: 'string' }, // Room
+      { select: 10, render: createRenderSpeakers(), sortable: true, type: 'string' }, // Speakers
+      { select: 11, hidden: true, type: 'string' }, // SpeakersTooltip (hidden)
+      { select: 12, hidden: true, render: createRenderAuthors(), sortable: true, type: 'string' }, // Authors
+      { select: 13, hidden: true, type: 'string' }, // AuthorsTooltip (hidden)
+      { select: 14, hidden: true, type: 'string' }, // URL (hidden)
+    ],
   };
 }
