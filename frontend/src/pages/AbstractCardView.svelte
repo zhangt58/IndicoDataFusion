@@ -8,7 +8,7 @@
 
 {#if abstractData && abstractData.length > 0}
   <!-- Full-viewport container: makes the VirtualList fill the viewport exactly -->
-  <div class="flex flex-col mt-8 h-screen" style="height: calc(100vh - 8rem);">
+  <div class="flex flex-col h-screen" style="height: calc(100vh - 8rem);">
     <VirtualList items={abstractData}>
       {#snippet vl_slot({ index, item })}
         <div class="mb-4">

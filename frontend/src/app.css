@@ -1,6 +1,16 @@
+@import '@zhangt58/svelte-vtable/styles.css';
+/* Fallback if necessary:
+@import "../node_modules/@zhangt58/svelte-vtable/styles.css";
+*/
+
 @import 'tailwindcss';
 @plugin 'flowbite/plugin';
 @custom-variant dark (&:where(.dark, .dark *));
+
+/* Import svelte-vtable default styles so DataTable gets its CSS from the main app stylesheet.
+   Preferred: module specifier (Vite should resolve this). If your setup doesn't resolve bare imports,
+   uncomment the fallback line which references node_modules directly.
+*/
 
 @theme {
     --color-primary-50: #fff5f2;

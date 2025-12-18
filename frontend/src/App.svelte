@@ -3,6 +3,7 @@
     import {AlignJustifyOutline, BookOpenSolid, BookSolid, CogOutline, HomeSolid} from 'flowbite-svelte-icons';
     import {DarkMode} from 'flowbite-svelte';
     import './app.css';
+    import './table-helpers.css';
     import {goto} from './router/index.js';
     import LocalRouter from './router/Router.svelte';
     import AbstractPage from './pages/AbstractPage.svelte';

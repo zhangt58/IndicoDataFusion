@@ -24,7 +24,18 @@
         color: #166534 !important;
     }
 
-    :global(.dark .track-badge) {
+    /* Variant styles when parent passes variant classes (e.g. track-accepted or track-reviewed) */
+    .track-badge.track-accepted {
+        background-color: #dcfce7 !important;
+        color: #166534 !important;
+    }
+
+    .track-badge.track-reviewed {
+        background-color: #f3e8ff !important;
+        color: #6b21a8 !important;
+    }
+
+    :global(.dark) .track-badge {
         background-color: #14532d !important;
         color: #bbf7d0 !important;
     }

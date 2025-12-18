@@ -125,9 +125,12 @@
     </div>
   </div>
 
+  <div class="max-w-full overflow-x-auto overflow-y-hidden rounded-md
+              mt-8 mb-4 h-[calc(100vh-9rem)]">
   {#if viewMode === 'table'}
     <ContributionTableView {contributionData} />
   {:else}
     <ContributionCardView {contributionData} />
   {/if}
+  </div>
 {/if}

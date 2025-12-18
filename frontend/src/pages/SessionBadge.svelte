@@ -38,12 +38,13 @@
   .session-badge:active {
     transform: translateY(0);
   }
-  /* When used as interactive link/button, ensure pointer cursor is shown */
-  :global(.session-link) .session-badge,
-  :global(.session-badge.session-link),
-  :global(.session-link.session-badge) {
+
+  /* When used as interactive link/button, parent may pass a class like 'session-link' or 'interactive'. Allow the element itself to adopt pointer cursor when so used */
+  .session-badge.session-link,
+  .session-badge.interactive {
     cursor: pointer;
   }
+
   :global(.dark .session-badge) {
       background-color: #581c87 !important;
       color: #e9d5ff !important;
