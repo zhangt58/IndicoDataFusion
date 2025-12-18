@@ -5,9 +5,7 @@
   import TrackDetailsDialog from './TrackDetailsDialog.svelte';
   import TitleLink from '../components/TitleLink.svelte';
   import TrackBadge from './TrackBadge.svelte';
-  import {
-    getTableItems, 
-  } from './AbstractTableItem.js';
+  import { getTableItems } from './AbstractTableItem.js';
 
   let { abstractData = [] } = $props();
 
@@ -41,14 +39,19 @@
     { id: 'Type', title: 'Type', stretch: 1 },
     { id: 'Score', title: 'Score', stretch: 1 },
     { id: 'Submitted', title: 'Submitted', stretch: 2 },
-    { id: 'Authors', title: 'Authors', stretch: 2 }
+    { id: 'Authors', title: 'Authors', stretch: 2 },
   ];
 
   // Map of visible column keys in the data objects (header titles)
-  const visibleKeys = columns.map(c => c.title);
+  const visibleKeys = columns.map((c) => c.title);
 
   // Build mappedColumns for rowSnippet rendering
-  const mappedColumns = columns.map(c => ({ id: c.id, title: c.title, nowrap: false, stretch: c.stretch }));
+  const mappedColumns = columns.map((c) => ({
+    id: c.id,
+    title: c.title,
+    nowrap: false,
+    stretch: c.stretch,
+  }));
 
   // Build column widths mapping to pass to DataTable (using stretch weights)
   const colWidths = mappedColumns.reduce((acc, c) => {
@@ -57,25 +60,27 @@
   }, {});
 
   // Collect all unique tracks from all abstracts
-  let allAvailableTracks = $derived(abstractData.reduce((acc, abstract) => {
-    if (abstract.accepted_track && !acc.some(t => t.title === abstract.accepted_track.title)) {
-      acc.push({ title: abstract.accepted_track.title, type: 'accepted' });
-    }
-    if (abstract.reviewed_for_tracks) {
-      abstract.reviewed_for_tracks.forEach(track => {
-        if (!acc.some(t => t.title === track.title)) {
-          acc.push({ title: track.title, type: 'reviewed' });
-        }
-      });
-    }
-    return acc;
-  }, []));
+  let allAvailableTracks = $derived(
+    abstractData.reduce((acc, abstract) => {
+      if (abstract.accepted_track && !acc.some((t) => t.title === abstract.accepted_track.title)) {
+        acc.push({ title: abstract.accepted_track.title, type: 'accepted' });
+      }
+      if (abstract.reviewed_for_tracks) {
+        abstract.reviewed_for_tracks.forEach((track) => {
+          if (!acc.some((t) => t.title === track.title)) {
+            acc.push({ title: track.title, type: 'reviewed' });
+          }
+        });
+      }
+      return acc;
+    }, []),
+  );
 
   // Find abstract by ID
   function findAbstractById(id) {
     // Use strict string comparison to avoid type coercion warnings
     const sid = String(id);
-    return abstractData.find(a => String(a.friendly_id || a.id) === sid);
+    return abstractData.find((a) => String(a.friendly_id || a.id) === sid);
   }
 
   // Open abstract details by id (used by title button)
@@ -107,22 +112,28 @@
   // columnFilters derived from tableItems (for DataTableControls/DataTableFilters)
   function getUniqueValuesWithCounts(items, header) {
     const counts = {};
-    (items || []).forEach(it => {
+    (items || []).forEach((it) => {
       const val = it && it[header];
       if (Array.isArray(val)) {
-        val.forEach(v => { const s = String(v ?? ''); counts[s] = (counts[s] || 0) + 1; });
+        val.forEach((v) => {
+          const s = String(v ?? '');
+          counts[s] = (counts[s] || 0) + 1;
+        });
       } else {
-        const s = String(val ?? ''); counts[s] = (counts[s] || 0) + 1;
+        const s = String(val ?? '');
+        counts[s] = (counts[s] || 0) + 1;
       }
     });
     const uniqueValues = Object.keys(counts).sort();
     return { uniqueValues, counts };
   }
 
-  let columnFilters = $derived(columns.map(c => {
-    const { uniqueValues, counts } = getUniqueValuesWithCounts(tableItems || [], c.title);
-    return { key: c.title, label: c.title, uniqueValues, counts };
-  }));
+  let columnFilters = $derived(
+    columns.map((c) => {
+      const { uniqueValues, counts } = getUniqueValuesWithCounts(tableItems || [], c.title);
+      return { key: c.title, label: c.title, uniqueValues, counts };
+    }),
+  );
 
   // Handle filter changes from DataTableControls/DataTableFilters
   function handleFilterChange({ allFilters }) {
@@ -136,8 +147,8 @@
       if (!selectedValues || selectedValues.length === 0) continue;
       const itemValue = item[columnKey];
       if (Array.isArray(itemValue)) {
-        const itemStrings = itemValue.map(v => String(v ?? ''));
-        if (!selectedValues.some(val => itemStrings.includes(val))) return false;
+        const itemStrings = itemValue.map((v) => String(v ?? ''));
+        if (!selectedValues.some((val) => itemStrings.includes(val))) return false;
       } else {
         const itemStr = String(itemValue ?? '');
         if (!selectedValues.includes(itemStr)) return false;
@@ -147,17 +158,23 @@
   }
 
   // Filtering (apply active column filters first, then search)
-  let filteredItems = $derived(tableItems.filter(item => {
-    if (Object.keys(activeFilters).length > 0) {
-      if (!matchesFilters(item, activeFilters)) return false;
-    }
-    if (!searchQuery) return true;
-    const q = searchQuery.toLowerCase();
-    return visibleKeys.some(k => String(item[k] ?? '').toLowerCase().includes(q));
-  }));
+  let filteredItems = $derived(
+    tableItems.filter((item) => {
+      if (Object.keys(activeFilters).length > 0) {
+        if (!matchesFilters(item, activeFilters)) return false;
+      }
+      if (!searchQuery) return true;
+      const q = searchQuery.toLowerCase();
+      return visibleKeys.some((k) =>
+        String(item[k] ?? '')
+          .toLowerCase()
+          .includes(q),
+      );
+    }),
+  );
 
   // Sorting helper (handles ID numeric, Score numeric, Submitted timestamp, and Track numeric extraction)
-  function compare(a,b,key) {
+  function compare(a, b, key) {
     const va = a[key];
     const vb = b[key];
 
@@ -217,15 +234,17 @@
     return sa < sb ? -1 : sa > sb ? 1 : 0;
   }
 
-  let sortedItems = $derived((() => {
-    if (!sortKey) return filteredItems;
-    const copy = filteredItems.slice();
-    copy.sort((a,b) => {
-      const res = compare(a,b,sortKey);
-      return sortDir === 'asc' ? res : -res;
-    });
-    return copy;
-  })());
+  let sortedItems = $derived(
+    (() => {
+      if (!sortKey) return filteredItems;
+      const copy = filteredItems.slice();
+      copy.sort((a, b) => {
+        const res = compare(a, b, sortKey);
+        return sortDir === 'asc' ? res : -res;
+      });
+      return copy;
+    })(),
+  );
 
   // expose total items for DataTableControls
   let totalItems = $derived(sortedItems.length);
@@ -239,7 +258,9 @@
     }
   });
 
-  let paginatedItems = $derived(sortedItems.slice((currentPage-1)*perPage, currentPage*perPage));
+  let paginatedItems = $derived(
+    sortedItems.slice((currentPage - 1) * perPage, currentPage * perPage),
+  );
 
   // For VirtualList we pass the paginatedItems so the visible window is virtualized per page
   let visibleItems = $derived(paginatedItems);
@@ -259,7 +280,11 @@
 <!-- Row snippet for AbstractTableView (moved out of <script>) -->
 {#snippet rowSnippet({ item, index, select, selected })}
   <tr
-    onclick={() => { try { select && select(); } catch (e) {} }}
+    onclick={() => {
+      try {
+        select && select();
+      } catch (e) {}
+    }}
     tabindex="0"
     class="cursor-pointer"
     class:selected-row={selected && String(selected.ID) === String(item.ID)}
@@ -270,14 +295,32 @@
         {#if col.id === 'ID'}
           {item.ID}
         {:else if col.id === 'Title'}
-          <TitleLink as="button" onclick={() => openAbstract(item.ID)} data-id={item.ID} data-title={item.Title}>{item.Title}</TitleLink>
+          <TitleLink
+            as="button"
+            onclick={() => openAbstract(item.ID)}
+            data-id={item.ID}
+            data-title={item.Title}>{item.Title}</TitleLink
+          >
         {:else if col.id === 'State'}
           {#if item.State}
-            <span class={item.State.toLowerCase() === 'accepted' ? 'state-badge state-accepted' : (item.State.toLowerCase() === 'rejected' ? 'state-badge state-rejected' : 'state-badge state-other')}>{item.State}</span>
+            <span
+              class={item.State.toLowerCase() === 'accepted'
+                ? 'state-badge state-accepted'
+                : item.State.toLowerCase() === 'rejected'
+                  ? 'state-badge state-rejected'
+                  : 'state-badge state-other'}>{item.State}</span
+            >
           {/if}
         {:else if col.id === 'Track'}
           {#if item.Track}
-            <TrackBadge text={item.Track} as="button" className={(item.TrackType === 'accepted' ? 'track-accepted' : 'track-reviewed') + ' track-link'} onclick={() => openTrack(item.TrackFull)} {...{ 'data-tracks': item.TrackFull }} />
+            <TrackBadge
+              text={item.Track}
+              as="button"
+              className={(item.TrackType === 'accepted' ? 'track-accepted' : 'track-reviewed') +
+                ' track-link'}
+              onclick={() => openTrack(item.TrackFull)}
+              {...{ 'data-tracks': item.TrackFull }}
+            />
           {/if}
         {:else if col.id === 'Type'}
           {#if item.Type}
@@ -296,18 +339,24 @@
 {/snippet}
 
 <div class="flex flex-col overflow-auto px-1" style="height:calc(100vh - 8rem);">
-  <div class="sticky top-0 z-10 bg-transparent
+  <div
+    class="sticky top-0 z-10 bg-transparent
               px-2 py-2 rounded-md border-gray-200 dark:border-gray-700
-              mb-2 mt-2 shrink-0 shadow-md dark:shadow-black/40">
+              mb-2 mt-2 shrink-0 shadow-md dark:shadow-black/40"
+  >
     <DataTableControls
       search={searchQuery}
-      currentPage={currentPage}
-      bind:perPage={perPage}
+      {currentPage}
+      bind:perPage
       {totalItems}
-      pagechange={(payload) => { currentPage = payload.currentPage }}
-      searchchange={(payload) => { searchQuery = payload.search }}
-      columnFilters={columnFilters}
-      activeFilters={activeFilters}
+      pagechange={(payload) => {
+        currentPage = payload.currentPage;
+      }}
+      searchchange={(payload) => {
+        searchQuery = payload.search;
+      }}
+      {columnFilters}
+      {activeFilters}
       filterChange={handleFilterChange}
       filtersVisible={false}
     />
@@ -317,26 +366,30 @@
     <DataTable
       items={visibleItems}
       {visibleKeys}
-      sortKey={sortKey}
-      sortDir={sortDir}
+      {sortKey}
+      {sortDir}
       sortCallback={onSort}
       className="datatable-table w-full mt-0.5 mb-2 overflow-auto min-h-0"
-      colWidths={colWidths}
+      {colWidths}
       virtualize={false}
-      rowSnippet={rowSnippet}
+      {rowSnippet}
     />
   </section>
 </div>
 
- <!-- Abstract Detail Dialog -->
- <AbstractDetailsDialog bind:open={showAbstractDialog} abstract={selectedAbstract} />
+<!-- Abstract Detail Dialog -->
+<AbstractDetailsDialog bind:open={showAbstractDialog} abstract={selectedAbstract} />
 
- <!-- Track Details Dialog -->
- <TrackDetailsDialog bind:open={showTrackDialog} tracks={selectedTracks} allTracks={allAvailableTracks} />
+<!-- Track Details Dialog -->
+<TrackDetailsDialog
+  bind:open={showTrackDialog}
+  tracks={selectedTracks}
+  allTracks={allAvailableTracks}
+/>
 
 <style>
   /* Component-specific styling for AbstractTableView */
-  
+
   /* State badge styling - specific to AbstractTableView (scoped) */
   .state-badge {
     font-size: 0.75rem;

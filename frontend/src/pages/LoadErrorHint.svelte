@@ -29,10 +29,15 @@
 
     <div class="bg-yellow-50 border border-yellow-200 rounded-md p-4 mb-4">
       <p class="text-sm text-yellow-800 mb-3">
-        Hint: Click the top <strong>Settings</strong> button and modify the data sources in <strong>ConfigurationTab</strong> to point the app at a valid Indico data source.
+        Hint: Click the top <strong>Settings</strong> button and modify the data sources in
+        <strong>ConfigurationTab</strong> to point the app at a valid Indico data source.
       </p>
       <div class="flex gap-2">
-        <button onclick={openSettings} class="px-3 py-1 bg-yellow-600 text-white rounded hover:bg-yellow-700">Open Settings</button>
+        <button
+          onclick={openSettings}
+          class="px-3 py-1 bg-yellow-600 text-white rounded hover:bg-yellow-700"
+          >Open Settings</button
+        >
       </div>
     </div>
   </div>
@@ -40,8 +45,16 @@
 
 <style>
   /* keep styling minimal and tailwind-friendly; fallback styles for non-tailwind environments */
-  .bg-yellow-50 { background-color: #FFFBEB; }
-  .border-yellow-200 { border-color: #FDE68A; }
-  .text-yellow-800 { color: #92400E; }
-  .rounded-md { border-radius: 0.375rem; }
+  .bg-yellow-50 {
+    background-color: #fffbeb;
+  }
+  .border-yellow-200 {
+    border-color: #fde68a;
+  }
+  .text-yellow-800 {
+    color: #92400e;
+  }
+  .rounded-md {
+    border-radius: 0.375rem;
+  }
 </style>

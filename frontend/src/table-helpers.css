@@ -15,9 +15,16 @@
   font-size: 0.875rem;
   font-weight: 400;
 }
-.title-link:hover { color: #0a58ca; text-decoration: underline; }
-.dark .title-link { color: #60a5fa; }
-.dark .title-link:hover { color: #93c5fd; }
+.title-link:hover {
+  color: #0a58ca;
+  text-decoration: underline;
+}
+.dark .title-link {
+  color: #60a5fa;
+}
+.dark .title-link:hover {
+  color: #93c5fd;
+}
 
 /* Small badge sizing that complements vtable badges if used */
 .datatable-table .badge {

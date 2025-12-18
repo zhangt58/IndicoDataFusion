@@ -18,12 +18,12 @@ export function formatDate(dateInfo) {
       const localDate = dateObj.toLocaleDateString(undefined, {
         year: 'numeric',
         month: '2-digit',
-        day: '2-digit'
+        day: '2-digit',
       });
       const localTime = dateObj.toLocaleTimeString(undefined, {
         hour: '2-digit',
         minute: '2-digit',
-        hour12: false
+        hour12: false,
       });
       const localTz = Intl.DateTimeFormat().resolvedOptions().timeZone;
 
@@ -36,4 +36,3 @@ export function formatDate(dateInfo) {
 
   return tz ? `${date} ${time} (${tz})` : `${date} ${time}`;
 }
-

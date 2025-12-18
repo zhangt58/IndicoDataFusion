@@ -41,9 +41,10 @@ export function createCacheEventListener(cacheKey, loadData, setRefreshing) {
 
     // Only reload when the cache was explicitly refreshed/deleted for this key, or when cache was cleared.
     // Do NOT auto-reload on expiration/eviction events (action === 'expired' or 'evicted').
-    const shouldReload = (action === 'refreshed' && key === cacheKey) ||
-                        (action === 'deleted' && key === cacheKey) ||
-                        action === 'cleared';
+    const shouldReload =
+      (action === 'refreshed' && key === cacheKey) ||
+      (action === 'deleted' && key === cacheKey) ||
+      action === 'cleared';
 
     if (!shouldReload) {
       // If this event is not a user-triggered refresh/clear/delete, ignore for loading purposes.
