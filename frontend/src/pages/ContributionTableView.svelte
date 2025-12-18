@@ -3,7 +3,6 @@
   import ContributionDetailsDialog from './ContributionDetailsDialog.svelte';
   import { 
     getTableItems, 
-    createDataTableOptions
   } from './ContributionTableItem.js';
   import SessionBadge from './SessionBadge.svelte';
   import TrackBadge from './TrackBadge.svelte';
@@ -189,7 +188,6 @@
   const colWidths = mappedColumns.reduce((acc, c) => { acc[c.title] = c.stretch; return acc; }, {});
 
   $: tableItems = getTableItems(contributionData);
-  $: dataTableOptions = createDataTableOptions(); // kept for potential external use
 
   // columnFilters derived from tableItems
   function getUniqueValuesWithCounts(items, header) {

@@ -7,7 +7,6 @@
   import TrackBadge from './TrackBadge.svelte';
   import {
     getTableItems, 
-    createDataTableOptions
   } from './AbstractTableItem.js';
 
   /** @type {Array} */
@@ -105,7 +104,6 @@
 
   // Build table items and options
   $: tableItems = getTableItems(abstractData);
-  $: dataTableOptions = createDataTableOptions();
 
   // columnFilters derived from tableItems (for DataTableControls/DataTableFilters)
   function getUniqueValuesWithCounts(items, header) {
