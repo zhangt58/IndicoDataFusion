@@ -1,5 +1,6 @@
 <script>
   import { onMount, onDestroy } from 'svelte';
+  import { DarkMode } from 'flowbite-svelte';
   import { EventsOn, EventsOff } from '../../wailsjs/runtime/runtime.js';
   import { GetAppInfo } from '../../wailsjs/go/main/App';
 
@@ -120,6 +121,7 @@
   {:else}
     <!-- Left: App name and version -->
     <div class="flex items-center gap-2 pr-3 justify-start min-w-2xs">
+      <DarkMode class="px-1 py-1 rounded dark:text-primary-600" />
       {#if appName}
         <button
           class="text-sm text-gray-500 dark:text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-300 transition-colors px-2 py-1 rounded focus:outline-none"
