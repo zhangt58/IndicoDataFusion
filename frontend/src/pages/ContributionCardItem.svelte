@@ -4,8 +4,7 @@
   import TypeBadge from './TypeBadge.svelte';
   import SessionBadge from './SessionBadge.svelte';
 
-  /** @type {Object} */
-  export let contribution = {};
+  let { contribution = {} } = $props();
 </script>
 
 <div class="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 border border-gray-200 dark:border-gray-700">
@@ -196,7 +195,8 @@
   {#if contribution.url}
     <div class="mt-3 pt-3 border-t border-gray-200 dark:border-gray-600">
       <a href={contribution.url}
-         on:click|preventDefault={async () => {
+         onclick={async (e) => {
+           e.preventDefault();
            try {
              await BrowserOpenURL(contribution.url);
            } catch (e) {

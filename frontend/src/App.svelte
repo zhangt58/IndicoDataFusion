@@ -21,9 +21,9 @@
     '/contribution': ContributionPage
   };
 
-  let isSidebarOpen = false;
-  let settingsOpen = false;
-  let settingsTab = 'about';
+  let isSidebarOpen = $state(false);
+  let settingsOpen = $state(false);
+  let settingsTab = $state('about');
 
   // Keep onMount in case other init logic is needed
   onMount(() => {
@@ -86,7 +86,7 @@
   <!-- horizontal quick buttons left of the toggle -->
   <div class="fixed top-12 right-4 z-40 flex items-center gap-2 animate-slide-in"> <!-- z-40 so titlebar (z-50) remains on top -->
     <button
-      on:click={() => quickGoto('/')}
+      onclick={() => quickGoto('/')}
       class="flex items-center gap-2 bg-white/50 dark:bg-gray-800/50 border border-gray-200/60 dark:border-gray-700/60 rounded px-3 py-2 text-sm shadow-sm hover:bg-white/70 transition-all duration-200 hover:scale-105"
       aria-label="Go to Home"
       title="Home"
@@ -97,7 +97,7 @@
     </button>
 
     <button
-      on:click={() => quickGoto('/abstract')}
+      onclick={() => quickGoto('/abstract')}
       class="flex items-center gap-2 bg-white/50 dark:bg-gray-800/50 border border-gray-200/60 dark:border-gray-700/60 rounded px-3 py-2 text-sm shadow-sm hover:bg-white/70 transition-all duration-200 hover:scale-105"
       aria-label="Go to Abstracts"
       title="Abstracts"
@@ -108,7 +108,7 @@
     </button>
 
     <button
-      on:click={() => quickGoto('/contribution')}
+      onclick={() => quickGoto('/contribution')}
       class="flex items-center gap-2 bg-white/50 dark:bg-gray-800/50 border border-gray-200/60 dark:border-gray-700/60 rounded px-3 py-2 text-sm shadow-sm hover:bg-white/70 transition-all duration-200 hover:scale-105"
       aria-label="Go to Contributions"
       title="Contributions"
@@ -119,7 +119,7 @@
     </button>
 
     <button
-      on:click={toggleSettings}
+      onclick={toggleSettings}
       class="flex items-center gap-2 bg-white/50 dark:bg-gray-800/50 border border-gray-200/60 dark:border-gray-700/60 rounded px-3 py-2 text-sm shadow-sm hover:bg-white/70 transition-all duration-200 hover:scale-105"
       aria-label="Settings"
       title="Settings"
@@ -133,7 +133,7 @@
     <DarkMode class="flex items-center px-3 py-2 rounded dark:text-primary-600 bg-white/50 dark:bg-gray-800/50 border border-gray-200/60 dark:border-gray-700/60 shadow-md backdrop-blur-sm" />
 
     <button
-      on:click={toggleSidebar}
+      onclick={toggleSidebar}
       class="flex items-center gap-2 bg-white/60 dark:bg-gray-800/60 border border-gray-200/70 dark:border-gray-700/60 rounded px-3 py-2 shadow-md backdrop-blur-sm hover:bg-white/70 transition-all duration-200 hover:scale-105 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
       aria-label="Toggle sidebar"
       title="Toggle sidebar"
@@ -146,7 +146,7 @@
   {:else}
   <div class="fixed top-12 right-4 z-40 flex items-center gap-2 animate-fade-in">
     <button
-      on:click={toggleSidebar}
+      onclick={toggleSidebar}
       class="pointer-events-auto bg-white/60 dark:bg-gray-800/60 border border-gray-200/70 dark:border-gray-700/60 rounded px-3 py-2 shadow-md backdrop-blur-sm hover:bg-white/70 transition-all duration-200 hover:scale-110 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
       aria-label="Toggle sidebar"
       title="Toggle sidebar"
@@ -159,7 +159,7 @@
 
   <div class="overflow-hidden mt-4">
     <div class="w-screen px-4 pb-4">
-      <svelte:component this={Router} {routes} />
+      <Router {routes} />
     </div>
   </div>
 </div>

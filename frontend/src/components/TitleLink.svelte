@@ -1,27 +1,14 @@
 <script>
-  import { createEventDispatcher } from 'svelte';
-  export let as = 'button';
-  export let className = '';
-  export let onClick = null;
-  const dispatch = createEventDispatcher();
-
-  function handleClick(e) {
-    // call optional prop callback
-    if (typeof onClick === 'function') {
-      try { onClick(e); } catch (err) { console.error('TitleLink onClick error', err); }
-    }
-    // re-dispatch event so parent can use on:click on the component
-    dispatch('click', e);
-  }
+  let { as = 'button', className = '', children, ...rest } = $props();
 </script>
 
 {#if as === 'button'}
-  <button class={"title-link " + className} on:click={handleClick} {...$$restProps}>
-    <slot />
+  <button class={"title-link " + className} {...rest}>
+    {@render children()}
   </button>
 {:else}
-  <a class={"title-link " + className} on:click={handleClick} {...$$restProps}>
-    <slot />
+  <a class={"title-link " + className} {...rest}>
+    {@render children()}
   </a>
 {/if}
 

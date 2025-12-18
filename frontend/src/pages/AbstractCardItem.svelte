@@ -1,8 +1,8 @@
 <script>
-  /** @type {Object} */
-  export let abstract = {};
   import TypeBadge from './TypeBadge.svelte';
   import TrackBadge from './TrackBadge.svelte';
+
+  let { abstract = {} } = $props();
 </script>
 
 <div class="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 border border-gray-200 dark:border-gray-700">

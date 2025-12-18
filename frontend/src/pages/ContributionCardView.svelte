@@ -2,8 +2,7 @@
   import ContributionCardItem from './ContributionCardItem.svelte';
   import { VirtualList } from 'svelte-virtuallists';
 
-  /** @type {Array} */
-  export let contributionData = [];
+  let { contributionData = [] } = $props();
 </script>
 
 {#if contributionData && contributionData.length > 0}

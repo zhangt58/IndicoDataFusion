@@ -1,16 +1,13 @@
 <script>
-  export let text = '';
-  export let as = 'span'; // 'span' or 'button'
-  export let className = '';
-
+  let { text = '', as = 'span', className = '', ...rest } = $props();
 </script>
 
 {#if as === 'button'}
-  <button class={"type-badge ml-4 px-3 py-1 rounded-full text-xs font-normal bg-indigo-100 dark:bg-indigo-900 text-indigo-800 dark:text-indigo-200 " + className} {...$$restProps}>
+  <button class={"type-badge ml-4 px-3 py-1 rounded-full text-xs font-normal bg-indigo-100 dark:bg-indigo-900 text-indigo-800 dark:text-indigo-200 " + className} {...rest}>
     {text}
   </button>
 {:else}
-  <span class={"type-badge ml-4 px-3 py-1 rounded-full text-xs font-normal bg-indigo-100 dark:bg-indigo-900 text-indigo-800 dark:text-indigo-200 " + className} {...$$restProps}>
+  <span class={"type-badge ml-4 px-3 py-1 rounded-full text-xs font-normal bg-indigo-100 dark:bg-indigo-900 text-indigo-800 dark:text-indigo-200 " + className} {...rest}>
     {text}
   </span>
 {/if}

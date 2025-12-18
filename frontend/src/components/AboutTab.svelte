@@ -1,10 +1,7 @@
 <script>
   import iconImage from '../assets/images/icon.png';
 
-  /** @type {{ name: string, version: string, author: string, company: string, buildDate: string } | null } */
-  export let appInfo = null;
-  /** @type {(e?: any) => void} */
-  export let reportIssue;
+  let { appInfo = null, reportIssue } = $props();
 </script>
 
 {#if appInfo}
@@ -48,7 +45,7 @@
         <span class="text-sm font-medium text-gray-700 dark:text-gray-300">See an Issue?</span>
         <button
           type="button"
-          on:click={reportIssue}
+          onclick={reportIssue}
           class="text-sm px-3 py-1 rounded bg-indigo-600 text-white hover:bg-indigo-700 dark:bg-indigo-500 dark:hover:bg-indigo-600 focus:outline-none focus:ring-2 focus:ring-indigo-400"
         >
           Report
@@ -64,7 +61,7 @@
     </div>
   </div>
 {:else}
-  <div class="flex items-center justify-center p-8">
-    <p class="text-gray-600 dark:text-gray-400">Failed to load app information</p>
+  <div class="text-center p-4 text-gray-500">
+    No application information available.
   </div>
 {/if}

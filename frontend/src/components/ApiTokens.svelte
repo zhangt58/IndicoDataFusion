@@ -1,13 +1,15 @@
 <script>
-  import { createEventDispatcher } from 'svelte';
-  const dispatch = createEventDispatcher();
+  let {
+    apiTokens = [],
+    disabled = false,
+    onAdd = (_token) => {},
+    onEdit = (_payload) => {},
+    onDelete = (_index) => {}
+  } = $props();
 
-  export let apiTokens = [];
-  export let disabled = false;
-
-  let showModal = false;
-  let editingIndex = -1;
-  let token = { name: '', baseUrl: '', username: '', token: '' };
+  let showModal = $state(false);
+  let editingIndex = $state(-1);
+  let token = $state({ name: '', baseUrl: '', username: '', token: '' });
 
   function openAdd() {
     editingIndex = -1;
@@ -29,16 +31,16 @@
     // basic validation
     if (!token.name || token.name.trim() === '') return;
     if (editingIndex >= 0) {
-      dispatch('edit', { index: editingIndex, entry: token });
+      onEdit({ index: editingIndex, entry: token });
     } else {
-      dispatch('add', token);
+      onAdd(token);
     }
     showModal = false;
   }
 
-  function onDelete(i) {
+  function onDeleteClick(i) {
     if (!confirm(`Delete API token "${apiTokens[i].name}"?`)) return;
-    dispatch('delete', i);
+    onDelete(i);
   }
 </script>
 
@@ -46,7 +48,7 @@
   <div class="flex items-center justify-between">
     <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">API Tokens</h3>
     <div>
-      <button class="px-3 py-1 rounded bg-indigo-600 text-white text-sm hover:bg-indigo-700 disabled:opacity-50" on:click={openAdd} disabled={disabled}>Add Token</button>
+      <button class="px-3 py-1 rounded bg-indigo-600 text-white text-sm hover:bg-indigo-700 disabled:opacity-50" onclick={openAdd} disabled={disabled}>Add Token</button>
     </div>
   </div>
   {#if apiTokens && apiTokens.length > 0}
@@ -58,8 +60,8 @@
             <div class="text-xs text-gray-500 dark:text-gray-400">{t.baseUrl}</div>
           </div>
           <div class="flex items-center gap-2">
-            <button class="text-sm px-2 py-1 rounded bg-gray-200 dark:bg-gray-600" on:click={() => openEdit(i)} disabled={disabled}>Edit</button>
-            <button class="text-sm px-2 py-1 rounded bg-red-600 text-white" on:click={() => onDelete(i)} disabled={disabled}>Delete</button>
+            <button class="text-sm px-2 py-1 rounded bg-gray-200 dark:bg-gray-600" onclick={() => openEdit(i)} disabled={disabled}>Edit</button>
+            <button class="text-sm px-2 py-1 rounded bg-red-600 text-white" onclick={() => onDeleteClick(i)} disabled={disabled}>Delete</button>
           </div>
         </li>
       {/each}
@@ -70,7 +72,7 @@
 
   {#if showModal}
     <div class="fixed inset-0 z-40 flex items-center justify-center">
-      <div class="absolute inset-0 bg-black/40" role="button" tabindex="0" aria-label="Close dialog" on:click={onCancel} on:keydown={(e) => { if (e.key === 'Enter' || e.key === ' ' || e.key === 'Spacebar' || e.key === 'Escape') { e.preventDefault(); onCancel(); } }}></div>
+      <div class="absolute inset-0 bg-black/40" role="button" tabindex="0" aria-label="Close dialog" onclick={onCancel} onkeydown={(e) => { if (e.key === 'Enter' || e.key === ' ' || e.key === 'Spacebar' || e.key === 'Escape') { e.preventDefault(); onCancel(); } }}></div>
       <div class="relative z-50 w-full max-w-md mx-4 bg-white dark:bg-gray-800 rounded-lg shadow-lg p-4 pointer-events-auto">
         <h4 class="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-3">{editingIndex >= 0 ? 'Edit' : 'Add'} API Token</h4>
         <div class="space-y-2">
@@ -92,8 +94,8 @@
           </div>
         </div>
         <div class="mt-4 flex justify-end gap-2">
-          <button class="px-3 py-1 rounded bg-gray-200 dark:bg-gray-700 text-sm" on:click={onCancel}>Cancel</button>
-          <button class="px-3 py-1 rounded bg-indigo-600 text-white text-sm hover:bg-indigo-700" on:click={onSave}>Save</button>
+          <button class="px-3 py-1 rounded bg-gray-200 dark:bg-gray-700 text-sm" onclick={onCancel}>Cancel</button>
+          <button class="px-3 py-1 rounded bg-indigo-600 text-white text-sm hover:bg-indigo-700" onclick={onSave}>Save</button>
         </div>
       </div>
     </div>

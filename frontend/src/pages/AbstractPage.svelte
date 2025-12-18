@@ -8,13 +8,13 @@
   import AbstractTableView from './AbstractTableView.svelte';
   import LoadErrorHint from './LoadErrorHint.svelte';
 
-  let loading = false;
-  let refreshing = false;
-  let abstractData = [];
-  let error = null;
-  let viewMode = 'card';
-  let isTestMode = false;
-  let cacheExpired = false;
+  let loading = $state(false);
+  let refreshing = $state(false);
+  let abstractData = $state([]);
+  let error = $state(null);
+  let viewMode = $state('card');
+  let isTestMode = $state(false);
+  let cacheExpired = $state(false);
 
   async function loadData() {
     loading = true;
