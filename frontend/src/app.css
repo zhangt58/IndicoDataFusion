@@ -7,7 +7,7 @@
 @plugin 'flowbite/plugin';
 @custom-variant dark (&:where(.dark, .dark *));
 
-/* Import svelte-vtable default styles so VirtualDataTable gets its CSS from the main app stylesheet.
+/* Import svelte-vtable default styles so DataTable gets its CSS from the main app stylesheet.
    Preferred: module specifier (Vite should resolve this). If your setup doesn't resolve bare imports,
    uncomment the fallback line which references node_modules directly.
 */

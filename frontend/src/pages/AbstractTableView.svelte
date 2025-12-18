@@ -1,5 +1,5 @@
 <script>
-  import { VirtualDataTable, DataTableControls } from '@zhangt58/svelte-vtable';
+  import { DataTable, DataTableControls } from '@zhangt58/svelte-vtable';
   import TypeBadge from './TypeBadge.svelte';
   import AbstractDetailsDialog from './AbstractDetailsDialog.svelte';
   import TrackDetailsDialog from './TrackDetailsDialog.svelte';
@@ -52,7 +52,7 @@
   // Build mappedColumns for rowSnippet rendering
   const mappedColumns = columns.map(c => ({ id: c.id, title: c.title, nowrap: false, stretch: c.stretch }));
 
-  // Build column widths mapping to pass to VirtualDataTable (using stretch weights)
+  // Build column widths mapping to pass to DataTable (using stretch weights)
   const colWidths = mappedColumns.reduce((acc, c) => {
     acc[c.title] = c.stretch;
     return acc;
@@ -241,7 +241,7 @@
   // For VirtualList we pass the paginatedItems so the visible window is virtualized per page
   $: visibleItems = paginatedItems;
 
-  // sort callback used by VirtualDataTable (event-based)
+  // sort callback used by DataTable (event-based)
   function onSort(key) {
     if (sortKey === key) {
       sortDir = sortDir === 'asc' ? 'desc' : 'asc';
@@ -311,7 +311,7 @@
   </div>
 
   <section class="flex-1 overflow-auto flex flex-col max-h-screen min-h-0">
-    <VirtualDataTable
+    <DataTable
       items={visibleItems}
       {visibleKeys}
       sortKey={sortKey}

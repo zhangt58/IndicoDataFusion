@@ -1,5 +1,5 @@
 <script>
-  import { VirtualDataTable, DataTableControls } from '@zhangt58/svelte-vtable';
+  import { DataTable, DataTableControls } from '@zhangt58/svelte-vtable';
   import ContributionDetailsDialog from './ContributionDetailsDialog.svelte';
   import { 
     getTableItems, 
@@ -344,7 +344,7 @@
   </div>
 
   <section class="flex-1 overflow-auto flex flex-col max-h-screen min-h-0" onclick={handleTableClick}>
-    <VirtualDataTable
+    <DataTable
        items={visibleItems}
        {visibleKeys}
        sortKey={sortKey}
