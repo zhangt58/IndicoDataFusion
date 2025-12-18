@@ -45,20 +45,20 @@
 </script>
 
 <div
-  class="bg-gray-50 dark:bg-gray-800 rounded-lg shadow p-4 border border-gray-200 dark:border-gray-700"
+  class="bg-gray-50 dark:bg-gray-800 rounded-lg shadow p-2 border border-gray-200 dark:border-gray-700"
 >
   <div class="flex items-center justify-between">
-    <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">API Tokens</h3>
+    <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-1">API Tokens</h3>
     <div>
       <button
         class="px-3 py-1 rounded bg-indigo-600 text-white text-sm hover:bg-indigo-700 disabled:opacity-50"
         onclick={openAdd}
-        {disabled}>Add Token</button
+        {disabled}>Add</button
       >
     </div>
   </div>
   {#if apiTokens && apiTokens.length > 0}
-    <ul class="space-y-2 mt-2 text-sm text-gray-800 dark:text-gray-200">
+    <ul class="space-y-1 mt-1 text-sm text-gray-800 dark:text-gray-200">
       {#each apiTokens as t, i}
         <li
           class="flex items-center justify-between p-2 rounded border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-700"
@@ -163,7 +163,7 @@
           </div>
         </div>
         <div class="mt-4 flex justify-end gap-2">
-          <button class="px-3 py-1 rounded bg-gray-200 dark:bg-gray-700 text-sm" onclick={onCancel}
+          <button class="px-2 py-1 rounded bg-gray-200 dark:bg-gray-700 text-sm" onclick={onCancel}
             >Cancel</button
           >
           <button
