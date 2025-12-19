@@ -1,5 +1,5 @@
 <script>
-  import { onMount } from 'svelte';
+  import { onMount, tick } from 'svelte';
   import { GetStructuredConfigUI, ApplyStructuredConfigUI } from '../../wailsjs/go/main/App';
   import DataSources from './DataSources.svelte';
   import IndicoConfig from './IndicoConfig.svelte';
@@ -19,16 +19,23 @@
   // exposed list of API tokens (from configData.APITokens)
   let apiTokens = $derived(configData && configData.apiTokens ? configData.apiTokens : []);
 
-  function showToastMsg(msg, type = 'success', duration = 3500) {
+  async function showToastMsg(msg, type = 'success', duration = 3500) {
     // clear previous timeout
     if (toastTimeoutId) {
       clearTimeout(toastTimeoutId);
       toastTimeoutId = null;
     }
+
     toastMessage = msg || '';
     toastType = type || 'success';
+
+    // Restart the toast animation reliably by toggling the visibility and yielding a tick.
+    // This ensures the inline toast to the left of the Apply button animates on repeated calls.
+    showToast = false;
+    await tick();
     showToast = true;
-    // auto-hide
+
+    // auto-hide after duration
     toastTimeoutId = setTimeout(() => {
       showToast = false;
       toastTimeoutId = null;
@@ -41,6 +48,10 @@
   let currentActiveIndex = $state(0);
   let selectedActiveIndex = $state(0);
   let showConfigFile = $state(false);
+  // top-level advanced panel that groups cache & API tokens
+  let showAdvanced = $state(false);
+  // Collapsible Cache Configuration inside Advanced (closed by default)
+  let showCacheConfig = $state(false);
   // name validation errors keyed by data-source index
   let nameErrors = $state({});
 
@@ -387,82 +398,6 @@
 </script>
 
 <div class="p-2 space-y-2 max-w-5xl mx-auto">
-  <!-- Toast (top-right) -->
-  <div class="fixed right-4 top-4 z-50 pointer-events-none">
-    <div
-      class="transform transition-all duration-300 ease-out {showToast
-        ? 'opacity-100 translate-y-0'
-        : 'opacity-0 translate-y-2'}"
-    >
-      <div class="pointer-events-auto max-w-xs w-full rounded-lg shadow-lg overflow-hidden">
-        <div
-          class="flex items-start gap-3 p-3 {toastType === 'success'
-            ? 'bg-green-50 border border-green-200 text-green-800'
-            : toastType === 'error'
-              ? 'bg-red-50 border border-red-200 text-red-800'
-              : 'bg-gray-50 border border-gray-200 text-gray-800'} rounded-lg"
-        >
-          <div class="shrink-0 mt-0.5">
-            {#if toastType === 'success'}
-              <svg
-                class="w-5 h-5 text-green-600"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-                ><path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M5 13l4 4L19 7"
-                /></svg
-              >
-            {:else if toastType === 'error'}
-              <svg
-                class="w-5 h-5 text-red-600"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-                ><path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M6 18L18 6M6 6l12 12"
-                /></svg
-              >
-            {:else}
-              <svg
-                class="w-5 h-5 text-gray-600"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-                ><path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M13 16h-1v-4h-1m1-4h.01"
-                /></svg
-              >
-            {/if}
-          </div>
-          <div class="flex-1 text-sm leading-tight">
-            <div class="font-medium">{toastMessage}</div>
-          </div>
-          <button
-            class="ml-2 text-xs text-gray-500 hover:text-gray-700"
-            onclick={() => {
-              showToast = false;
-              if (toastTimeoutId) {
-                clearTimeout(toastTimeoutId);
-                toastTimeoutId = null;
-              }
-            }}
-            aria-label="Dismiss toast">×</button
-          >
-        </div>
-      </div>
-    </div>
-  </div>
-
   {#if loading}
     <div class="flex items-center justify-center p-4">
       <div class="text-center">
@@ -475,9 +410,9 @@
   {:else}
     <!-- Active Data Source -->
     <div
-      class="bg-gray-50 dark:bg-gray-800 rounded-lg shadow p-4 border border-gray-200 dark:border-gray-700"
+      class="bg-gray-50 dark:bg-gray-800 rounded-lg shadow px-4 py-2 border border-gray-200 dark:border-gray-700"
     >
-      <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">
+      <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-1">
         Active Data Source
       </h3>
       <div class="flex items-center gap-2">
@@ -494,7 +429,7 @@
           {/each}
         </select>
       </div>
-      <div class="mt-1">
+      <div class="mt-0.5">
         <span class="text-sm text-green-600 dark:text-green-400"
           >Current Active: <strong>{configData.dataSources?.[currentActiveIndex]?.name}</strong
           ></span
@@ -517,18 +452,6 @@
       onAddIndico={openAddIndicoDialog}
       onDelete={(index) => openDeleteConfirm(index)}
       onToggle={(index) => toggleSource(index)}
-    />
-
-    <!-- IndicoConfig component for adding new Indico sources -->
-    <IndicoConfig
-      bind:open={indicoDialogOpen}
-      initialName={indicoDialogInitialName}
-      existingNames={(configData?.dataSources || []).map((ds) => ds.name)}
-      placeholders={indicoDataSourcePlaceholders}
-      saving={applying}
-      {apiTokens}
-      onCreate={handleCreateIndico}
-      onCancel={cancelCreateIndico}
     />
 
     <!-- Delete Confirmation Modal -->
@@ -585,111 +508,240 @@
       </div>
     {/if}
 
-    <!-- Cache Configuration -->
+    <!-- Advanced (collapsible): groups Cache Configuration + API Tokens -->
     <div
-      class="bg-gray-50 dark:bg-gray-800 rounded-lg shadow p-4 border border-gray-200 dark:border-gray-700"
+      class="bg-gray-50 dark:bg-gray-800 rounded-lg shadow border border-gray-200 dark:border-gray-700 overflow-hidden"
     >
-      <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">
-        Cache Configuration
-      </h3>
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-2">
-        <div>
-          <label
-            for="cache-ttl"
-            class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+      <div
+        role="button"
+        tabindex="0"
+        onclick={() => (showAdvanced = !showAdvanced)}
+        onkeydown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            showAdvanced = !showAdvanced;
+          }
+        }}
+        class="w-full flex items-center justify-between px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+      >
+        <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100">Advanced</h3>
+        <div class="flex items-center gap-1">
+          <span class="text-sm text-gray-600 dark:text-gray-400"
+            >{(configData?.apiTokens || []).length} tokens</span
           >
-            TTL (Time-To-Live)
-            <span
-              class="text-xs text-gray-500 dark:text-gray-400 ml-1"
-              title="How long cache entries stay valid before expiring">ⓘ</span
-            >
-          </label>
-          <input
-            id="cache-ttl"
-            type="text"
-            bind:value={configData.cache.ttl}
-            placeholder="24h"
-            class="w-full rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-          />
-          <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">e.g., 24h, 1h30m, 30m</p>
-        </div>
-        <div>
-          <label
-            for="cache-maxsize"
-            class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+          <svg
+            class="w-5 h-5 text-gray-500 dark:text-gray-400 transform transition-transform"
+            class:rotate-180={showAdvanced}
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
           >
-            Max Size
-            <span
-              class="text-xs text-gray-500 dark:text-gray-400 ml-1"
-              title="Maximum cache size - oldest entries evicted when limit reached">ⓘ</span
-            >
-          </label>
-          <input
-            id="cache-maxsize"
-            type="text"
-            bind:value={configData.cache.maxSize}
-            placeholder="100MB"
-            class="w-full rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-          />
-          <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">e.g., 100MB, 1GB, 500MB</p>
-        </div>
-        <div>
-          <label
-            for="cache-dir"
-            class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
-          >
-            Cache Directory
-            <span
-              class="text-xs text-gray-500 dark:text-gray-400 ml-1"
-              title="Custom cache directory path (leave empty for default)">ⓘ</span
-            >
-          </label>
-          <input
-            id="cache-dir"
-            type="text"
-            bind:value={configData.cache.cacheDir}
-            placeholder="~/.cache/IndicoDataFusion"
-            class="w-full rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-indigo-500"
-          />
-          <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Leave empty for default</p>
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"
+            ></path>
+          </svg>
         </div>
       </div>
+      {#if showAdvanced}
+        <div class="p-2 space-y-2">
+          <!-- Cache Configuration (moved back from CacheTab) -->
+          <div
+            class="bg-gray-50 dark:bg-gray-800 rounded-lg shadow border border-gray-200 dark:border-gray-700 overflow-hidden"
+          >
+            <div
+              role="button"
+              tabindex="0"
+              onclick={() => (showCacheConfig = !showCacheConfig)}
+              onkeydown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  showCacheConfig = !showCacheConfig;
+                }
+              }}
+              class="w-full flex items-center justify-between p-3 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+            >
+              <h4 class="text-md font-semibold text-gray-900 dark:text-gray-100">
+                Cache Configuration
+              </h4>
+              <svg
+                class="w-5 h-5 text-gray-500 dark:text-gray-400 transform transition-transform"
+                class:rotate-180={showCacheConfig}
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M19 9l-7 7-7-7"
+                ></path>
+              </svg>
+            </div>
+
+            {#if showCacheConfig}
+              <div class="p-4">
+                <div class="pt-2">
+                  <div class="grid grid-cols-1 md:grid-cols-3 gap-2">
+                    <div>
+                      <label
+                        for="cache-ttl"
+                        class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+                        >TTL (Time-To-Live)
+                        <span
+                          class="text-xs text-gray-500 dark:text-gray-400 ml-1"
+                          title="How long cache entries stay valid before expiring">ⓘ</span
+                        >
+                      </label>
+                      <input
+                        id="cache-ttl"
+                        type="text"
+                        bind:value={configData.cache.ttl}
+                        placeholder="24h"
+                        class="w-full rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                      />
+                      <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                        e.g., 24h, 1h30m, 30m
+                      </p>
+                    </div>
+                    <div>
+                      <label
+                        for="cache-maxsize"
+                        class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+                        >Max Size
+                        <span
+                          class="text-xs text-gray-500 dark:text-gray-400 ml-1"
+                          title="Maximum cache size - oldest entries evicted when limit reached"
+                          >ⓘ</span
+                        >
+                      </label>
+                      <input
+                        id="cache-maxsize"
+                        type="text"
+                        bind:value={configData.cache.maxSize}
+                        placeholder="100MB"
+                        class="w-full rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                      />
+                      <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                        e.g., 100MB, 1GB, 500MB
+                      </p>
+                    </div>
+                    <div>
+                      <label
+                        for="cache-dir"
+                        class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+                        >Cache Directory
+                        <span
+                          class="text-xs text-gray-500 dark:text-gray-400 ml-1"
+                          title="Custom cache directory path (leave empty for default)">ⓘ</span
+                        >
+                      </label>
+                      <input
+                        id="cache-dir"
+                        type="text"
+                        bind:value={configData.cache.cacheDir}
+                        placeholder="~/.cache/IndicoDataFusion"
+                        class="w-full rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                      />
+                      <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                        Leave empty for default
+                      </p>
+                    </div>
+                  </div>
+                </div>
+                <!-- Note: Use the top-level Apply button to persist these changes -->
+              </div>
+            {/if}
+          </div>
+
+          <!-- API Tokens Manager -->
+          <ApiTokens
+            {apiTokens}
+            onAdd={(entry) => handleAddApiToken(entry)}
+            onEdit={(payload) => handleEditApiToken(payload)}
+            onDelete={(index) => handleDeleteApiToken(index)}
+          />
+        </div>
+      {/if}
     </div>
+    <!-- CLOSE: Advanced container -->
+    <div class="flex items-center justify-end gap-2">
+      <!-- Toast (inline, left of Apply) -->
+      {#if showToast}
+        <div
+          class="transform transition-all duration-300 ease-out flex items-start gap-3 rounded-lg shadow-lg overflow-hidden px-3 py-2"
+          role="status"
+          aria-live={toastType === 'error' ? 'assertive' : 'polite'}
+        >
+          <div class="mt-0.5">
+            {#if toastType === 'success'}
+              <svg
+                class="w-5 h-5 text-green-600"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+                ><path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M5 13l4 4L19 7"
+                /></svg
+              >
+            {:else if toastType === 'error'}
+              <svg
+                class="w-5 h-5 text-red-600"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+                ><path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M6 18L18 6M6 6l12 12"
+                /></svg
+              >
+            {:else}
+              <svg
+                class="w-5 h-5 text-gray-600"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+                ><path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M13 16h-1v-4h-1m1-4h.01"
+                /></svg
+              >
+            {/if}
+          </div>
+          <div class="text-sm leading-tight">
+            <div class="font-medium text-gray-900 dark:text-gray-100">{toastMessage}</div>
+          </div>
+          <button
+            class="ml-2 text-xs text-gray-500 hover:text-gray-700"
+            onclick={() => {
+              showToast = false;
+              if (toastTimeoutId) {
+                clearTimeout(toastTimeoutId);
+                toastTimeoutId = null;
+              }
+            }}
+            aria-label="Dismiss toast">×</button
+          >
+        </div>
+      {/if}
 
-    <!-- API Tokens Manager -->
-    <ApiTokens
-      {apiTokens}
-      onAdd={(entry) => handleAddApiToken(entry)}
-      onEdit={(payload) => handleEditApiToken(payload)}
-      onDelete={(index) => handleDeleteApiToken(index)}
-    />
-
-    <!-- Status Messages -->
-    {#if applyError}
-      <div
-        class="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-2"
-      >
-        <p class="text-sm text-red-600 dark:text-red-400">{applyError}</p>
+      <!-- Apply Button -->
+      <div>
+        <button
+          type="button"
+          class="px-2 py-1.5 rounded-lg bg-indigo-600 text-white font-medium hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed dark:bg-indigo-500 dark:hover:bg-indigo-600 focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:ring-offset-2 transition-colors"
+          onclick={apply}
+          disabled={applying || hasNameErrors}
+        >
+          {applying ? 'Applying...' : 'Apply'}
+        </button>
       </div>
-    {/if}
-    {#if applySuccess}
-      <div
-        class="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-2"
-      >
-        <p class="text-sm text-green-600 dark:text-green-400">{applySuccess}</p>
-      </div>
-    {/if}
-
-    <!-- Apply Button -->
-    <div class="flex justify-end">
-      <button
-        type="button"
-        class="px-2 py-1.5 rounded-lg bg-indigo-600 text-white font-medium hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed dark:bg-indigo-500 dark:hover:bg-indigo-600 focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:ring-offset-2 transition-colors"
-        onclick={apply}
-        disabled={applying || hasNameErrors}
-      >
-        {applying ? 'Applying...' : 'Apply'}
-      </button>
     </div>
 
     <!-- Configuration File Path Info (Collapsible) -->
@@ -710,9 +762,8 @@
       >
         <h4 class="text-sm font-semibold text-gray-700 dark:text-gray-300">Configuration File</h4>
         <svg
-          class="w-5 h-5 text-gray-500 dark:text-gray-400 transform transition-transform {showConfigFile
-            ? 'rotate-180'
-            : ''}"
+          class="w-5 h-5 text-gray-500 dark:text-gray-400 transform transition-transform"
+          class:rotate-180={showConfigFile}
           fill="none"
           stroke="currentColor"
           viewBox="0 0 24 24"
@@ -735,8 +786,19 @@
   {/if}
 </div>
 
+<!-- IndicoConfig component for adding new Indico sources -->
+<IndicoConfig
+  bind:open={indicoDialogOpen}
+  initialName={indicoDialogInitialName}
+  existingNames={(configData?.dataSources || []).map((ds) => ds.name)}
+  placeholders={indicoDataSourcePlaceholders}
+  saving={applying}
+  {apiTokens}
+  onCreate={handleCreateIndico}
+  onCancel={cancelCreateIndico}
+/>
+
 <style>
-  /* Dim placeholders to distinguish them from filled input text. Use slightly different colors in light and dark mode. */
   :global(input::placeholder),
   :global(textarea::placeholder) {
     color: rgba(107, 114, 128, 0.6); /* gray-500 @ 60% */
