@@ -6,7 +6,7 @@ import (
 	"github.com/zalando/go-keyring"
 )
 
-const keyringService = "IndicoDataFusion:api-token"
+const keyringService = "IndicoDataFusion:API-Tokens"
 
 func SetAPITokenSecret(name, token string) error {
 	if name == "" {
