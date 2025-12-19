@@ -85,6 +85,12 @@ func NewDataSourceHandler(ds *DataSource, cacheConfig *CacheConfig, tokens []API
 		for _, e := range tokens {
 			if e.Name == target {
 				apiToken = e.Token
+				// If token is empty in config, try keyring
+				if apiToken == "" {
+					if secret, err := GetAPITokenSecret(e.Name); err == nil {
+						apiToken = secret
+					}
+				}
 				break
 			}
 		}
