@@ -93,7 +93,12 @@
   }
 
   async function onDeleteClick(i) {
-    if (!confirm(`Delete API token "${apiTokens[i].name}"? This will remove the secret from the system keyring.`)) return;
+    if (
+      !confirm(
+        `Delete API token "${apiTokens[i].name}"? This will remove the secret from the system keyring.`,
+      )
+    )
+      return;
     const name = apiTokens[i].name;
     try {
       await DeleteAPIToken(name);
@@ -315,8 +320,12 @@
           }
         }}
       ></div>
-      <div class="relative z-50 w-full max-w-md mx-4 bg-white dark:bg-gray-800 rounded-lg shadow-lg p-4 pointer-events-auto">
-        <h4 class="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-3">Reveal API Token — {reveal.name ?? ''}</h4>
+      <div
+        class="relative z-50 w-full max-w-md mx-4 bg-white dark:bg-gray-800 rounded-lg shadow-lg p-4 pointer-events-auto"
+      >
+        <h4 class="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-3">
+          Reveal API Token — {reveal.name ?? ''}
+        </h4>
         {#if reveal.loading}
           <p class="text-sm text-gray-600 dark:text-gray-400">Loading…</p>
         {:else if reveal.error}
@@ -324,10 +333,15 @@
         {:else}
           <div class="mb-2">
             <div class="block text-xs text-gray-600 dark:text-gray-400 mb-1">Token value</div>
-            <div class="font-mono wrap-break-word p-2 rounded bg-gray-100 dark:bg-gray-700 text-sm">{reveal.token}</div>
+            <div class="font-mono wrap-break-word p-2 rounded bg-gray-100 dark:bg-gray-700 text-sm">
+              {reveal.token}
+            </div>
           </div>
           <div class="flex justify-end gap-2">
-            <button class="px-2 py-1 rounded bg-gray-200" onclick={() => copyToClipboard(reveal.token)}>Copy</button>
+            <button
+              class="px-2 py-1 rounded bg-gray-200"
+              onclick={() => copyToClipboard(reveal.token)}>Copy</button
+            >
             <button class="px-2 py-1 rounded bg-gray-200" onclick={closeReveal}>Close</button>
           </div>
         {/if}
@@ -349,22 +363,40 @@
           }
         }}
       ></div>
-      <div class="relative z-50 w-full max-w-lg mx-4 bg-white dark:bg-gray-800 rounded-lg shadow-lg p-4 pointer-events-auto">
-        <h4 class="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">What the empty token means</h4>
+      <div
+        class="relative z-50 w-full max-w-lg mx-4 bg-white dark:bg-gray-800 rounded-lg shadow-lg p-4 pointer-events-auto"
+      >
+        <h4 class="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">
+          What the empty token means
+        </h4>
         <p class="text-sm text-gray-700 dark:text-gray-300 mb-2">
-          The actual API token value is not stored in the YAML configuration file. Instead, it is stored securely
-          in your operating system's secret store (keychain/credential manager/Secret Service). The configuration
-          keeps a reference by name which the application uses to look up the secret at runtime.
+          The actual API token value is not stored in the YAML configuration file. Instead, it is
+          stored securely in your operating system's secret store (keychain/credential
+          manager/Secret Service). The configuration keeps a reference by name which the application
+          uses to look up the secret at runtime.
         </p>
         <p class="text-sm text-gray-700 dark:text-gray-300 mb-2">Notes:</p>
         <ul class="list-disc ml-4 mt-1 text-sm text-gray-700 dark:text-gray-300 mb-2">
           <li>The token is stored locally and encrypted by the OS where possible.</li>
-          <li>On Linux this typically uses the Secret Service (gnome-keyring/libsecret) via D-Bus — make sure a session secret service is available if you run the app in a desktop session.</li>
-          <li>In headless or CI environments the OS keyring may not be available; you can use the CLI tool <code>manage-secrets</code> to manage tokens or provide tokens via environment variables if you prefer.</li>
-          <li>The UI allows you to reveal a token temporarily (for copy). Use this cautiously and avoid pasting tokens into insecure places.</li>
+          <li>
+            On Linux this typically uses the Secret Service (gnome-keyring/libsecret) via D-Bus —
+            make sure a session secret service is available if you run the app in a desktop session.
+          </li>
+          <li>
+            In headless or CI environments the OS keyring may not be available; you can use the CLI
+            tool <code>manage-secrets</code> to manage tokens or provide tokens via environment variables
+            if you prefer.
+          </li>
+          <li>
+            The UI allows you to reveal a token temporarily (for copy). Use this cautiously and
+            avoid pasting tokens into insecure places.
+          </li>
         </ul>
         <div class="flex justify-end">
-          <button class="px-3 py-1 rounded bg-indigo-600 text-white" onclick={() => (showHelp = false)}>Close</button>
+          <button
+            class="px-3 py-1 rounded bg-indigo-600 text-white"
+            onclick={() => (showHelp = false)}>Close</button
+          >
         </div>
       </div>
     </div>
