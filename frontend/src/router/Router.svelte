@@ -1,11 +1,11 @@
 <script>
   import { onMount, onDestroy, createEventDispatcher } from 'svelte';
-  export let routes = {};
-  export let useHash = false; // allow hash routing for file:// or packaged apps
   const dispatch = createEventDispatcher();
 
-  let current = '/';
-  let ready = false;
+  let { routes = {}, useHash = false } = $props();
+
+  let current = $state('/');
+  let ready = $state(false);
 
   function checkRuntime() {
     // Check if Wails runtime is available
@@ -29,8 +29,10 @@
   function updateCurrentFromLocation() {
     if (typeof window === 'undefined') return;
     current = useHash
-      ? (window.location.hash ? window.location.hash.slice(1) : '/')
-      : (window.location.pathname || '/');
+      ? window.location.hash
+        ? window.location.hash.slice(1)
+        : '/'
+      : window.location.pathname || '/';
   }
 
   function onPop() {
@@ -87,14 +89,16 @@
     if (_interval) clearInterval(_interval);
     if (_timeout) clearTimeout(_timeout);
   });
+
+  let RouteComponent = $derived(getRouteComponent(current));
 </script>
 
 {#if ready}
-  <svelte:component this={getRouteComponent(current)} />
+  <RouteComponent />
 {:else}
   <div>Loading application runtime…</div>
 {/if}
 
 <style>
-/* minimal styles for loading fallback */
+  /* minimal styles for loading fallback */
 </style>

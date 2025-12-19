@@ -1,23 +1,30 @@
 <script>
-  /** @type {Object} */
-  export let abstract = {};
   import TypeBadge from './TypeBadge.svelte';
   import TrackBadge from './TrackBadge.svelte';
+
+  let { abstract = {} } = $props();
 </script>
 
-<div class="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 border border-gray-200 dark:border-gray-700">
+<div
+  class="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 border border-gray-200 dark:border-gray-700"
+>
   <!-- Title and Status -->
   <div class="flex justify-between items-start mb-3">
     <div class="flex-1">
       <h3 class="text-xl font-bold text-gray-800 dark:text-white">{abstract.title}</h3>
       <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
-        ID: {abstract.id} {#if abstract.friendly_id}(#{abstract.friendly_id}){/if}
+        ID: {abstract.id}
+        {#if abstract.friendly_id}(#{abstract.friendly_id}){/if}
       </p>
     </div>
-    <span class="ml-4 px-3 py-1 rounded-full text-xs font-semibold
-      {abstract.state === 'accepted' ? 'bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200' :
-       abstract.state === 'rejected' ? 'bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200' :
-       'bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200'}">
+    <span
+      class="ml-4 px-3 py-1 rounded-full text-xs font-semibold
+      {abstract.state === 'accepted'
+        ? 'bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200'
+        : abstract.state === 'rejected'
+          ? 'bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200'
+          : 'bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200'}"
+    >
       {abstract.state}
     </span>
   </div>
@@ -46,7 +53,9 @@
   <!-- Tracks -->
   {#if abstract.reviewed_for_tracks && abstract.reviewed_for_tracks.length > 0}
     <div class="mb-3">
-      <p class="text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1">Reviewed for tracks:</p>
+      <p class="text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1">
+        Reviewed for tracks:
+      </p>
       <div class="flex gap-2 flex-wrap">
         {#each abstract.reviewed_for_tracks as track}
           <TrackBadge text={track.title} className="track-reviewed" />
@@ -97,7 +106,8 @@
         {#each abstract.persons as person}
           <div class="px-3 py-1 bg-blue-50 dark:bg-blue-900 rounded text-sm">
             <span class="font-medium text-blue-800 dark:text-blue-200">
-              {person.first_name} {person.last_name}
+              {person.first_name}
+              {person.last_name}
               {#if person.is_speaker}
                 <span class="ml-1 text-xs">🎤</span>
               {/if}

@@ -53,8 +53,7 @@ func main() {
 			ProgramName:         AppName,
 		},
 		Mac: &mac.Options{
-			// Use a hidden inset titlebar to provide a native-like draggable area while allowing a frameless, transparent webview
-			TitleBar:             mac.TitleBarHiddenInset(),
+			TitleBar:             &mac.TitleBar{HideTitleBar: true},
 			WebviewIsTransparent: true,
 			WindowIsTranslucent:  true,
 		},

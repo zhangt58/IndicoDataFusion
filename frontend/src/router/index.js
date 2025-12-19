@@ -12,4 +12,3 @@ export function goto(path) {
     return Promise.reject(e);
   }
 }
-

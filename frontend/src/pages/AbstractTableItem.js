@@ -6,7 +6,10 @@
 export function formatTimestamp(dt) {
   if (!dt) return '';
   // Remove microseconds (.123456) and timezone suffix like +00:00 or Z
-  return dt.replace(/\.\d{6}/, '').replace(/([+-]\d{2}:\d{2}|Z)$/, '').replace('T', ' ');
+  return dt
+    .replace(/\.\d{6}/, '')
+    .replace(/([+-]\d{2}:\d{2}|Z)$/, '')
+    .replace('T', ' ');
 }
 
 /**
@@ -27,26 +30,26 @@ export function getShortTrackName(trackTitle) {
  */
 export function getAllTracks(abstract) {
   const tracks = [];
-  
+
   if (abstract.accepted_track) {
     tracks.push({
       title: abstract.accepted_track.title,
-      type: 'accepted'
+      type: 'accepted',
     });
   }
-  
+
   if (abstract.reviewed_for_tracks && abstract.reviewed_for_tracks.length > 0) {
-    abstract.reviewed_for_tracks.forEach(track => {
+    abstract.reviewed_for_tracks.forEach((track) => {
       // Don't add duplicates
-      if (!tracks.some(t => t.title === track.title)) {
+      if (!tracks.some((t) => t.title === track.title)) {
         tracks.push({
           title: track.title,
-          type: 'reviewed'
+          type: 'reviewed',
         });
       }
     });
   }
-  
+
   return tracks;
 }
 
@@ -57,19 +60,19 @@ export function getAllTracks(abstract) {
  */
 export function getPrimaryAuthorsDisplay(persons) {
   if (!persons || persons.length === 0) return '';
-  
-  const primaryAuthors = persons.filter(p => p.author_type === 'primary');
-  
+
+  const primaryAuthors = persons.filter((p) => p.author_type === 'primary');
+
   if (primaryAuthors.length === 0) {
     // Fall back to first person if no primary authors
     const first = persons[0];
-    return persons.length > 1 
+    return persons.length > 1
       ? `${first.first_name} ${first.last_name} ...`
       : `${first.first_name} ${first.last_name}`;
   }
-  
+
   const first = primaryAuthors[0];
-  return primaryAuthors.length > 1 
+  return primaryAuthors.length > 1
     ? `${first.first_name} ${first.last_name} ...`
     : `${first.first_name} ${first.last_name}`;
 }
@@ -81,12 +84,14 @@ export function getPrimaryAuthorsDisplay(persons) {
  */
 export function getAllAuthorsTooltip(persons) {
   if (!persons || persons.length === 0) return '';
-  return persons.map(p => {
-    const name = `${p.first_name} ${p.last_name}`;
-    const type = p.author_type === 'primary' ? ' (Primary)' : '';
-    const speaker = p.is_speaker ? ' 🎤' : '';
-    return `${name}${type}${speaker}`;
-  }).join('\n');
+  return persons
+    .map((p) => {
+      const name = `${p.first_name} ${p.last_name}`;
+      const type = p.author_type === 'primary' ? ' (Primary)' : '';
+      const speaker = p.is_speaker ? ' 🎤' : '';
+      return `${name}${type}${speaker}`;
+    })
+    .join('\n');
 }
 
 /**
@@ -95,7 +100,8 @@ export function getAllAuthorsTooltip(persons) {
  * @returns {Object} Table row data
  */
 export function transformAbstractToTableItem(abstract) {
-  const trackTitle = abstract.accepted_track?.title || abstract.reviewed_for_tracks?.[0]?.title || '';
+  const trackTitle =
+    abstract.accepted_track?.title || abstract.reviewed_for_tracks?.[0]?.title || '';
   const allTracks = getAllTracks(abstract);
 
   // compute numeric ID if possible
@@ -119,7 +125,7 @@ export function transformAbstractToTableItem(abstract) {
     Submitter: abstract.submitter?.full_name || '',
     Affiliation: abstract.submitter?.affiliation || '',
     Track: getShortTrackName(trackTitle),
-    TrackFull: JSON.stringify(allTracks),  // Store all tracks as JSON for the dialog
+    TrackFull: JSON.stringify(allTracks), // Store all tracks as JSON for the dialog
     TrackType: abstract.accepted_track ? 'accepted' : 'reviewed',
     Type: abstract.accepted_contrib_type?.name || '',
     Score: abstract.score ?? '',
@@ -127,7 +133,7 @@ export function transformAbstractToTableItem(abstract) {
     SubmittedISO: submittedISO,
     SubmittedMillis: submittedMillis,
     Authors: getPrimaryAuthorsDisplay(abstract.persons),
-    AuthorsTooltip: getAllAuthorsTooltip(abstract.persons)  // All authors for tooltip
+    AuthorsTooltip: getAllAuthorsTooltip(abstract.persons), // All authors for tooltip
   };
 }
 
@@ -147,7 +153,7 @@ export function getTableItems(data) {
  */
 export function buildTableItemsMap(tableItems) {
   const map = new Map();
-  tableItems.forEach(item => {
+  tableItems.forEach((item) => {
     map.set(String(item.ID), item);
   });
   return map;
@@ -159,21 +165,21 @@ export function buildTableItemsMap(tableItems) {
  * @returns {Function} Render function
  */
 export function createRenderTitle() {
-  return function(data, cell, dataIndex, cellIndex) {
+  return function (data, cell, dataIndex, cellIndex) {
     const titleStr = String(data || '');
     // We need to find ID from the row. Use a custom attribute on the link
     // that will be updated by rowRender with the actual row ID
     cell.childNodes = [
       {
         nodeName: 'A',
-        attributes: { 
+        attributes: {
           class: 'title-link',
           href: '#',
-          'data-id': '',  // Will be filled by rowRender
-          'data-title': titleStr
+          'data-id': '', // Will be filled by rowRender
+          'data-title': titleStr,
         },
-        childNodes: [{ nodeName: '#text', data: titleStr }]
-      }
+        childNodes: [{ nodeName: '#text', data: titleStr }],
+      },
     ];
   };
 }
@@ -187,13 +193,13 @@ export function renderState(data, cell, dataIndex, cellIndex) {
   let bgClass = 'state-badge state-other';
   if (state === 'accepted') bgClass = 'state-badge state-accepted';
   else if (state === 'rejected') bgClass = 'state-badge state-rejected';
-  
+
   cell.childNodes = [
     {
       nodeName: 'SPAN',
       attributes: { class: bgClass },
-      childNodes: [{ nodeName: '#text', data: stateStr }]
-    }
+      childNodes: [{ nodeName: '#text', data: stateStr }],
+    },
   ];
 }
 
@@ -203,21 +209,21 @@ export function renderState(data, cell, dataIndex, cellIndex) {
  * @returns {Function} Render function
  */
 export function createRenderTrack() {
-  return function(data, cell, dataIndex, cellIndex) {
+  return function (data, cell, dataIndex, cellIndex) {
     const trackStr = String(data || '');
     if (!trackStr) return;
-    
+
     // Default class, will be updated by rowRender based on TrackType
     cell.childNodes = [
       {
         nodeName: 'A',
-        attributes: { 
+        attributes: {
           class: 'track-badge track-reviewed track-link',
           href: '#',
-          'data-tracks': ''  // Will be filled by rowRender
+          'data-tracks': '', // Will be filled by rowRender
         },
-        childNodes: [{ nodeName: '#text', data: trackStr }]
-      }
+        childNodes: [{ nodeName: '#text', data: trackStr }],
+      },
     ];
   };
 }
@@ -228,13 +234,13 @@ export function createRenderTrack() {
 export function renderType(data, cell, dataIndex, cellIndex) {
   const typeStr = String(data || '');
   if (!typeStr) return;
-  
+
   cell.childNodes = [
     {
       nodeName: 'SPAN',
       attributes: { class: 'type-badge' },
-      childNodes: [{ nodeName: '#text', data: typeStr }]
-    }
+      childNodes: [{ nodeName: '#text', data: typeStr }],
+    },
   ];
 }
 
@@ -244,11 +250,11 @@ export function renderType(data, cell, dataIndex, cellIndex) {
  */
 export function rowRender(row, tr, index) {
   // Get values from row cells
-  const id = row.cells[0]?.data || '';           // ID column
-  const trackType = row.cells[7]?.data || '';    // TrackType column  
-  const trackFull = row.cells[6]?.data || '[]';  // TrackFull column
-  const authorsTooltip = row.cells[12]?.data || '';  // AuthorsTooltip column
-  
+  const id = row.cells[0]?.data || ''; // ID column
+  const trackType = row.cells[7]?.data || ''; // TrackType column
+  const trackFull = row.cells[6]?.data || '[]'; // TrackFull column
+  const authorsTooltip = row.cells[12]?.data || ''; // AuthorsTooltip column
+
   // Update Title link (column 1) with data-id
   if (tr.childNodes && tr.childNodes[1]) {
     const titleCell = tr.childNodes[1];
@@ -256,18 +262,19 @@ export function rowRender(row, tr, index) {
       titleCell.childNodes[0].attributes['data-id'] = String(id);
     }
   }
-  
+
   // Update Track link (column 5) with data-tracks and proper class
   if (tr.childNodes && tr.childNodes[5]) {
     const trackCell = tr.childNodes[5];
     if (trackCell.childNodes && trackCell.childNodes[0]?.attributes) {
       trackCell.childNodes[0].attributes['data-tracks'] = trackFull;
-      trackCell.childNodes[0].attributes.class = trackType === 'accepted' 
-        ? 'track-badge track-accepted track-link'
-        : 'track-badge track-reviewed track-link';
+      trackCell.childNodes[0].attributes.class =
+        trackType === 'accepted'
+          ? 'track-badge track-accepted track-link'
+          : 'track-badge track-reviewed track-link';
     }
   }
-  
+
   // Update Authors span (column 11) with tooltip
   if (tr.childNodes && tr.childNodes[11]) {
     const authorsCell = tr.childNodes[11];
@@ -275,7 +282,7 @@ export function rowRender(row, tr, index) {
       authorsCell.childNodes[0].attributes.title = authorsTooltip;
     }
   }
-  
+
   return tr;
 }
 
@@ -285,25 +292,36 @@ export function rowRender(row, tr, index) {
  * @returns {Function} Render function
  */
 export function createRenderAuthors() {
-  return function(data, cell, dataIndex, cellIndex) {
+  return function (data, cell, dataIndex, cellIndex) {
     const authorsStr = String(data || '');
     if (!authorsStr) return;
-    
+
     cell.childNodes = [
       {
         nodeName: 'SPAN',
-        attributes: { 
+        attributes: {
           class: 'authors-cell',
-          title: ''  // Will be filled by rowRender
+          title: '', // Will be filled by rowRender
         },
-        childNodes: [{ nodeName: '#text', data: authorsStr }]
-      }
+        childNodes: [{ nodeName: '#text', data: authorsStr }],
+      },
     ];
   };
 }
 
 // Column names for filter placeholders (visible columns only)
-const visibleColumnNames = ['ID', 'Title', 'State', 'Submitter', 'Affiliation', 'Track', 'Type', 'Score', 'Submitted', 'Authors'];
+const visibleColumnNames = [
+  'ID',
+  'Title',
+  'State',
+  'Submitter',
+  'Affiliation',
+  'Track',
+  'Type',
+  'Score',
+  'Submitted',
+  'Authors',
+];
 
 // Mapping from visible column index to actual data column index
 // Visible: 0=ID, 1=Title, 2=State, 3=Submitter, 4=Affiliation, 5=Track, 6=Type, 7=Score, 8=Submitted, 9=Authors
@@ -327,7 +345,7 @@ export function tableRender(_data, table, type) {
   const filterHeaders = {
     nodeName: 'TR',
     attributes: {
-      class: 'search-filtering-row'
+      class: 'search-filtering-row',
     },
     childNodes: tHead.childNodes[0].childNodes.map((_th, index) => ({
       nodeName: 'TH',
@@ -338,11 +356,11 @@ export function tableRender(_data, table, type) {
             class: 'datatable-input column-filter',
             type: 'search',
             placeholder: visibleColumnNames[index] || `Col ${index + 1}`,
-            'data-columns': `[${visibleToDataColumnIndex[index]}]`
-          }
-        }
-      ]
-    }))
+            'data-columns': `[${visibleToDataColumnIndex[index]}]`,
+          },
+        },
+      ],
+    })),
   };
 
   tHead.childNodes.push(filterHeaders);
@@ -363,19 +381,19 @@ export function createDataTableOptions() {
     rowRender: rowRender,
     tableRender: tableRender,
     columns: [
-      { select: 0, sortable: true, type: 'number' },  // ID
-      { select: 1, render: createRenderTitle(), sortable: true, type: 'string' },  // Title
-      { select: 2, render: renderState, sortable: true, type: 'string' },  // State
-      { select: 3, sortable: true, type: 'string' },  // Submitter
-      { select: 4, sortable: true, type: 'string' },  // Affiliation
-      { select: 5, render: createRenderTrack(), sortable: true, type: 'string' },  // Track
-      { select: 6, hidden: true, type: 'string' },  // TrackFull (hidden - JSON of all tracks)
-      { select: 7, hidden: true, type: 'string' },  // TrackType (hidden helper column)
-      { select: 8, render: renderType, sortable: true, type: 'string' },  // Type
-      { select: 9, sortable: true, type: 'number' },  // Score
-      { select: 10, sortable: true, type: 'string' },  // Submitted
-      { select: 11, render: createRenderAuthors(), sortable: true, type: 'string' },  // Authors
-      { select: 12, hidden: true, type: 'string' }  // AuthorsTooltip (hidden)
-    ]
+      { select: 0, sortable: true, type: 'number' }, // ID
+      { select: 1, render: createRenderTitle(), sortable: true, type: 'string' }, // Title
+      { select: 2, render: renderState, sortable: true, type: 'string' }, // State
+      { select: 3, sortable: true, type: 'string' }, // Submitter
+      { select: 4, sortable: true, type: 'string' }, // Affiliation
+      { select: 5, render: createRenderTrack(), sortable: true, type: 'string' }, // Track
+      { select: 6, hidden: true, type: 'string' }, // TrackFull (hidden - JSON of all tracks)
+      { select: 7, hidden: true, type: 'string' }, // TrackType (hidden helper column)
+      { select: 8, render: renderType, sortable: true, type: 'string' }, // Type
+      { select: 9, sortable: true, type: 'number' }, // Score
+      { select: 10, sortable: true, type: 'string' }, // Submitted
+      { select: 11, render: createRenderAuthors(), sortable: true, type: 'string' }, // Authors
+      { select: 12, hidden: true, type: 'string' }, // AuthorsTooltip (hidden)
+    ],
   };
 }

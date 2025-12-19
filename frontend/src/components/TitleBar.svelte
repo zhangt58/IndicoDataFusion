@@ -4,12 +4,12 @@
     WindowMinimise,
     WindowToggleMaximise,
     Quit,
-    WindowIsMaximised
+    WindowIsMaximised,
   } from '../../wailsjs/runtime/runtime.js';
   import { MinusOutline, CloseOutline } from 'flowbite-svelte-icons';
   import iconImage from '../assets/images/icon.png';
 
-  let isMaximised = false;
+  let isMaximised = $state(false);
 
   onMount(async () => {
     // Check initial maximised state
@@ -34,6 +34,8 @@
       // Update state after toggle
       setTimeout(async () => {
         isMaximised = await WindowIsMaximised();
+        // Trigger resize event to update table size
+        window.dispatchEvent(new Event('resize'));
       }, 100);
     } catch (e) {
       console.error('Failed to toggle maximize:', e);
@@ -55,12 +57,17 @@
   role="button"
   tabindex="0"
   aria-label="Application title bar"
-  on:dblclick={handleMaximise}
-  on:keydown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleMaximise(); } }}
+  ondblclick={handleMaximise}
+  onkeydown={(e) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      handleMaximise();
+    }
+  }}
 >
   <!-- Left: App title/icon -->
   <div class="flex items-center px-3 gap-2">
-    <img src={ iconImage } alt="App" class="w-6 h-6 rounded-sm" draggable="false" />
+    <img src={iconImage} alt="App" class="w-6 h-6 rounded-sm" draggable="false" />
     <span class="text-sm font-semibold text-gray-700 dark:text-gray-200 rounded-sm">IDF</span>
   </div>
 
@@ -68,20 +75,26 @@
   <div class="flex items-center h-full" style="--wails-draggable: no-drag">
     <!-- Minimize -->
     <button
-      on:click={handleMinimise}
-      on:dblclick|stopPropagation={() => {}}
+      onclick={handleMinimise}
+      ondblclick={(e) => {
+        e.stopPropagation();
+      }}
       class="h-full px-4 hover:bg-gray-200 dark:hover:bg-gray-800 transition-colors flex items-center justify-center group"
       aria-label="Minimize"
       title="Minimize"
       type="button"
     >
-      <MinusOutline class="w-4 h-4 text-gray-600 dark:text-gray-400 group-hover:text-gray-900 dark:group-hover:text-gray-100" />
+      <MinusOutline
+        class="w-4 h-4 text-gray-600 dark:text-gray-400 group-hover:text-gray-900 dark:group-hover:text-gray-100"
+      />
     </button>
 
     <!-- Maximize/Restore -->
     <button
-      on:click={handleMaximise}
-      on:dblclick|stopPropagation={() => {}}
+      onclick={handleMaximise}
+      ondblclick={(e) => {
+        e.stopPropagation();
+      }}
       class="h-full px-4 hover:bg-gray-200 dark:hover:bg-gray-800 transition-colors flex items-center justify-center group"
       aria-label={isMaximised ? 'Restore' : 'Maximize'}
       title={isMaximised ? 'Restore' : 'Maximize'}
@@ -98,9 +111,9 @@
           style="fill: none;"
         >
           <!-- back square (offset) -->
-          <rect x="7" y="5" width="11" height="11" rx="1" ry="1" style="fill: none;"/>
+          <rect x="7" y="5" width="11" height="11" rx="1" ry="1" style="fill: none;" />
           <!-- front square -->
-          <rect x="4" y="8" width="11" height="11" rx="1" ry="1" style="fill: none;"/>
+          <rect x="4" y="8" width="11" height="11" rx="1" ry="1" style="fill: none;" />
         </svg>
       {:else}
         <!-- Maximize icon: Single square -->
@@ -112,15 +125,17 @@
           stroke-width="1.5"
           style="fill: none;"
         >
-          <rect x="4" y="4" width="16" height="16" rx="1" ry="1" style="fill: none;"/>
+          <rect x="4" y="4" width="16" height="16" rx="1" ry="1" style="fill: none;" />
         </svg>
       {/if}
     </button>
 
     <!-- Close -->
     <button
-      on:click={handleClose}
-      on:dblclick|stopPropagation={() => {}}
+      onclick={handleClose}
+      ondblclick={(e) => {
+        e.stopPropagation();
+      }}
       class="h-full px-4 hover:bg-red-500 dark:hover:bg-red-600 transition-colors flex items-center justify-center group"
       aria-label="Close"
       title="Close"

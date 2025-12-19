@@ -1,46 +1,49 @@
 <script>
-  import VirtualDataTable from '../components/VirtualDataTable.svelte';
+  import { DataTable, DataTableControls } from '@zhangt58/svelte-vtable';
   import ContributionDetailsDialog from './ContributionDetailsDialog.svelte';
-  import { 
-    getTableItems, 
-    createDataTableOptions,
-    rowRender
-  } from './ContributionTableItem.js';
+  import { getTableItems } from './ContributionTableItem.js';
   import SessionBadge from './SessionBadge.svelte';
   import TrackBadge from './TrackBadge.svelte';
   import TypeBadge from './TypeBadge.svelte';
-  import DataTableControls from '../components/DataTableControls.svelte';
+  import TitleLink from '../components/TitleLink.svelte';
   import TrackDetailsDialog from './TrackDetailsDialog.svelte';
   import SessionDetailsDialog from './SessionDetailsDialog.svelte';
 
-  /** @type {Array} */
-  export let contributionData = [];
+  let { contributionData = [] } = $props();
 
   // Contribution dialog state (can be extended later for contribution details dialog)
-  let showContributionDialog = false;
-  let selectedContribution = null;
+  let showContributionDialog = $state(false);
+  let selectedContribution = $state(null);
 
   // Track dialog state
-  let showTrackDialog = false;
-  let selectedTracks = [];
+  let showTrackDialog = $state(false);
+  let selectedTracks = $state([]);
 
   // Session dialog state
-  let showSessionDialog = false;
-  let selectedSessions = [];
+  let showSessionDialog = $state(false);
+  let selectedSessions = $state([]);
+
+  // Column filters state
+  let activeFilters = $state({});
 
   // Aggregate all unique sessions from contributions
-  $: allAvailableSessions = contributionData.reduce((acc, c) => {
-    const title = c.session || c.Session || null;
-    if (title && !acc.some(s => s.title === title)) {
-      acc.push({ title });
-    }
-    return acc;
-  }, []);
+  let allAvailableSessions = $derived(
+    contributionData.reduce((acc, c) => {
+      const title = c.session || c.Session || null;
+      if (title && !acc.some((s) => s.title === title)) {
+        acc.push({ title });
+      }
+      return acc;
+    }, []),
+  );
 
   // Open session dialog - accepts a string or array/object
   function openSession(sessionFull) {
     try {
-      if (!sessionFull) { selectedSessions = []; return; }
+      if (!sessionFull) {
+        selectedSessions = [];
+        return;
+      }
       // If it's a simple title string, gather matching table items to show additional fields
       if (typeof sessionFull === 'string') {
         // try parsing JSON first
@@ -51,15 +54,19 @@
         } catch (e) {
           // not JSON, keep the raw title
         }
-        const matches = tableItems.filter(it => it.Session === title);
+        const matches = tableItems.filter((it) => it.Session === title);
         selectedSessions = [{ title, items: matches }];
       } else if (Array.isArray(sessionFull)) {
         // try to normalize array entries
-        selectedSessions = sessionFull.map(s => (typeof s === 'string' ? { title: s, items: tableItems.filter(it => it.Session === s) } : s));
+        selectedSessions = sessionFull.map((s) =>
+          typeof s === 'string'
+            ? { title: s, items: tableItems.filter((it) => it.Session === s) }
+            : s,
+        );
       } else if (sessionFull && typeof sessionFull === 'object') {
         // object may contain a title
         const title = sessionFull.title || sessionFull.name || '';
-        const matches = title ? tableItems.filter(it => it.Session === title) : [];
+        const matches = title ? tableItems.filter((it) => it.Session === title) : [];
         selectedSessions = [{ ...sessionFull, items: matches }];
       } else {
         selectedSessions = [];
@@ -74,7 +81,7 @@
 
   // Find contribution by ID
   function findContributionById(id) {
-    return contributionData.find(c => String(c.friendly_id || c.id) === String(id));
+    return contributionData.find((c) => String(c.friendly_id || c.id) === String(id));
   }
 
   // Open contribution details by id (used by title button)
@@ -85,14 +92,16 @@
   }
 
   // Aggregate all unique tracks from contributions
-  $: allAvailableTracks = contributionData.reduce((acc, c) => {
-    const title = c.track || c.Track || null;
-    if (title && !acc.some(t => t.title === title)) {
-      // contribution source doesn't carry accepted/reviewed flag, mark as unknown
-      acc.push({ title, type: 'unknown' });
-    }
-    return acc;
-  }, []);
+  let allAvailableTracks = $derived(
+    contributionData.reduce((acc, c) => {
+      const title = c.track || c.Track || null;
+      if (title && !acc.some((t) => t.title === title)) {
+        // contribution source doesn't carry accepted/reviewed flag, mark as unknown
+        acc.push({ title, type: 'unknown' });
+      }
+      return acc;
+    }, []),
+  );
 
   // Open track dialog - accepts JSON string/array/object or plain title string
   function openTrack(trackFull) {
@@ -126,7 +135,7 @@
   // Handle clicks on the table (keeps existing delegation behavior)
   function handleTableClick(event) {
     const target = event.target;
-    
+
     // Handle title link click
     if (target.classList.contains('title-link')) {
       event.preventDefault();
@@ -142,46 +151,130 @@
     }
 
     // Handle track badge click (support clicks on inner elements too)
-    if (target.classList.contains('track-link') || (target.closest && target.closest('.track-link'))) {
+    if (
+      target.classList.contains('track-link') ||
+      (target.closest && target.closest('.track-link'))
+    ) {
       event.preventDefault();
       const el = target.classList.contains('track-link') ? target : target.closest('.track-link');
-      const data = el && (el.dataset && el.dataset.tracks) ? el.dataset.tracks : el && el.getAttribute && el.getAttribute('data-tracks');
+      const data =
+        el && el.dataset && el.dataset.tracks
+          ? el.dataset.tracks
+          : el && el.getAttribute && el.getAttribute('data-tracks');
       // openTrack will handle JSON or plain string
       openTrack(data || el.textContent || '');
     }
 
     // Handle session badge click (support clicks on inner elements too)
-    if (target.classList.contains('session-link') || (target.closest && target.closest('.session-link'))) {
+    if (
+      target.classList.contains('session-link') ||
+      (target.closest && target.closest('.session-link'))
+    ) {
       event.preventDefault();
-      const el = target.classList.contains('session-link') ? target : target.closest('.session-link');
-      const data = el && (el.dataset && el.dataset.session) ? el.dataset.session : el && el.getAttribute && el.getAttribute('data-session');
+      const el = target.classList.contains('session-link')
+        ? target
+        : target.closest('.session-link');
+      const data =
+        el && el.dataset && el.dataset.session
+          ? el.dataset.session
+          : el && el.getAttribute && el.getAttribute('data-session');
       // openSession will handle string or array/object
       openSession(data || el.textContent || '');
     }
   }
 
   // --- Virtualized table client-side controls (search/sort/pagination) ---
-  let searchQuery = '';
-  let perPage = 25;  // Fixed value, not user-configurable
-  let currentPage = 1;
-  let sortKey = null;
-  let sortDir = 'asc';
+  let searchQuery = $state('');
+  let perPage = $state(25);
+  let currentPage = $state(1);
+  let sortKey = $state(null);
+  let sortDir = $state('asc');
 
   // Visible columns for contributions (matches ContributionTableItem.js visibleColumnNames)
-  const visibleKeys = ['ID','Code','Title','Type','Session','Track','Start','Duration','Room','Speakers'];
+  const columns = [
+    { id: 'ID', title: 'ID', stretch: 1 },
+    { id: 'Code', title: 'Code', stretch: 2 },
+    { id: 'Title', title: 'Title', stretch: 6 },
+    { id: 'Type', title: 'Type', stretch: 1 },
+    { id: 'Session', title: 'Session', stretch: 2 },
+    { id: 'Track', title: 'Track', stretch: 2 },
+    { id: 'StartDate', title: 'Start', stretch: 2 },
+    { id: 'Duration', title: 'Duration', stretch: 1 },
+    { id: 'Room', title: 'Room', stretch: 1 },
+    { id: 'Speakers', title: 'Speakers', stretch: 2 },
+  ];
 
-  $: tableItems = getTableItems(contributionData);
-  $: dataTableOptions = createDataTableOptions(); // kept for potential external use
+  const visibleKeys = columns.map((c) => c.title);
+
+  const mappedColumns = columns.map((c) => ({
+    id: c.id,
+    title: c.title,
+    nowrap: false,
+    stretch: c.stretch,
+  }));
+  const colWidths = mappedColumns.reduce((acc, c) => {
+    acc[c.title] = c.stretch;
+    return acc;
+  }, {});
+
+  let tableItems = $derived(getTableItems(contributionData));
+
+  // columnFilters derived from tableItems
+  function getUniqueValuesWithCounts(items, header) {
+    const counts = {};
+    (items || []).forEach((it) => {
+      const val = it && it[header];
+      if (Array.isArray(val)) {
+        val.forEach((v) => {
+          const s = String(v ?? '');
+          counts[s] = (counts[s] || 0) + 1;
+        });
+      } else {
+        const s = String(val ?? '');
+        counts[s] = (counts[s] || 0) + 1;
+      }
+    });
+    const uniqueValues = Object.keys(counts).sort();
+    return { uniqueValues, counts };
+  }
+
+  let columnFilters = $derived(
+    columns.map((c) => {
+      const { uniqueValues, counts } = getUniqueValuesWithCounts(tableItems || [], c.title);
+      return { key: c.title, label: c.title, uniqueValues, counts };
+    }),
+  );
 
   // Filtering
-  $: filteredItems = tableItems.filter(item => {
-    if (!searchQuery) return true;
-    const q = searchQuery.toLowerCase();
-    return visibleKeys.some(k => String(item[k] ?? '').toLowerCase().includes(q));
-  });
+  let filteredItems = $derived(
+    tableItems.filter((item) => {
+      // apply active column filters first
+      if (Object.keys(activeFilters).length > 0) {
+        for (const [columnKey, selectedValues] of Object.entries(activeFilters)) {
+          if (!selectedValues || selectedValues.length === 0) continue;
+          const itemValue = item[columnKey];
+          if (Array.isArray(itemValue)) {
+            const itemStrings = itemValue.map((v) => String(v ?? ''));
+            if (!selectedValues.some((val) => itemStrings.includes(val))) return false;
+          } else {
+            const itemStr = String(itemValue ?? '');
+            if (!selectedValues.includes(itemStr)) return false;
+          }
+        }
+      }
+
+      if (!searchQuery) return true;
+      const q = searchQuery.toLowerCase();
+      return visibleKeys.some((k) =>
+        String(item[k] ?? '')
+          .toLowerCase()
+          .includes(q),
+      );
+    }),
+  );
 
   // Sorting (string compare for all columns)
-  function compare(a,b,key) {
+  function compare(a, b, key) {
     // Special-case ID: numeric sort if IDNumber exists
     if (key === 'ID') {
       const na = a.IDNumber != null ? Number(a.IDNumber) : NaN;
@@ -240,24 +333,34 @@
     return 0;
   }
 
-  $: sortedItems = (() => {
-    if (!sortKey) return filteredItems;
-    const copy = filteredItems.slice();
-    copy.sort((a,b) => {
-      const res = compare(a,b,sortKey);
-      return sortDir === 'asc' ? res : -res;
-    });
-    return copy;
-  })();
+  let sortedItems = $derived(
+    (() => {
+      if (!sortKey) return filteredItems;
+      const copy = filteredItems.slice();
+      copy.sort((a, b) => {
+        const res = compare(a, b, sortKey);
+        return sortDir === 'asc' ? res : -res;
+      });
+      return copy;
+    })(),
+  );
 
   // total items available after filtering/sorting
-  $: totalItems = sortedItems.length;
+  let totalItems = $derived(sortedItems.length);
 
   // Pagination
-  $: totalPages = Math.max(1, Math.ceil(sortedItems.length / perPage));
-  $: currentPage = Math.min(currentPage, totalPages);
-  $: paginatedItems = sortedItems.slice((currentPage-1)*perPage, currentPage*perPage);
-  $: visibleItems = paginatedItems;
+  let totalPages = $derived(Math.max(1, Math.ceil(sortedItems.length / perPage)));
+
+  $effect(() => {
+    if (currentPage > totalPages) {
+      currentPage = totalPages;
+    }
+  });
+
+  let paginatedItems = $derived(
+    sortedItems.slice((currentPage - 1) * perPage, currentPage * perPage),
+  );
+  let visibleItems = $derived(paginatedItems);
 
   function setSort(key) {
     if (sortKey === key) {
@@ -267,177 +370,53 @@
       sortDir = 'asc';
     }
   }
-
-  // Helper action to apply the original rowRender to a rendered <tr>
-  function applyRowRender(node, payload) {
-    let { item, index } = payload || {};
-
-    function buildSyntheticRow(it) {
-      const cells = [];
-      // Build cells matching ContributionTableItem.js expected data indices 0..14
-      cells[0] = { data: it.ID ?? '' };
-      cells[1] = { data: it.Code ?? '' };
-      cells[2] = { data: it.Title ?? '' };
-      cells[3] = { data: it.Type ?? '' };
-      cells[4] = { data: it.Session ?? '' };
-      cells[5] = { data: it.Track ?? '' };
-      cells[6] = { data: it.StartDate ?? '' };
-      cells[7] = { data: it.Duration ?? '' };
-      cells[8] = { data: it.Location ?? '' };
-      cells[9] = { data: it.Room ?? '' };
-      cells[10] = { data: it.Speakers ?? '' };
-      cells[11] = { data: it.SpeakersTooltip ?? '' };
-      cells[12] = { data: it.Authors ?? '' };
-      cells[13] = { data: it.AuthorsTooltip ?? '' };
-      cells[14] = { data: it.URL ?? '' };
-      return { cells };
-    }
-
-    // Build a plain virtual `tr` whose structure matches what rowRender expects
-    function buildVirtualTr(visibleCount) {
-      const vtr = { childNodes: [] };
-      for (let i = 0; i < visibleCount; i++) {
-        // Each cell has childNodes; the first child has an attributes object that rowRender will mutate
-        vtr.childNodes[i] = { childNodes: [ { attributes: {} } ] };
-      }
-      return vtr;
-    }
-
-    function apply(it) {
-      // First try to call the original rowRender but using a virtual tr object
-      try {
-        if (typeof rowRender === 'function') {
-          const synthetic = buildSyntheticRow(it);
-          // create a virtual tr with slots matching the visible TDs in the real DOM
-          const visibleCount = Math.max((node.children && node.children.length) || 0, (synthetic.cells || []).length || 0);
-          const vtr = buildVirtualTr(visibleCount);
-          // Call rowRender with the synthetic row and virtual tr. rowRender will write into vtr.childNodes[x].childNodes[0].attributes
-          rowRender(synthetic, vtr, index);
-
-          // Copy any attributes set by rowRender from vtr into the real DOM elements
-          for (let i = 0; i < vtr.childNodes.length; i++) {
-            const vcell = vtr.childNodes[i];
-            if (!vcell || !vcell.childNodes || !vcell.childNodes[0]) continue;
-            const attrs = vcell.childNodes[0].attributes || {};
-            const td = node.children && node.children[i];
-            if (!td) continue;
-            // Prefer the first element child inside the TD (e.g., button, a, span)
-            const el = td.firstElementChild || td.querySelector && td.querySelector('*') || td;
-            for (const name in attrs) {
-              if (!Object.prototype.hasOwnProperty.call(attrs, name)) continue;
-              try {
-                el.setAttribute(name, attrs[name]);
-              } catch (e) {
-                // ignore if setAttribute fails for any reason
-              }
-            }
-          }
-          return;
-        }
-      } catch (err) {
-        console.error('rowRender call failed, falling back to manual apply:', err);
-      }
-
-      // fallback manual attribute updates
-      try {
-        const titleCell = node.children[2];
-        const titleAnchor = titleCell && (titleCell.querySelector('.title-link') || titleCell.querySelector('a'));
-        if (titleAnchor) {
-          if (it.ID != null) titleAnchor.setAttribute('data-id', String(it.ID));
-          if (it.Title != null) titleAnchor.setAttribute('data-title', String(it.Title));
-        }
-
-        const speakersCell = node.children[9];
-        const speakersSpan = speakersCell && (speakersCell.querySelector('.speakers-cell') || speakersCell.querySelector('span'));
-        if (speakersSpan && it.SpeakersTooltip != null) {
-          speakersSpan.setAttribute('title', String(it.SpeakersTooltip));
-        }
-
-        // Track badge: ensure data-tracks is present (useful when original rowRender doesn't set it)
-        const trackCell = node.children[5];
-        const trackEl = trackCell && (trackCell.querySelector('.track-link') || trackCell.querySelector('button') || trackCell.querySelector('a') || trackCell.querySelector('span'));
-        if (trackEl && it.Track != null) {
-          try { trackEl.setAttribute('data-tracks', String(it.Track)); } catch (e) { /* ignore */ }
-        }
-
-        // Session badge: ensure data-session is present
-        const sessionCell = node.children[4];
-        const sessionEl = sessionCell && (sessionCell.querySelector('.session-link') || sessionCell.querySelector('button') || sessionCell.querySelector('a') || sessionCell.querySelector('span'));
-        if (sessionEl && it.Session != null) {
-          try { sessionEl.setAttribute('data-session', String(it.Session)); } catch (e) { /* ignore */ }
-        }
-      } catch (err) {
-        console.error('applyRowRender fallback error', err);
-      }
-    }
-
-    // initial apply
-    apply(item);
-
-    return {
-      update(newPayload) {
-        ({ item, index } = newPayload || {});
-        apply(item);
-      },
-      destroy() {}
-    };
-  }
 </script>
 
 <!-- svelte-ignore a11y_click_events_have_key_events -->
 <!-- svelte-ignore a11y_no_static_element_interactions -->
-<div class="flex flex-col overflow-hidden mt-8 px-1" style="height: calc(100vh - 8rem);">
+<div class="flex flex-col overflow-auto" style="height:calc(100vh - 8rem);">
   <!-- Sticky Controls at top -->
-  <div class="sticky top-0 z-10 bg-transparent py-1 border-b border-gray-200 dark:border-gray-700 mb-2 shrink-0">
+  <div
+    class="sticky top-0 z-10 bg-transparent
+              px-2 py-2 rounded-md border-gray-200 dark:border-gray-700
+              mb-2 mt-2 shrink-0 shadow-md dark:shadow-black/40"
+  >
     <DataTableControls
       search={searchQuery}
-      currentPage={currentPage}
-      perPage={perPage}
+      {currentPage}
+      bind:perPage
       {totalItems}
-      pagechange={(payload) => { currentPage = payload.currentPage }}
-      searchchange={(payload) => { searchQuery = payload.search }}
+      pagechange={(payload) => {
+        currentPage = payload.currentPage;
+      }}
+      searchchange={(payload) => {
+        searchQuery = payload.search;
+      }}
+      {columnFilters}
+      {activeFilters}
+      filterChange={({ allFilters }) => {
+        activeFilters = { ...allFilters };
+        currentPage = 1;
+      }}
+      filtersVisible={false}
     />
   </div>
 
-  <!-- Table area: scrollable content -->
-  <section class="flex-1 overflow-hidden flex flex-col min-h-0" on:click={handleTableClick}>
-    <VirtualDataTable
+  <section
+    class="flex-1 overflow-auto flex flex-col max-h-screen min-h-0"
+    onclick={handleTableClick}
+  >
+    <DataTable
       items={visibleItems}
       {visibleKeys}
-      bind:sortKey
-      bind:sortDir
-      className="datatable-table"
-      style="width:100%;height:100%;"
-      on:sort={(e) => setSort(e.detail)}
-      colWidths={{ ID: '6%', Code: '8%', Title: '36%', Type: '6%', Session: '8%', Track: '8%', Start: '8%', Duration: '6%', Room: '6%', Speakers: '8%' }}
-    >
-      <svelte:fragment slot="default" let:item let:index>
-        <tr use:applyRowRender={{ item, index }}>
-          <td>{item.ID}</td>
-          <td>{item.Code}</td>
-          <td><button type="button" class="title-link" data-id={item.ID} on:click={() => openContribution(item.ID)}>{item.Title}</button></td>
-          <td>
-            {#if item.Type}
-              <TypeBadge text={item.Type} />
-            {/if}
-          </td>
-          <td>
-            {#if item.Session}
-              <SessionBadge text={item.Session} as="button" className="session-link" on:click={() => openSession(item.Session)} {...{ 'data-session': item.Session }} />
-            {/if}
-          </td>
-          <td>
-            {#if item.Track}
-              <TrackBadge text={item.Track} className="track-link" on:click={() => openTrack(item.Track)} {...{ 'data-tracks': item.Track }} />
-            {/if}
-          </td>
-          <td>{item.StartDate}</td>
-          <td>{item.Duration}</td>
-          <td>{item.Room}</td>
-          <td>{#if item.Speakers}<span class="speakers-cell" title={item.SpeakersTooltip}>{item.Speakers}</span>{/if}</td>
-        </tr>
-      </svelte:fragment>
-    </VirtualDataTable>
+      {sortKey}
+      {sortDir}
+      sortCallback={(k) => setSort(k)}
+      className="datatable-table w-full mt-0.5 mb-2 overflow-auto min-h-0"
+      {colWidths}
+      virtualize={false}
+      {rowSnippet}
+    />
   </section>
 </div>
 
@@ -445,26 +424,92 @@
 <ContributionDetailsDialog bind:open={showContributionDialog} contribution={selectedContribution} />
 
 <!-- Track Details Dialog -->
-<TrackDetailsDialog bind:open={showTrackDialog} tracks={selectedTracks} allTracks={allAvailableTracks} showTypes={false} />
+<TrackDetailsDialog
+  bind:open={showTrackDialog}
+  tracks={selectedTracks}
+  allTracks={allAvailableTracks}
+  showTypes={false}
+/>
 
 <!-- Session Details Dialog -->
-<SessionDetailsDialog bind:open={showSessionDialog} sessions={selectedSessions} allSessions={allAvailableSessions} />
+<SessionDetailsDialog
+  bind:open={showSessionDialog}
+  sessions={selectedSessions}
+  allSessions={allAvailableSessions}
+/>
+
+<!-- Row snippet for ContributionTableView (moved out of <script>) -->
+{#snippet rowSnippet({ item, index, select, selected })}
+  <tr
+    onclick={() => {
+      try {
+        select && select();
+      } catch (e) {}
+    }}
+    tabindex="0"
+    class="cursor-pointer"
+    class:selected-row={selected && String(selected.ID) === String(item.ID)}
+    aria-selected={selected && String(selected.ID) === String(item.ID)}
+  >
+    {#each mappedColumns as col}
+      <td class={col.nowrap ? 'nowrap' : ''}>
+        {#if col.id === 'ID'}
+          {item.ID}
+        {:else if col.id === 'Code'}
+          {item.Code}
+        {:else if col.id === 'Title'}
+          <TitleLink as="button" data-id={item.ID} onclick={() => openContribution(item.ID)}
+            >{item.Title}</TitleLink
+          >
+        {:else if col.id === 'Type'}
+          {#if item.Type}
+            <TypeBadge text={item.Type} />
+          {/if}
+        {:else if col.id === 'Session'}
+          {#if item.Session}
+            <SessionBadge
+              text={item.Session}
+              as="button"
+              className="session-link"
+              onclick={() => openSession(item.Session)}
+              {...{ 'data-session': item.Session }}
+            />
+          {/if}
+        {:else if col.id === 'Track'}
+          {#if item.Track}
+            <TrackBadge
+              text={item.Track}
+              className="track-link"
+              onclick={() => openTrack(item.Track)}
+              {...{ 'data-tracks': item.Track }}
+            />
+          {/if}
+        {:else if col.id === 'Speakers'}
+          {#if item.Speakers}
+            <span class="speakers-cell" title={item.SpeakersTooltip}>{item.Speakers}</span>
+          {/if}
+        {:else}
+          {item[col.id]}
+        {/if}
+      </td>
+    {/each}
+  </tr>
+{/snippet}
 
 <style>
   /* Component-specific styling for ContributionTableView */
 
-  /* Speakers cell with tooltip */
-  :global(.speakers-cell) {
+  /* Speakers cell with tooltip (scoped) */
+  .speakers-cell {
     cursor: help;
   }
 
-  /* Make track-link appear clickable */
-  :global(.track-link) {
+  /* Make session-badge adopt pointer when parent marks it interactive */
+  .session-link .session-badge,
+  .session-badge.session-link,
+  .session-badge.interactive {
     cursor: pointer;
   }
 
-  /* Make session-link appear clickable */
-  :global(.session-link) {
-    cursor: pointer;
-  }
+  /* Small badge sizing that complements vtable badges if used (moved to shared CSS) */
 </style>

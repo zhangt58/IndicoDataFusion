@@ -1,56 +1,86 @@
 <script>
-  import VirtualDataTable from '../components/VirtualDataTable.svelte';
+  import { DataTable, DataTableControls } from '@zhangt58/svelte-vtable';
   import TypeBadge from './TypeBadge.svelte';
   import AbstractDetailsDialog from './AbstractDetailsDialog.svelte';
   import TrackDetailsDialog from './TrackDetailsDialog.svelte';
-  import { 
-    getTableItems, 
-    createDataTableOptions,
-    rowRender
-  } from './AbstractTableItem.js';
-  import DataTableControls from '../components/DataTableControls.svelte';
+  import TitleLink from '../components/TitleLink.svelte';
+  import TrackBadge from './TrackBadge.svelte';
+  import { getTableItems } from './AbstractTableItem.js';
 
-  /** @type {Array} */
-  export let abstractData = [];
+  let { abstractData = [] } = $props();
 
   // Abstract dialog state
-  let showAbstractDialog = false;
-  let selectedAbstract = null;
+  let showAbstractDialog = $state(false);
+  let selectedAbstract = $state(null);
 
   // Track dialog state
-  let showTrackDialog = false;
-  let selectedTracks = [];
+  let showTrackDialog = $state(false);
+  let selectedTracks = $state([]);
 
   // Simple client-side controls (search/sort/pagination)
-  let searchQuery = '';
-  let perPage = 25;  // Fixed value, not user-configurable
-  let currentPage = 1;
-  let sortKey = null; // e.g. 'Title' or 'Score'
-  let sortDir = 'asc'; // 'asc' | 'desc'
+  // We will use the event-based API like the example: DataTableControls emits pagechange/searchchange
+  let searchQuery = $state('');
+  let perPage = $state(25);
+  let currentPage = $state(1);
+  let sortKey = $state(null); // e.g. 'Title' or 'Score'
+  let sortDir = $state('asc'); // 'asc' | 'desc'
 
-  // Map of visible column keys in the data objects
-  const visibleKeys = ['ID','Title','State','Submitter','Affiliation','Track','Type','Score','Submitted','Authors'];
+  // Column filters state (added) - map of { headerTitle: [selectedValues] }
+  let activeFilters = $state({});
+
+  // Columns definition (id matches keys in tableItems)
+  const columns = [
+    { id: 'ID', title: 'ID', stretch: 1 },
+    { id: 'Title', title: 'Title', stretch: 6 },
+    { id: 'State', title: 'State', stretch: 2 },
+    { id: 'Submitter', title: 'Submitter', stretch: 3 },
+    { id: 'Affiliation', title: 'Affiliation', stretch: 3 },
+    { id: 'Track', title: 'Track', stretch: 2 },
+    { id: 'Type', title: 'Type', stretch: 1 },
+    { id: 'Score', title: 'Score', stretch: 1 },
+    { id: 'Submitted', title: 'Submitted', stretch: 2 },
+    { id: 'Authors', title: 'Authors', stretch: 2 },
+  ];
+
+  // Map of visible column keys in the data objects (header titles)
+  const visibleKeys = columns.map((c) => c.title);
+
+  // Build mappedColumns for rowSnippet rendering
+  const mappedColumns = columns.map((c) => ({
+    id: c.id,
+    title: c.title,
+    nowrap: false,
+    stretch: c.stretch,
+  }));
+
+  // Build column widths mapping to pass to DataTable (using stretch weights)
+  const colWidths = mappedColumns.reduce((acc, c) => {
+    acc[c.title] = c.stretch;
+    return acc;
+  }, {});
 
   // Collect all unique tracks from all abstracts
-  $: allAvailableTracks = abstractData.reduce((acc, abstract) => {
-    if (abstract.accepted_track && !acc.some(t => t.title === abstract.accepted_track.title)) {
-      acc.push({ title: abstract.accepted_track.title, type: 'accepted' });
-    }
-    if (abstract.reviewed_for_tracks) {
-      abstract.reviewed_for_tracks.forEach(track => {
-        if (!acc.some(t => t.title === track.title)) {
-          acc.push({ title: track.title, type: 'reviewed' });
-        }
-      });
-    }
-    return acc;
-  }, []);
+  let allAvailableTracks = $derived(
+    abstractData.reduce((acc, abstract) => {
+      if (abstract.accepted_track && !acc.some((t) => t.title === abstract.accepted_track.title)) {
+        acc.push({ title: abstract.accepted_track.title, type: 'accepted' });
+      }
+      if (abstract.reviewed_for_tracks) {
+        abstract.reviewed_for_tracks.forEach((track) => {
+          if (!acc.some((t) => t.title === track.title)) {
+            acc.push({ title: track.title, type: 'reviewed' });
+          }
+        });
+      }
+      return acc;
+    }, []),
+  );
 
   // Find abstract by ID
   function findAbstractById(id) {
     // Use strict string comparison to avoid type coercion warnings
     const sid = String(id);
-    return abstractData.find(a => String(a.friendly_id || a.id) === sid);
+    return abstractData.find((a) => String(a.friendly_id || a.id) === sid);
   }
 
   // Open abstract details by id (used by title button)
@@ -76,18 +106,75 @@
     }
   }
 
-  $: tableItems = getTableItems(abstractData);
-  $: dataTableOptions = createDataTableOptions();
+  // Build table items and options
+  let tableItems = $derived(getTableItems(abstractData));
 
-  // Filtering
-  $: filteredItems = tableItems.filter(item => {
-    if (!searchQuery) return true;
-    const q = searchQuery.toLowerCase();
-    return visibleKeys.some(k => String(item[k] ?? '').toLowerCase().includes(q));
-  });
+  // columnFilters derived from tableItems (for DataTableControls/DataTableFilters)
+  function getUniqueValuesWithCounts(items, header) {
+    const counts = {};
+    (items || []).forEach((it) => {
+      const val = it && it[header];
+      if (Array.isArray(val)) {
+        val.forEach((v) => {
+          const s = String(v ?? '');
+          counts[s] = (counts[s] || 0) + 1;
+        });
+      } else {
+        const s = String(val ?? '');
+        counts[s] = (counts[s] || 0) + 1;
+      }
+    });
+    const uniqueValues = Object.keys(counts).sort();
+    return { uniqueValues, counts };
+  }
 
-  // Sorting
-  function compare(a,b,key) {
+  let columnFilters = $derived(
+    columns.map((c) => {
+      const { uniqueValues, counts } = getUniqueValuesWithCounts(tableItems || [], c.title);
+      return { key: c.title, label: c.title, uniqueValues, counts };
+    }),
+  );
+
+  // Handle filter changes from DataTableControls/DataTableFilters
+  function handleFilterChange({ allFilters }) {
+    activeFilters = { ...allFilters };
+    currentPage = 1;
+  }
+
+  // Helper to check if an item matches activeFilters
+  function matchesFilters(item, filters) {
+    for (const [columnKey, selectedValues] of Object.entries(filters)) {
+      if (!selectedValues || selectedValues.length === 0) continue;
+      const itemValue = item[columnKey];
+      if (Array.isArray(itemValue)) {
+        const itemStrings = itemValue.map((v) => String(v ?? ''));
+        if (!selectedValues.some((val) => itemStrings.includes(val))) return false;
+      } else {
+        const itemStr = String(itemValue ?? '');
+        if (!selectedValues.includes(itemStr)) return false;
+      }
+    }
+    return true;
+  }
+
+  // Filtering (apply active column filters first, then search)
+  let filteredItems = $derived(
+    tableItems.filter((item) => {
+      if (Object.keys(activeFilters).length > 0) {
+        if (!matchesFilters(item, activeFilters)) return false;
+      }
+      if (!searchQuery) return true;
+      const q = searchQuery.toLowerCase();
+      return visibleKeys.some((k) =>
+        String(item[k] ?? '')
+          .toLowerCase()
+          .includes(q),
+      );
+    }),
+  );
+
+  // Sorting helper (handles ID numeric, Score numeric, Submitted timestamp, and Track numeric extraction)
+  function compare(a, b, key) {
     const va = a[key];
     const vb = b[key];
 
@@ -147,227 +234,190 @@
     return sa < sb ? -1 : sa > sb ? 1 : 0;
   }
 
-  $: sortedItems = (() => {
-    if (!sortKey) return filteredItems;
-    const copy = filteredItems.slice();
-    copy.sort((a,b) => {
-      const res = compare(a,b,sortKey);
-      return sortDir === 'asc' ? res : -res;
-    });
-    return copy;
-  })();
+  let sortedItems = $derived(
+    (() => {
+      if (!sortKey) return filteredItems;
+      const copy = filteredItems.slice();
+      copy.sort((a, b) => {
+        const res = compare(a, b, sortKey);
+        return sortDir === 'asc' ? res : -res;
+      });
+      return copy;
+    })(),
+  );
 
   // expose total items for DataTableControls
-  $: totalItems = sortedItems.length;
+  let totalItems = $derived(sortedItems.length);
 
   // Pagination
-  $: totalPages = Math.max(1, Math.ceil(sortedItems.length / perPage));
-  $: currentPage = Math.min(currentPage, totalPages);
-  $: paginatedItems = sortedItems.slice((currentPage-1)*perPage, currentPage*perPage);
+  let totalPages = $derived(Math.max(1, Math.ceil(sortedItems.length / perPage)));
+
+  $effect(() => {
+    if (currentPage > totalPages) {
+      currentPage = totalPages;
+    }
+  });
+
+  let paginatedItems = $derived(
+    sortedItems.slice((currentPage - 1) * perPage, currentPage * perPage),
+  );
 
   // For VirtualList we pass the paginatedItems so the visible window is virtualized per page
-  $: visibleItems = paginatedItems;
+  let visibleItems = $derived(paginatedItems);
 
-  // Helper functions for pagination controls
-  function setSort(key) {
+  // sort callback used by DataTable (event-based)
+  function onSort(key) {
     if (sortKey === key) {
       sortDir = sortDir === 'asc' ? 'desc' : 'asc';
     } else {
       sortKey = key;
       sortDir = 'asc';
     }
-  }
-
-  // Helper action: apply row-render-like DOM updates to a rendered <tr>
-  // Uses the original `rowRender` helper when available, falling back to manual updates.
-  function applyRowRender(node, payload) {
-    // payload is { item, index }
-    let { item, index } = payload || {};
-
-    function buildSyntheticRow(it) {
-      // Build a synthetic `row` expected by the original rowRender(row, tr, index)
-      // row.cells should be an array of objects where .data contains the column value
-      const cells = [];
-      // Ensure indices up to 12 exist per original mapping
-      // 0 ID,1 Title,2 State,3 Submitter,4 Affiliation,5 Track,6 TrackFull,7 TrackType,8 Type,9 Score,10 Submitted,11 Authors,12 AuthorsTooltip
-      cells[0] = { data: it.ID ?? '' };
-      cells[1] = { data: it.Title ?? '' };
-      cells[2] = { data: it.State ?? '' };
-      cells[3] = { data: it.Submitter ?? '' };
-      cells[4] = { data: it.Affiliation ?? '' };
-      cells[5] = { data: it.Track ?? '' };
-      cells[6] = { data: it.TrackFull ?? '[]' };
-      cells[7] = { data: it.TrackType ?? '' };
-      cells[8] = { data: it.Type ?? '' };
-      cells[9] = { data: it.Score ?? '' };
-      cells[10] = { data: it.Submitted ?? '' };
-      cells[11] = { data: it.Authors ?? '' };
-      cells[12] = { data: it.AuthorsTooltip ?? '' };
-      return { cells };
-    }
-
-    // Build a plain virtual `tr` whose structure matches what rowRender expects
-    function buildVirtualTr(visibleCount) {
-      const vtr = { childNodes: [] };
-      for (let i = 0; i < visibleCount; i++) {
-        vtr.childNodes[i] = { childNodes: [ { attributes: {} } ] };
-      }
-      return vtr;
-    }
-
-    function apply(it) {
-      // Prefer calling the original rowRender if available
-      try {
-        if (typeof rowRender === 'function') {
-          const synthetic = buildSyntheticRow(it);
-          const visibleCount = Math.max((node.children && node.children.length) || 0, (synthetic.cells || []).length || 0);
-          const vtr = buildVirtualTr(visibleCount);
-          // rowRender will write attributes into vtr.childNodes[x].childNodes[0].attributes
-          rowRender(synthetic, vtr, index);
-
-          // copy attributes from the virtual tr into the real DOM
-          for (let i = 0; i < vtr.childNodes.length; i++) {
-            const vcell = vtr.childNodes[i];
-            if (!vcell || !vcell.childNodes || !vcell.childNodes[0]) continue;
-            const attrs = vcell.childNodes[0].attributes || {};
-            const td = node.children[i];
-            if (!td) continue;
-            const el = td.firstElementChild || (td.querySelector && td.querySelector('*')) || td;
-            for (const name in attrs) {
-              if (!Object.prototype.hasOwnProperty.call(attrs, name)) continue;
-              try { el.setAttribute(name, attrs[name]); } catch (e) { /* ignore */ }
-            }
-          }
-          return;
-        }
-      } catch (err) {
-        console.error('rowRender call failed, falling back to manual apply:', err);
-      }
-
-      // Fallback: manual DOM updates similar to previous implementation
-      try {
-        // Title link
-        const titleCell = node.children[1];
-        const titleAnchor = titleCell && (titleCell.querySelector('.title-link') || titleCell.querySelector('a'));
-        if (titleAnchor) {
-          if (it.ID != null) titleAnchor.setAttribute('data-id', String(it.ID));
-          if (it.Title != null) titleAnchor.setAttribute('data-title', String(it.Title));
-        }
-
-        // Track link
-        const trackCell = node.children[5];
-        const trackAnchor = trackCell && (trackCell.querySelector('.track-link') || trackCell.querySelector('a'));
-        if (trackAnchor) {
-          if (it.TrackFull != null) trackAnchor.setAttribute('data-tracks', String(it.TrackFull));
-          trackAnchor.classList.remove('track-accepted', 'track-reviewed');
-          if (it.TrackType === 'accepted') trackAnchor.classList.add('track-accepted');
-          else trackAnchor.classList.add('track-reviewed');
-        }
-
-        // Authors tooltip
-        const authorsCell = node.children[9];
-        const authorsSpan = authorsCell && (authorsCell.querySelector('.authors-cell') || authorsCell.querySelector('span'));
-        if (authorsSpan && it.AuthorsTooltip != null) {
-          authorsSpan.setAttribute('title', String(it.AuthorsTooltip));
-        }
-      } catch (err) {
-        console.error('applyRowRender fallback error', err);
-      }
-    }
-
-    // initial apply
-    apply(item);
-
-    return {
-      update(newPayload) {
-        ({ item, index } = newPayload || {});
-        apply(item);
-      },
-      destroy() {
-        // nothing to cleanup
-      }
-    };
+    currentPage = 1;
   }
 </script>
 
-<div class="flex flex-col overflow-hidden mt-8 px-1" style="height: calc(100vh - 8rem);">
-  <div class="sticky top-0 z-10 bg-transparent py-1 border-b border-gray-200 dark:border-gray-700 mb-2 shrink-0">
+<!-- Row snippet for AbstractTableView (moved out of <script>) -->
+{#snippet rowSnippet({ item, index, select, selected })}
+  <tr
+    onclick={() => {
+      try {
+        select && select();
+      } catch (e) {}
+    }}
+    tabindex="0"
+    class="cursor-pointer"
+    class:selected-row={selected && String(selected.ID) === String(item.ID)}
+    aria-selected={selected && String(selected.ID) === String(item.ID)}
+  >
+    {#each mappedColumns as col}
+      <td class={col.nowrap ? 'nowrap' : ''}>
+        {#if col.id === 'ID'}
+          {item.ID}
+        {:else if col.id === 'Title'}
+          <TitleLink
+            as="button"
+            onclick={() => openAbstract(item.ID)}
+            data-id={item.ID}
+            data-title={item.Title}>{item.Title}</TitleLink
+          >
+        {:else if col.id === 'State'}
+          {#if item.State}
+            <span
+              class={item.State.toLowerCase() === 'accepted'
+                ? 'state-badge state-accepted'
+                : item.State.toLowerCase() === 'rejected'
+                  ? 'state-badge state-rejected'
+                  : 'state-badge state-other'}>{item.State}</span
+            >
+          {/if}
+        {:else if col.id === 'Track'}
+          {#if item.Track}
+            <TrackBadge
+              text={item.Track}
+              as="button"
+              className={(item.TrackType === 'accepted' ? 'track-accepted' : 'track-reviewed') +
+                ' track-link'}
+              onclick={() => openTrack(item.TrackFull)}
+              {...{ 'data-tracks': item.TrackFull }}
+            />
+          {/if}
+        {:else if col.id === 'Type'}
+          {#if item.Type}
+            <TypeBadge text={item.Type} />
+          {/if}
+        {:else if col.id === 'Authors'}
+          {#if item.Authors}
+            <span class="authors-cell" title={item.AuthorsTooltip}>{item.Authors}</span>
+          {/if}
+        {:else}
+          {item[col.id]}
+        {/if}
+      </td>
+    {/each}
+  </tr>
+{/snippet}
+
+<div class="flex flex-col overflow-auto px-1" style="height:calc(100vh - 8rem);">
+  <div
+    class="sticky top-0 z-10 bg-transparent
+              px-2 py-2 rounded-md border-gray-200 dark:border-gray-700
+              mb-2 mt-2 shrink-0 shadow-md dark:shadow-black/40"
+  >
     <DataTableControls
       search={searchQuery}
-      currentPage={currentPage}
-      perPage={perPage}
+      {currentPage}
+      bind:perPage
       {totalItems}
-      pagechange={(payload) => { currentPage = payload.currentPage }}
-      searchchange={(payload) => { searchQuery = payload.search }}
+      pagechange={(payload) => {
+        currentPage = payload.currentPage;
+      }}
+      searchchange={(payload) => {
+        searchQuery = payload.search;
+      }}
+      {columnFilters}
+      {activeFilters}
+      filterChange={handleFilterChange}
+      filtersVisible={false}
     />
   </div>
 
-  <section class="flex flex-col flex-1 max-h-screen overflow-hidden">
-    <VirtualDataTable
+  <section class="flex-1 overflow-auto flex flex-col max-h-screen min-h-0">
+    <DataTable
       items={visibleItems}
       {visibleKeys}
-      bind:sortKey
-      bind:sortDir
-      className="datatable-table"
-      style="width:100%;height:100%;"
-      on:sort={(e) => setSort(e.detail)}
-      colWidths={{ ID: '6%', Title: '30%', State: '8%', Submitter: '12%', Affiliation: '12%', Track: '8%', Type: '6%', Score: '5%', Submitted: '7%', Authors: '6%' }}
-    >
-      <svelte:fragment slot="default" let:item let:index>
-        <tr use:applyRowRender={{ item, index }}>
-          <td>{item.ID}</td>
-          <td>
-            <button type="button" class="title-link" on:click={() => openAbstract(item.ID)} data-id={item.ID} data-title={item.Title}>{item.Title}</button>
-          </td>
-          <td>
-            {#if item.State}
-              <span class={item.State.toLowerCase() === 'accepted' ? 'state-badge state-accepted' : (item.State.toLowerCase() === 'rejected' ? 'state-badge state-rejected' : 'state-badge state-other')}>{item.State}</span>
-            {/if}
-          </td>
-          <td>{item.Submitter}</td>
-          <td>{item.Affiliation}</td>
-          <td>
-            {#if item.Track}
-              <button type="button" class={'track-badge ' + (item.TrackType === 'accepted' ? 'track-accepted' : 'track-reviewed') + ' track-link'} on:click={() => openTrack(item.TrackFull)} data-tracks={item.TrackFull}>{item.Track}</button>
-            {/if}
-          </td>
-          <td>
-            {#if item.Type}
-              <TypeBadge text={item.Type} />
-            {/if}
-          </td>
-          <td>{item.Score}</td>
-          <td>{item.Submitted}</td>
-          <td>
-            {#if item.Authors}
-              <span class="authors-cell" title={item.AuthorsTooltip}>{item.Authors}</span>
-            {/if}
-          </td>
-        </tr>
-      </svelte:fragment>
-    </VirtualDataTable>
+      {sortKey}
+      {sortDir}
+      sortCallback={onSort}
+      className="datatable-table w-full mt-0.5 mb-2 overflow-auto min-h-0"
+      {colWidths}
+      virtualize={false}
+      {rowSnippet}
+    />
   </section>
 </div>
 
- <!-- Abstract Detail Dialog -->
- <AbstractDetailsDialog bind:open={showAbstractDialog} abstract={selectedAbstract} />
+<!-- Abstract Detail Dialog -->
+<AbstractDetailsDialog bind:open={showAbstractDialog} abstract={selectedAbstract} />
 
- <!-- Track Details Dialog -->
- <TrackDetailsDialog bind:open={showTrackDialog} tracks={selectedTracks} allTracks={allAvailableTracks} />
+<!-- Track Details Dialog -->
+<TrackDetailsDialog
+  bind:open={showTrackDialog}
+  tracks={selectedTracks}
+  allTracks={allAvailableTracks}
+/>
 
 <style>
   /* Component-specific styling for AbstractTableView */
-  
-  /* State badge styling - specific to AbstractTableView */
-  :global(.state-badge) {
+
+  /* State badge styling - specific to AbstractTableView (scoped) */
+  .state-badge {
     font-size: 0.75rem;
     padding: 0.25rem 0.5rem;
     border-radius: 0.25rem;
     font-weight: 500;
   }
 
-  /* Authors cell with tooltip */
-  :global(.authors-cell) {
+  /* State variants (scoped to this component) */
+  .state-accepted {
+    background-color: #dcfce7;
+    color: #166534;
+  }
+
+  .state-rejected {
+    background-color: #fee2e2;
+    color: #991b1b;
+  }
+
+  .state-other {
+    background-color: #fef3c7;
+    color: #92400e;
+  }
+
+  /* Authors cell with tooltip (scoped) */
+  .authors-cell {
     cursor: help;
   }
+
+  /* Other table/badge helpers moved to shared CSS */
 </style>
