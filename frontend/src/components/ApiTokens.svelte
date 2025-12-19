@@ -1,4 +1,6 @@
 <script>
+  import { AddAPIToken, DeleteAPIToken } from '../../wailsjs/go/main/App';
+
   let {
     apiTokens = [],
     disabled = false,
@@ -19,7 +21,9 @@
 
   function openEdit(i) {
     editingIndex = i;
+    // copy metadata but never expose the stored secret; leave token input blank so user can enter a new secret if desired
     token = Object.assign({}, apiTokens[i]);
+    token.token = '';
     showModal = true;
   }
 
@@ -27,19 +31,67 @@
     showModal = false;
   }
 
-  function onSave() {
+  async function onSave() {
     // basic validation
     if (!token.name || token.name.trim() === '') return;
-    if (editingIndex >= 0) {
-      onEdit({ index: editingIndex, entry: token });
+
+    const entry = {
+      name: token.name.trim(),
+      baseUrl: token.baseUrl,
+      username: token.username || '',
+      token: '',
+    };
+
+    // If adding
+    if (editingIndex < 0) {
+      // raw token must be provided when adding
+      if (!token.token || token.token.trim() === '') {
+        alert('Please provide the token value to store in the system keyring.');
+        return;
+      }
+      try {
+        await AddAPIToken(entry, token.token);
+      } catch (e) {
+        alert('Failed to store token: ' + (e && e.message ? e.message : e));
+        return;
+      }
+      // set metadata token field to indicate managed status
+      entry.token = 'managed by system keyring';
+      onAdd(entry);
     } else {
-      onAdd(token);
+      // editing existing entry
+      const payload = { index: editingIndex, entry: Object.assign({}, apiTokens[editingIndex]) };
+      // update metadata fields
+      payload.entry.name = entry.name;
+      payload.entry.baseUrl = entry.baseUrl;
+      payload.entry.username = entry.username;
+
+      // if user provided a new raw token, store it (overwrite existing secret)
+      if (token.token && token.token.trim() !== '') {
+        try {
+          await AddAPIToken(payload.entry, token.token);
+        } catch (e) {
+          alert('Failed to update token: ' + (e && e.message ? e.message : e));
+          return;
+        }
+        payload.entry.token = 'managed by system keyring';
+      }
+
+      onEdit(payload);
     }
+
     showModal = false;
   }
 
-  function onDeleteClick(i) {
-    if (!confirm(`Delete API token "${apiTokens[i].name}"?`)) return;
+  async function onDeleteClick(i) {
+    if (!confirm(`Delete API token "${apiTokens[i].name}"? This will remove the secret from the system keyring.`)) return;
+    const name = apiTokens[i].name;
+    try {
+      await DeleteAPIToken(name);
+    } catch (e) {
+      alert('Failed to delete token from keyring: ' + (e && e.message ? e.message : e));
+      return;
+    }
     onDelete(i);
   }
 </script>
