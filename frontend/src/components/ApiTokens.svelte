@@ -1,5 +1,6 @@
 <script>
   import { AddAPIToken, DeleteAPIToken, RevealAPIToken } from '../../wailsjs/go/main/App';
+  import ConfirmDialog from './ConfirmDialog.svelte';
 
   let {
     apiTokens = [],
@@ -16,6 +17,15 @@
 
   // reveal state for the Reveal modal
   let reveal = $state({ show: false, name: '', token: '', loading: false, error: '' });
+
+  // Confirm dialog state for delete/reveal operations
+  let showDeleteTokenConfirm = $state(false);
+  let deleteTokenIndex = $state(-1);
+  let deleteTokenName = $state('');
+
+  let showRevealTokenConfirm = $state(false);
+  let revealTokenIndex = $state(-1);
+  let revealTokenName = $state('');
 
   function openAdd() {
     editingIndex = -1;
@@ -93,12 +103,32 @@
   }
 
   async function onDeleteClick(i) {
-    if (
-      !confirm(
-        `Delete API token "${apiTokens[i].name}"? This will remove the secret from the system keyring.`,
-      )
-    )
-      return;
+    // open confirm dialog and handle deletion on confirm
+    deleteTokenIndex = i;
+    deleteTokenName = apiTokens[i].name;
+    showDeleteTokenConfirm = true;
+  }
+
+  async function onRevealClick(i) {
+    // Ask user to confirm reveal action via ConfirmDialog, actual reveal proceeds on confirm
+    revealTokenIndex = i;
+    revealTokenName = apiTokens[i].name;
+    showRevealTokenConfirm = true;
+  }
+
+  function closeReveal() {
+    reveal.show = false;
+    reveal.name = '';
+    reveal.token = '';
+    reveal.loading = false;
+    reveal.error = '';
+  }
+
+  // Handlers for ConfirmDialog events
+  async function handleConfirmDelete() {
+    const i = deleteTokenIndex;
+    showDeleteTokenConfirm = false;
+    if (i < 0 || i >= apiTokens.length) return;
     const name = apiTokens[i].name;
     try {
       await DeleteAPIToken(name);
@@ -107,11 +137,21 @@
       return;
     }
     onDelete(i);
+    deleteTokenIndex = -1;
+    deleteTokenName = '';
   }
 
-  async function onRevealClick(i) {
+  function handleCancelDelete() {
+    showDeleteTokenConfirm = false;
+    deleteTokenIndex = -1;
+    deleteTokenName = '';
+  }
+
+  async function handleConfirmReveal() {
+    const i = revealTokenIndex;
+    showRevealTokenConfirm = false;
+    if (i < 0 || i >= apiTokens.length) return;
     const name = apiTokens[i].name;
-    if (!confirm(`Reveal API token for "${name}"? The value will be shown on screen.`)) return;
     reveal.show = true;
     reveal.name = name;
     reveal.loading = true;
@@ -125,14 +165,14 @@
     } finally {
       reveal.loading = false;
     }
+    revealTokenIndex = -1;
+    revealTokenName = '';
   }
 
-  function closeReveal() {
-    reveal.show = false;
-    reveal.name = '';
-    reveal.token = '';
-    reveal.loading = false;
-    reveal.error = '';
+  function handleCancelReveal() {
+    showRevealTokenConfirm = false;
+    revealTokenIndex = -1;
+    revealTokenName = '';
   }
 
   async function copyToClipboard(text) {
@@ -406,4 +446,27 @@
       </div>
     </div>
   {/if}
+
+  <!-- Confirm dialogs for delete and reveal actions -->
+  <ConfirmDialog
+    bind:open={showDeleteTokenConfirm}
+    title="Delete API Token"
+    message={`Delete API token "${deleteTokenName || ''}"? This will remove the secret from the system keyring.`}
+    confirmLabel="Delete"
+    cancelLabel="Cancel"
+    danger={true}
+    onConfirm={handleConfirmDelete}
+    onCancel={handleCancelDelete}
+  />
+
+  <ConfirmDialog
+    bind:open={showRevealTokenConfirm}
+    title="Reveal API Token"
+    message={`Reveal API token for "${revealTokenName || ''}"? The value will be shown on screen.`}
+    confirmLabel="Reveal"
+    cancelLabel="Cancel"
+    danger={false}
+    onConfirm={handleConfirmReveal}
+    onCancel={handleCancelReveal}
+  />
 </div>
