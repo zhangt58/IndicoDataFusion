@@ -21,6 +21,8 @@ type DataSourceHandler struct {
 	dataDir    string
 	isTestMode bool
 	cache      *Cache
+	// initProblems collects non-fatal initialization issues (e.g., missing API token)
+	initProblems []string
 }
 
 // NewDataSourceHandler creates a new data source handler with optional cache config
@@ -74,29 +76,57 @@ func NewDataSourceHandler(ds *DataSource, cacheConfig *CacheConfig, tokens []API
 		apiToken := ""
 		// APITokenName is required now
 		if ds.Indico.APITokenName == "" {
-			return nil, fmt.Errorf("indico data source %s must specify api_token_name", ds.Name)
+			// Previously this was a hard error; make it a non-fatal init problem so the
+			// app can continue and the UI can prompt the user to add a token.
+			handler.initProblems = append(handler.initProblems, fmt.Sprintf("data source %s: missing api_token_name", ds.Name))
+			log.Printf("Warning: %s", handler.initProblems[len(handler.initProblems)-1])
+			// Leave client nil so API calls will return a clear error; UI can add the token
+			handler.isTestMode = false
+			return handler, nil
 		}
 		// tokens must be provided to resolve api_token_name
 		if tokens == nil {
-			return nil, fmt.Errorf("api tokens not provided for data source %s; api_token_name %s cannot be resolved", ds.Name, ds.Indico.APITokenName)
+			// Record a non-fatal problem and continue; the UI can prompt the user to supply tokens
+			handler.initProblems = append(handler.initProblems, fmt.Sprintf("api tokens not provided for data source %s; api_token_name %s cannot be resolved", ds.Name, ds.Indico.APITokenName))
+			log.Printf("Warning: %s", handler.initProblems[len(handler.initProblems)-1])
+			// Leave client nil so API calls will return a clear error; app/UI can fix tokens and reinitialize handler
+			handler.isTestMode = false
+			return handler, nil
 		}
 		// Match by Name only
 		target := ds.Indico.APITokenName
+		var matched *APITokenEntry
 		for _, e := range tokens {
 			if e.Name == target {
-				apiToken = e.Token
-				// If token is empty in config, try keyring
-				if apiToken == "" {
-					if secret, err := GetAPITokenSecret(e.Name); err == nil {
-						apiToken = secret
-					}
-				}
+				// copy the entry so we can inspect it
+				entry := e
+				matched = &entry
 				break
 			}
 		}
-		// If not found, error out
+		if matched == nil {
+			// Not found in config list - record problem and continue
+			handler.initProblems = append(handler.initProblems, fmt.Sprintf("api token %q for data source %s not found in provided api-tokens", ds.Indico.APITokenName, ds.Name))
+			log.Printf("Warning: %s", handler.initProblems[len(handler.initProblems)-1])
+			// Leave client nil so API calls will return a clear error; UI can add the token
+			handler.isTestMode = false
+			return handler, nil
+		}
+
+		// Prefer token in config entry
+		apiToken = matched.Token
+		// If token is empty in config, try keyring
 		if apiToken == "" {
-			return nil, fmt.Errorf("api token %q for data source %s not found in provided api-tokens", ds.Indico.APITokenName, ds.Name)
+			if secret, err := GetAPITokenSecret(matched.Name); err == nil {
+				apiToken = secret
+			} else {
+				// keyring lookup failed or not present - record problem but continue
+				handler.initProblems = append(handler.initProblems, fmt.Sprintf("api token %q for data source %s has no token in config or keyring", ds.Indico.APITokenName, ds.Name))
+				log.Printf("Warning: %s", handler.initProblems[len(handler.initProblems)-1])
+				// Leave client nil so API calls will return a clear error; UI can add the token
+				handler.isTestMode = false
+				return handler, nil
+			}
 		}
 
 		// Initialize Indico client
@@ -114,6 +144,7 @@ func NewDataSourceHandler(ds *DataSource, cacheConfig *CacheConfig, tokens []API
 		}
 		handler.client = client
 		handler.isTestMode = false
+		log.Printf("Used Indico API token for %s: (%s) [REDACTED]", ds.Name, ds.Indico.APITokenName)
 	} else if ds.Test != nil {
 		// Test mode with local files
 		handler.dataDir, _ = filepath.Abs(ds.Test.DataDir)
@@ -123,6 +154,14 @@ func NewDataSourceHandler(ds *DataSource, cacheConfig *CacheConfig, tokens []API
 	}
 
 	return handler, nil
+}
+
+// GetInitProblems returns any non-fatal initialization problems encountered when creating the handler.
+func (h *DataSourceHandler) GetInitProblems() []string {
+	if h == nil {
+		return nil
+	}
+	return h.initProblems
 }
 
 // parseSize parses size strings like "100MB", "1GB", "512KB"
@@ -685,3 +724,5 @@ func (h *DataSourceHandler) SetCacheOnEvict(cb func(fullKey string)) {
 	}
 	h.cache.SetOnEvict(cb)
 }
+
+// End of DataSourceHandler methods

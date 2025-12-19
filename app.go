@@ -178,6 +178,8 @@ func (a *App) startup(ctx context.Context, configPath string) {
 	// Notify frontend of the active data source name so UI (titlebar) can display it
 	if a.handler != nil {
 		runtime.EventsEmit(a.ctx, "app:datasource", a.DataSourceName)
+		// Emit init problems so UI can show token-related issues
+		runtime.EventsEmit(a.ctx, "app:initproblems", a.GetInitProblems())
 	}
 
 	a.registerCacheCallbacks()
@@ -318,6 +320,8 @@ func (a *App) ApplyConfigYAML(yamlContent string) error {
 	// Notify frontend of the active data source name after reload
 	if a.handler != nil {
 		runtime.EventsEmit(a.ctx, "app:datasource", a.DataSourceName)
+		// Emit init problems so UI can show token-related issues
+		runtime.EventsEmit(a.ctx, "app:initproblems", a.GetInitProblems())
 	}
 
 	a.registerCacheCallbacks()
@@ -370,6 +374,8 @@ func (a *App) ApplyStructuredConfigUI(configData *backend.ConfigDataUI) error {
 	// Notify frontend of the active data source name after structured config reload
 	if a.handler != nil {
 		runtime.EventsEmit(a.ctx, "app:datasource", a.DataSourceName)
+		// Emit init problems so UI can show token-related issues
+		runtime.EventsEmit(a.ctx, "app:initproblems", a.GetInitProblems())
 	}
 
 	a.registerCacheCallbacks()
@@ -600,4 +606,12 @@ func (a *App) registerCacheCallbacks() {
 			"data_source_name": dataSourceName,
 		})
 	})
+}
+
+// GetInitProblems returns any non-fatal initialization problems encountered when creating the handler.
+func (a *App) GetInitProblems() []string {
+	if a == nil || a.handler == nil {
+		return []string{}
+	}
+	return a.handler.GetInitProblems()
 }
