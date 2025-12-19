@@ -64,7 +64,7 @@
         return;
       }
       // set metadata token field to indicate managed status
-      entry.token = 'managed by system keyring';
+      entry.token = '';
       onAdd(entry);
     } else {
       // editing existing entry
@@ -83,7 +83,7 @@
           alert('Failed to update token: ' + (e && e.message ? e.message : e));
           return;
         }
-        payload.entry.token = 'managed by system keyring';
+        payload.entry.token = '';
       }
 
       onEdit(payload);
@@ -164,7 +164,7 @@
       <button
         class="text-xs px-2 py-1 rounded bg-gray-200 dark:bg-gray-700"
         onclick={() => (showHelp = true)}
-        aria-label="What does 'managed by system keyring' mean?"
+        aria-label="What does empty token mean?"
       >
         ⓘ Info
       </button>
@@ -350,7 +350,7 @@
         }}
       ></div>
       <div class="relative z-50 w-full max-w-lg mx-4 bg-white dark:bg-gray-800 rounded-lg shadow-lg p-4 pointer-events-auto">
-        <h4 class="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">What "managed by system keyring" means</h4>
+        <h4 class="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">What the empty token means</h4>
         <p class="text-sm text-gray-700 dark:text-gray-300 mb-2">
           The actual API token value is not stored in the YAML configuration file. Instead, it is stored securely
           in your operating system's secret store (keychain/credential manager/Secret Service). The configuration
