@@ -178,6 +178,8 @@ func (a *App) startup(ctx context.Context, configPath string) {
 	// Notify frontend of the active data source name so UI (titlebar) can display it
 	if a.handler != nil {
 		runtime.EventsEmit(a.ctx, "app:datasource", a.DataSourceName)
+		// Emit init problems so UI can show token-related issues
+		runtime.EventsEmit(a.ctx, "app:initproblems", a.GetInitProblems())
 	}
 
 	a.registerCacheCallbacks()
@@ -318,6 +320,8 @@ func (a *App) ApplyConfigYAML(yamlContent string) error {
 	// Notify frontend of the active data source name after reload
 	if a.handler != nil {
 		runtime.EventsEmit(a.ctx, "app:datasource", a.DataSourceName)
+		// Emit init problems so UI can show token-related issues
+		runtime.EventsEmit(a.ctx, "app:initproblems", a.GetInitProblems())
 	}
 
 	a.registerCacheCallbacks()
@@ -370,6 +374,8 @@ func (a *App) ApplyStructuredConfigUI(configData *backend.ConfigDataUI) error {
 	// Notify frontend of the active data source name after structured config reload
 	if a.handler != nil {
 		runtime.EventsEmit(a.ctx, "app:datasource", a.DataSourceName)
+		// Emit init problems so UI can show token-related issues
+		runtime.EventsEmit(a.ctx, "app:initproblems", a.GetInitProblems())
 	}
 
 	a.registerCacheCallbacks()
@@ -469,6 +475,95 @@ func (a *App) GetCacheEntries() map[string][]*backend.CacheEntry {
 	return a.handler.GetCacheEntries()
 }
 
+// AddAPIToken stores the token secret in OS keyring and updates the config metadata (without storing the raw token in YAML).
+func (a *App) AddAPIToken(entry backend.APITokenEntry, rawToken string) error {
+	// store in keyring
+	if err := backend.SetAPITokenSecret(entry.Name, rawToken); err != nil {
+		return errors.Wrap(err, "failed to store token in keyring")
+	}
+
+	// load existing structured config
+	cfgData, err := a.GetStructuredConfigUI()
+	if err != nil {
+		return errors.Wrap(err, "failed to load structured config")
+	}
+	// ensure apiTokens list exists and replace/add entry (but clear token field)
+	if cfgData.APITokens == nil {
+		cfgData.APITokens = []backend.APITokenEntry{}
+	}
+	found := false
+	for i := range cfgData.APITokens {
+		if cfgData.APITokens[i].Name == entry.Name {
+			cfgData.APITokens[i].BaseURL = entry.BaseURL
+			cfgData.APITokens[i].Username = entry.Username
+			// clear token in persisted metadata
+			cfgData.APITokens[i].Token = ""
+			found = true
+			break
+		}
+	}
+	if !found {
+		entry.Token = ""
+		cfgData.APITokens = append(cfgData.APITokens, entry)
+	}
+
+	// Save via ApplyStructuredConfigUI which will persist the metadata
+	if err := a.ApplyStructuredConfigUI(cfgData); err != nil {
+		return errors.Wrap(err, "failed to persist API token metadata")
+	}
+	return nil
+}
+
+// DeleteAPIToken removes the secret from keyring and the metadata from config
+func (a *App) DeleteAPIToken(name string) error {
+	if name == "" {
+		return errors.Errorf("token name required")
+	}
+	if err := backend.DeleteAPITokenSecret(name); err != nil {
+		return errors.Wrap(err, "failed to delete token from keyring")
+	}
+	cfgData, err := a.GetStructuredConfigUI()
+	if err != nil {
+		return errors.Wrap(err, "failed to load structured config")
+	}
+	newList := []backend.APITokenEntry{}
+	for _, e := range cfgData.APITokens {
+		if e.Name != name {
+			newList = append(newList, e)
+		}
+	}
+	cfgData.APITokens = newList
+	if err := a.ApplyStructuredConfigUI(cfgData); err != nil {
+		return errors.Wrap(err, "failed to persist API token metadata after delete")
+	}
+	return nil
+}
+
+// HasAPITokenSecret checks whether a token with the given name exists in keyring (without returning the secret)
+func (a *App) HasAPITokenSecret(name string) (bool, error) {
+	if name == "" {
+		return false, errors.Errorf("token name required")
+	}
+	_, err := backend.GetAPITokenSecret(name)
+	if err != nil {
+		// keyring returns "secret not found" style errors; treat any error as absent
+		return false, nil
+	}
+	return true, nil
+}
+
+// RevealAPIToken returns the token value for a given name. Use with care (UI should prompt the user).
+func (a *App) RevealAPIToken(name string) (string, error) {
+	if name == "" {
+		return "", errors.Errorf("token name required")
+	}
+	tok, err := backend.GetAPITokenSecret(name)
+	if err != nil {
+		return "", errors.Wrap(err, "failed to read token from keyring")
+	}
+	return tok, nil
+}
+
 // shutdown is called when the app is shutting down
 func (a *App) shutdown(ctx context.Context) {
 	if a.handler != nil {
@@ -511,4 +606,12 @@ func (a *App) registerCacheCallbacks() {
 			"data_source_name": dataSourceName,
 		})
 	})
+}
+
+// GetInitProblems returns any non-fatal initialization problems encountered when creating the handler.
+func (a *App) GetInitProblems() []string {
+	if a == nil || a.handler == nil {
+		return []string{}
+	}
+	return a.handler.GetInitProblems()
 }

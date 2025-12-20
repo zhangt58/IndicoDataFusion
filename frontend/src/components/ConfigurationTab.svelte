@@ -4,6 +4,7 @@
   import DataSources from './DataSources.svelte';
   import IndicoConfig from './IndicoConfig.svelte';
   import ApiTokens from './ApiTokens.svelte';
+  import ConfirmDialog from './ConfirmDialog.svelte';
 
   let configData = $state(null);
   let loading = $state(true);
@@ -454,59 +455,16 @@
       onToggle={(index) => toggleSource(index)}
     />
 
-    <!-- Delete Confirmation Modal -->
-    {#if showDeleteConfirm}
-      <div class="fixed inset-0 z-40 flex items-center justify-center">
-        <div
-          class="absolute inset-0 bg-black/40"
-          role="button"
-          tabindex="0"
-          aria-label="Close dialog"
-          onclick={cancelDelete}
-          onkeydown={(e) => {
-            if (e.key === 'Enter' || e.key === ' ' || e.key === 'Spacebar') {
-              e.preventDefault();
-              cancelDelete();
-            }
-          }}
-        ></div>
-        <div
-          role="dialog"
-          aria-modal="true"
-          tabindex="0"
-          onkeydown={(e) => {
-            if (e.key === 'Escape') {
-              e.stopPropagation();
-              cancelDelete();
-            }
-          }}
-          class="relative z-50 w-full max-w-md mx-4 bg-white dark:bg-gray-800 rounded-lg shadow-lg p-4 pointer-events-auto"
-        >
-          <h4 class="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-3">
-            Delete Data Source
-          </h4>
-          <p class="text-sm text-gray-700 dark:text-gray-300">
-            Are you sure you want to delete <strong>{deleteName || 'this data source'}</strong>?
-            This action cannot be undone.
-          </p>
-          <div class="mt-4 flex justify-end gap-2">
-            <button
-              type="button"
-              class="px-3 py-1 rounded bg-gray-200 dark:bg-gray-700 text-sm"
-              onclick={cancelDelete}>Cancel</button
-            >
-            <button
-              type="button"
-              class="px-3 py-1 rounded bg-red-600 text-white text-sm hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-red-400"
-              onclick={confirmDelete}
-              disabled={applying}
-            >
-              {applying ? 'Deleting...' : 'Delete'}
-            </button>
-          </div>
-        </div>
-      </div>
-    {/if}
+    <ConfirmDialog
+      bind:open={showDeleteConfirm}
+      title="Delete Data Source"
+      message={`Are you sure you want to delete "${deleteName || 'this data source'}"? This action cannot be undone.`}
+      confirmLabel={applying ? 'Deleting...' : 'Delete'}
+      cancelLabel="Cancel"
+      danger={true}
+      onConfirm={confirmDelete}
+      onCancel={cancelDelete}
+    />
 
     <!-- Advanced (collapsible): groups Cache Configuration + API Tokens -->
     <div

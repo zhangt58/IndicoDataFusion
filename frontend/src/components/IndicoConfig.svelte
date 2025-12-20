@@ -4,9 +4,8 @@
     initialName = '',
     existingNames = [],
     placeholders = {
-      baseUrl: 'https://indico.example.org',
+      baseUrl: 'https://indico.jacow.org',
       eventId: '123',
-      apiToken: 'indp_...',
       timeout: '60s',
     },
     saving = false,
@@ -47,7 +46,7 @@
     newIndico.eventId = parseInt(String(placeholders.eventId || '0'), 10) || 0;
     // If there are apiTokens available, default to the first name; otherwise, use placeholder
     newIndico.apiTokenName =
-      apiTokens && apiTokens.length > 0 ? apiTokens[0].name || '' : placeholders.apiToken || '';
+      apiTokens && apiTokens.length > 0 ? apiTokens[0].name || '' : '';
     newIndico.timeout = placeholders.timeout || '60s';
     newIndicoErrors = { name: '', baseUrl: '', eventId: '', timeout: '' };
   }
@@ -167,7 +166,12 @@
             type="text"
             bind:value={newIndico.baseUrl}
             class="w-full rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm"
+            placeholder={placeholders.baseUrl} list="baseUrl-suggestions"
           />
+          <datalist id="baseUrl-suggestions">
+            <option value="https://indico.jacow.org">https://indico.jacow.org</option>
+            <option value="https://indico.global">https://indico.global</option>
+          </datalist>
           {#if newIndicoErrors.baseUrl}
             <p class="text-xs text-red-500 mt-1">{newIndicoErrors.baseUrl}</p>
           {/if}
@@ -207,7 +211,6 @@
               id="new-indico-apiTokenName"
               type="text"
               bind:value={newIndico.apiTokenName}
-              placeholder={placeholders.apiToken}
               class="w-full rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm font-mono"
             />
           {/if}

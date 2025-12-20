@@ -17,6 +17,7 @@
   import Settings from './components/Settings.svelte';
   import TitleBar from './components/TitleBar.svelte';
   import StatusBar from './components/StatusBar.svelte';
+  import InitProblems from './components/InitProblems.svelte';
 
   let Router = LocalRouter;
 
@@ -84,6 +85,9 @@
 
 <!-- Custom Title Bar for frameless window -->
 <TitleBar />
+
+<!-- Initialization problems (token/config issues) -->
+<InitProblems />
 
 <div class="flex min-h-screen pt-12 overflow-hidden h-full pb-10">
   {#if isSidebarOpen}

@@ -3,11 +3,15 @@
 import {backend} from '../models';
 import {main} from '../models';
 
+export function AddAPIToken(arg1:backend.APITokenEntry,arg2:string):Promise<void>;
+
 export function ApplyConfigYAML(arg1:string):Promise<void>;
 
 export function ApplyStructuredConfigUI(arg1:backend.ConfigDataUI):Promise<void>;
 
 export function ClearCache():Promise<void>;
+
+export function DeleteAPIToken(arg1:string):Promise<void>;
 
 export function DeleteCacheEntry(arg1:string):Promise<void>;
 
@@ -43,6 +47,10 @@ export function GetEventInfo():Promise<backend.Event>;
 
 export function GetStructuredConfigUI():Promise<backend.ConfigDataUI>;
 
+export function HasAPITokenSecret(arg1:string):Promise<boolean>;
+
 export function IsTestMode():Promise<boolean>;
 
 export function RefreshCache(arg1:string):Promise<void>;
+
+export function RevealAPIToken(arg1:string):Promise<string>;

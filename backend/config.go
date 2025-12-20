@@ -1,10 +1,8 @@
 package backend
 
 import (
-	"fmt"
 	"os"
 	"path/filepath"
-	"strings"
 	"time"
 
 	"gopkg.in/yaml.v3"
@@ -331,32 +329,15 @@ func BuildConfigFromStructuredUI(configData *ConfigDataUI) *Config {
 
 // Validate checks configuration consistency and returns an error listing problems.
 func (c *Config) Validate() error {
-	var issues []string
+	// Previously this function enforced that every Indico data source must specify
+	// a non-empty api_token_name and that the name must exist in the top-level
+	// api-tokens list. To allow the UI to manage tokens interactively (and to
+	// tolerate configs where token names or the entire api-tokens section are
+	// omitted), we relax that validation here: token presence will be checked at
+	// runtime when initializing data sources and surfaced as non-fatal init
+	// problems so the frontend can prompt the user.
 
-	// Build a set of token names for quick lookup
-	tokenNames := make(map[string]bool)
-	for _, t := range c.APITokens {
-		if t.Name != "" {
-			tokenNames[t.Name] = true
-		}
-	}
-
-	// Check each data source
-	for name, raw := range c.DataSources {
-		// raw is map[string]any
-		if indicoFlag, ok := raw["indico"].(bool); ok && indicoFlag {
-			if apiTokenName, ok := raw["api_token_name"].(string); !ok || strings.TrimSpace(apiTokenName) == "" {
-				issues = append(issues, fmt.Sprintf("data source %q: missing or empty api_token_name", name))
-			} else {
-				if !tokenNames[apiTokenName] {
-					issues = append(issues, fmt.Sprintf("data source %q: api_token_name %q not found in api-tokens", name, apiTokenName))
-				}
-			}
-		}
-	}
-
-	if len(issues) > 0 {
-		return fmt.Errorf("config validation errors:\n%s", strings.Join(issues, "\n"))
-	}
+	// Keep this function available for other future validations; currently there
+	// are no strict errors to return here.
 	return nil
 }
