@@ -45,6 +45,8 @@ export function GetContributionsByTrack(arg1:string):Promise<Array<backend.Contr
 
 export function GetEventInfo():Promise<backend.Event>;
 
+export function GetInitProblems():Promise<Array<string>>;
+
 export function GetStructuredConfigUI():Promise<backend.ConfigDataUI>;
 
 export function HasAPITokenSecret(arg1:string):Promise<boolean>;

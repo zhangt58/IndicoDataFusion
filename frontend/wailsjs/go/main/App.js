@@ -86,6 +86,10 @@ export function GetEventInfo() {
   return window['go']['main']['App']['GetEventInfo']();
 }
 
+export function GetInitProblems() {
+  return window['go']['main']['App']['GetInitProblems']();
+}
+
 export function GetStructuredConfigUI() {
   return window['go']['main']['App']['GetStructuredConfigUI']();
 }
