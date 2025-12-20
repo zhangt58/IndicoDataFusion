@@ -1,6 +1,9 @@
 <script>
   import { AddAPIToken, DeleteAPIToken, RevealAPIToken } from '../../wailsjs/go/main/App';
   import ConfirmDialog from './ConfirmDialog.svelte';
+  import RevealDialog from './RevealDialog.svelte';
+  import { Toast } from 'flowbite-svelte';
+  import { tick } from 'svelte';
 
   let {
     apiTokens = [],
@@ -14,6 +17,31 @@
   let showHelp = $state(false);
   let editingIndex = $state(-1);
   let token = $state({ name: '', baseUrl: '', username: '', token: '' });
+
+  // toast state (local, transient feedback in place of alert())
+  let showToast = $state(false);
+  let toastMessage = $state('');
+  let toastType = $state('success'); // 'success' | 'error' | 'info'
+  let toastTimeoutId = null;
+
+  async function showToastMsg(msg, type = 'success', duration = 3500, placement = 'auto') {
+    if (toastTimeoutId) {
+      clearTimeout(toastTimeoutId);
+      toastTimeoutId = null;
+    }
+    toastMessage = msg || '';
+    toastType = type || 'success';
+
+    // Restart animation by toggling
+    showToast = false;
+    await tick();
+    showToast = true;
+
+    toastTimeoutId = setTimeout(() => {
+      showToast = false;
+      toastTimeoutId = null;
+    }, duration);
+  }
 
   // reveal state for the Reveal modal
   let reveal = $state({ show: false, name: '', token: '', loading: false, error: '' });
@@ -48,6 +76,8 @@
   }
 
   async function onSave() {
+    // onSave may be called from a click handler; no anchor tracking is performed
+
     // basic validation
     if (!token.name || token.name.trim() === '') return;
 
@@ -64,13 +94,13 @@
     if (editingIndex < 0) {
       // raw token must be provided when adding
       if (!token.token || token.token.trim() === '') {
-        alert('Please provide the token value to store in the system keyring.');
+        showToastMsg('Please provide the token value to store in the system keyring.', 'error');
         return;
       }
       try {
         await AddAPIToken(entry, token.token);
       } catch (e) {
-        alert('Failed to store token: ' + (e && e.message ? e.message : e));
+        showToastMsg('Failed to store token: ' + (e && e.message ? e.message : e), 'error');
         return;
       }
       // set metadata token field to indicate managed status
@@ -90,7 +120,7 @@
         try {
           await AddAPIToken(payload.entry, token.token);
         } catch (e) {
-          alert('Failed to update token: ' + (e && e.message ? e.message : e));
+          showToastMsg('Failed to update token: ' + (e && e.message ? e.message : e), 'error');
           return;
         }
         payload.entry.token = '';
@@ -133,7 +163,7 @@
     try {
       await DeleteAPIToken(name);
     } catch (e) {
-      alert('Failed to delete token from keyring: ' + (e && e.message ? e.message : e));
+      showToastMsg('Failed to delete token from keyring: ' + (e && e.message ? e.message : e), 'error');
       return;
     }
     onDelete(i);
@@ -174,35 +204,48 @@
     revealTokenIndex = -1;
     revealTokenName = '';
   }
-
-  async function copyToClipboard(text) {
-    try {
-      if (navigator && navigator.clipboard && navigator.clipboard.writeText) {
-        await navigator.clipboard.writeText(text);
-        alert('Token copied to clipboard');
-        return;
-      }
-    } catch (e) {
-      // fall through to textarea fallback
-    }
-    // fallback
-    const ta = document.createElement('textarea');
-    ta.value = text;
-    document.body.appendChild(ta);
-    ta.select();
-    try {
-      document.execCommand('copy');
-      alert('Token copied to clipboard');
-    } catch (e) {
-      alert('Copy failed');
-    }
-    ta.remove();
-  }
 </script>
 
 <div
   class="bg-gray-50 dark:bg-gray-800 rounded-lg shadow p-2 border border-gray-200 dark:border-gray-700"
 >
+  <!-- Toast (rendered inline near anchor) -->
+  {#if showToast}
+    <div class="right-4 bottom-4 w-72 fixed z-50" role="status" aria-live="polite">
+      {#if toastType === 'error'}
+        <Toast color="red">
+          {#snippet icon()}
+            <svg class="h-5 w-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+            <span class="sr-only">Error icon</span>
+          {/snippet}
+          <div class="flex items-center w-full">
+            <div class="font-medium text-gray-900 dark:text-gray-100">{toastMessage}</div>
+          </div>
+        </Toast>
+      {:else if toastType === 'info'}
+        <Toast color="blue">
+          {#snippet icon()}
+            <svg class="h-5 w-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01"/></svg>
+            <span class="sr-only">Info icon</span>
+          {/snippet}
+          <div class="flex items-center w-full">
+            <div class="font-medium text-gray-900 dark:text-gray-100">{toastMessage}</div>
+          </div>
+        </Toast>
+      {:else}
+        <Toast color="green">
+          {#snippet icon()}
+            <svg class="h-5 w-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+            <span class="sr-only">Success icon</span>
+          {/snippet}
+          <div class="flex items-center w-full">
+            <div class="font-medium text-gray-900 dark:text-gray-100">{toastMessage}</div>
+          </div>
+        </Toast>
+      {/if}
+    </div>
+  {/if}
+
   <div class="flex items-center justify-between">
     <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-1">API Tokens</h3>
     <div class="flex items-center gap-2">
@@ -351,49 +394,6 @@
     </div>
   {/if}
 
-  {#if reveal.show}
-    <div class="fixed inset-0 z-50 flex items-center justify-center">
-      <div
-        class="absolute inset-0 bg-black/40"
-        role="button"
-        tabindex="0"
-        onclick={closeReveal}
-        onkeydown={(e) => {
-          if (e.key === 'Enter' || e.key === ' ' || e.key === 'Spacebar' || e.key === 'Escape') {
-            e.preventDefault();
-            closeReveal();
-          }
-        }}
-      ></div>
-      <div
-        class="relative z-50 w-full max-w-md mx-4 bg-white dark:bg-gray-800 rounded-lg shadow-lg p-4 pointer-events-auto"
-      >
-        <h4 class="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-3">
-          Reveal API Token — {reveal.name ?? ''}
-        </h4>
-        {#if reveal.loading}
-          <p class="text-sm text-gray-600 dark:text-gray-400">Loading…</p>
-        {:else if reveal.error}
-          <p class="text-sm text-red-600">Error: {reveal.error}</p>
-        {:else}
-          <div class="mb-2">
-            <div class="block text-xs text-gray-600 dark:text-gray-400 mb-1">Token value</div>
-            <div class="font-mono wrap-break-word p-2 rounded bg-gray-100 dark:bg-gray-700 text-sm">
-              {reveal.token}
-            </div>
-          </div>
-          <div class="flex justify-end gap-2">
-            <button
-              class="px-2 py-1 rounded bg-gray-200"
-              onclick={() => copyToClipboard(reveal.token)}>Copy</button
-            >
-            <button class="px-2 py-1 rounded bg-gray-200" onclick={closeReveal}>Close</button>
-          </div>
-        {/if}
-      </div>
-    </div>
-  {/if}
-
   {#if showHelp}
     <div class="fixed inset-0 z-50 flex items-center justify-center">
       <div
@@ -433,7 +433,7 @@
             if you prefer.
           </li>
           <li>
-            The UI allows you to reveal a token temporarily (for copy). Use this cautiously and
+            The UI allows you to reveal a token temporarily. Use this cautiously and
             avoid pasting tokens into insecure places.
           </li>
         </ul>
@@ -469,4 +469,14 @@
     onConfirm={handleConfirmReveal}
     onCancel={handleCancelReveal}
   />
+
+  <RevealDialog
+    bind:open={reveal.show}
+    name={reveal.name}
+    token={reveal.token}
+    loading={reveal.loading}
+    error={reveal.error}
+    onClose={closeReveal}
+  />
+
 </div>
