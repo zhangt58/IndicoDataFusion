@@ -113,7 +113,7 @@
 
 <!-- Fixed status bar at the bottom of the window -->
 <div
-  class="fixed bottom-0 left-0 right-0 h-10 bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700 text-sm text-gray-700 dark:text-gray-300 flex items-center justify-between z-40 shadow-md dark:shadow-black/40"
+  class="fixed bottom-0 left-0 right-0 h-10 rounded-b-xl bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700 text-sm text-gray-700 dark:text-gray-300 flex items-center justify-between z-40 shadow-md dark:shadow-black/40"
   style="--wails-draggable: no-drag; padding-left:0.5rem; padding-right:0.5rem; z-index: 10000; box-shadow: 0 -8px 24px -16px rgba(0,0,0,0.6), 0 1px 0 rgba(0,0,0,0.04);"
 >
   {#if loading}
