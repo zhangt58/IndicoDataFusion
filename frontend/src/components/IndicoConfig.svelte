@@ -1,9 +1,9 @@
 <script>
   let {
     open = $bindable(false),
-    initialName = '',
     existingNames = [],
     placeholders = {
+      confName: 'Conference name, e.g. IPAC25',
       baseUrl: 'https://indico.jacow.org',
       eventId: '123',
       timeout: '60s',
@@ -14,26 +14,17 @@
     onCancel = () => {},
   } = $props();
 
-  /** @type {{name: string, baseUrl: string, eventId: number, apiTokenName: string, timeout: string}} */
-  let newIndico = $state(
-    /** @type {any} */ ({
-      name: '',
-      baseUrl: 'https://',
-      eventId: 0,
-      // store the selected token name (reference), not the raw token value
-      apiTokenName: '',
-      timeout: '60s',
-    }),
-  );
-  /** @type {{name?: string, baseUrl?: string, eventId?: string, timeout?: string}} */
-  let newIndicoErrors = $state(
-    /** @type {any} */ ({
-      name: '',
-      baseUrl: '',
-      eventId: '',
-      timeout: '',
-    }),
-  );
+  // component state for the new Indico entry
+  let newIndico = $state({
+    name: '',
+    baseUrl: 'https://',
+    eventId: 0,
+    // store the selected token name (reference), not the raw token value
+    apiTokenName: '',
+    timeout: '60s',
+  });
+  // validation errors for the form fields
+  let newIndicoErrors = $state({ name: '', baseUrl: '', eventId: '', timeout: '' });
 
   // initialize when opened
   $effect(() => {
@@ -41,7 +32,7 @@
   });
 
   function initialize() {
-    newIndico.name = initialName || getUniqueName('Conference Name');
+    newIndico.name = '';
     newIndico.baseUrl = placeholders.baseUrl || 'https://';
     newIndico.eventId = parseInt(String(placeholders.eventId || '0'), 10) || 0;
     // If there are apiTokens available, default to the first name; otherwise, use placeholder
@@ -51,23 +42,23 @@
     newIndicoErrors = { name: '', baseUrl: '', eventId: '', timeout: '' };
   }
 
-  function getUniqueName(base = 'Conference Name') {
-    if (!Array.isArray(existingNames) || existingNames.length === 0) return base;
-    const existing = new Set(existingNames.map((n) => String(n || '')));
-    if (!existing.has(base)) return base;
-    let i = 2;
-    while (existing.has(`${base} (${i})`)) i++;
-    return `${base} (${i})`;
-  }
-
   function validateNewIndico() {
     newIndicoErrors = { name: '', baseUrl: '', eventId: '', timeout: '' };
     let isValid = true;
     // name
-    if (!newIndico.name || String(newIndico.name).trim() === '') {
+    const trimmedName = String(newIndico.name || '').trim();
+    if (trimmedName === '') {
       newIndicoErrors.name = 'Name is required';
       isValid = false;
+    } else if (
+      Array.isArray(existingNames) &&
+      existingNames.some((n) => String(n || '').trim() === trimmedName)
+    ) {
+      // Name conflicts with an existing entry — report an error (no suggestion helper)
+      newIndicoErrors.name = 'Name already exists';
+      isValid = false;
     }
+
     // baseUrl
     try {
       const url = new URL(String(newIndico.baseUrl || '').trim());
@@ -92,7 +83,7 @@
     }
     // timeout
     const t = String(newIndico.timeout || '').trim();
-    if (!/^\d+(ms|s|m|h)$/.test(t)) {
+    if (!/^[0-9]+(ms|s|m|h)$/.test(t)) {
       newIndicoErrors.timeout = 'Timeout must be a duration like 500ms, 15s, 1m, or 2h';
       isValid = false;
     }
@@ -151,6 +142,7 @@
             type="text"
             bind:value={newIndico.name}
             class="w-full rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm"
+            placeholder={placeholders.confName}
           />
           {#if newIndicoErrors.name}
             <p class="text-xs text-red-500 mt-1">{newIndicoErrors.name}</p>
@@ -225,6 +217,7 @@
             type="text"
             bind:value={newIndico.timeout}
             class="w-full rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm"
+            placeholder={placeholders.timeout}
           />
           {#if newIndicoErrors.timeout}
             <p class="text-xs text-red-500 mt-1">{newIndicoErrors.timeout}</p>

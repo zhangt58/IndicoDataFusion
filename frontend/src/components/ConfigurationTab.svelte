@@ -57,9 +57,9 @@
   let nameErrors = $state({});
 
   let indicoDataSourcePlaceholders = {
-    baseUrl: 'https://indico.example.org',
+    confName: 'Conference name, e.g. IPAC25',
+    baseUrl: 'https://indico.jacow.org',
     eventId: '123',
-    apiToken: 'indp_...',
     timeout: '60s',
   };
 
@@ -72,10 +72,9 @@
 
   // -- Indico dialog integration: we use the extracted component --
   let indicoDialogOpen = $state(false);
-  let indicoDialogInitialName = $state('');
 
   function openAddIndicoDialog() {
-    indicoDialogInitialName = getUniqueName('Conference Name');
+    // Do not prefill a suggested name here; leave the dialog name empty so placeholder is visible
     indicoDialogOpen = true;
   }
 
@@ -86,16 +85,8 @@
     if (!configData) configData = {};
     if (!Array.isArray(configData.dataSources)) configData.dataSources = [];
 
-    // make name unique if collision
-    const existingNames = new Set(
-      configData.dataSources.map((ds) => (ds && ds.name ? String(ds.name) : '')),
-    );
-    let finalName = nameRaw || getUniqueName('Conference Name');
-    if (existingNames.has(finalName)) {
-      let i = 2;
-      while (existingNames.has(`${finalName} (${i})`)) i++;
-      finalName = `${finalName} (${i})`;
-    }
+    // Use provided name if present; otherwise leave name empty (validation will catch missing names)
+    const finalName = nameRaw || '';
 
     const newSource = {
       name: finalName,
@@ -127,22 +118,6 @@
     indicoDialogOpen = false;
   }
 
-  // Helper to create a unique default name
-  function getUniqueName(base = 'Conference Name') {
-    if (
-      !configData ||
-      !Array.isArray(configData.dataSources) ||
-      configData.dataSources.length === 0
-    )
-      return base;
-    const existing = new Set(
-      configData.dataSources.map((ds) => (ds && ds.name ? String(ds.name) : '')),
-    );
-    if (!existing.has(base)) return base;
-    let i = 2;
-    while (existing.has(`${base} (${i})`)) i++;
-    return `${base} (${i})`;
-  }
 
   // Validate data source names: non-empty and unique
   function validateNames() {
@@ -747,7 +722,6 @@
 <!-- IndicoConfig component for adding new Indico sources -->
 <IndicoConfig
   bind:open={indicoDialogOpen}
-  initialName={indicoDialogInitialName}
   existingNames={(configData?.dataSources || []).map((ds) => ds.name)}
   placeholders={indicoDataSourcePlaceholders}
   saving={applying}
