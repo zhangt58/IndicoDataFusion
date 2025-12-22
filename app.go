@@ -1,8 +1,11 @@
 package main
 
 import (
+	"IndicoDataFusion/backend/cache"
 	"IndicoDataFusion/backend/config"
 	"IndicoDataFusion/backend/consts"
+	"IndicoDataFusion/backend/data"
+	"IndicoDataFusion/backend/indico"
 	"IndicoDataFusion/backend/utils"
 	"context"
 	_ "embed"
@@ -10,8 +13,6 @@ import (
 	"os"
 	"strings"
 	"time"
-
-	"IndicoDataFusion/backend"
 
 	"github.com/pkg/errors"
 	"github.com/wailsapp/wails/v2/pkg/runtime"
@@ -27,7 +28,7 @@ var (
 // App struct
 type App struct {
 	ctx        context.Context
-	handler    *backend.DataSourceHandler
+	handler    *data.DataSourceHandler
 	configPath string
 	// DataSourceName caches the active data source name from the handler
 	DataSourceName string
@@ -52,7 +53,7 @@ func (a *App) startup(ctx context.Context, configPath string) {
 		os.Exit(1)
 	}
 
-	handler, err := backend.NewDataSourceHandlerFromConfigFile(configPath)
+	handler, err := data.NewDataSourceHandlerFromConfigFile(configPath)
 	if err != nil {
 		log.Printf("Error: Failed to initialize data handler from %s: %v\n", configPath, err)
 		os.Exit(1)
@@ -76,7 +77,7 @@ func (a *App) startup(ctx context.Context, configPath string) {
 }
 
 // GetEventInfo retrieves event information from the configured data source
-func (a *App) GetEventInfo() (*backend.Event, error) {
+func (a *App) GetEventInfo() (*indico.Event, error) {
 	if a.handler == nil {
 		return nil, errors.Errorf("data handler not initialized")
 	}
@@ -84,7 +85,7 @@ func (a *App) GetEventInfo() (*backend.Event, error) {
 }
 
 // GetAbstracts retrieves all abstracts from the configured data source
-func (a *App) GetAbstracts() ([]backend.AbstractData, error) {
+func (a *App) GetAbstracts() ([]indico.AbstractData, error) {
 	if a.handler == nil {
 		return nil, errors.Errorf("data handler not initialized")
 	}
@@ -92,7 +93,7 @@ func (a *App) GetAbstracts() ([]backend.AbstractData, error) {
 }
 
 // GetContributions retrieves all contributions from the configured data source
-func (a *App) GetContributions() ([]backend.ContributionData, error) {
+func (a *App) GetContributions() ([]indico.ContributionData, error) {
 	if a.handler == nil {
 		return nil, errors.Errorf("data handler not initialized")
 	}
@@ -100,7 +101,7 @@ func (a *App) GetContributions() ([]backend.ContributionData, error) {
 }
 
 // GetAbstractByID retrieves a specific abstract by ID
-func (a *App) GetAbstractByID(id int) (*backend.AbstractData, error) {
+func (a *App) GetAbstractByID(id int) (*indico.AbstractData, error) {
 	if a.handler == nil {
 		return nil, errors.Errorf("data handler not initialized")
 	}
@@ -108,7 +109,7 @@ func (a *App) GetAbstractByID(id int) (*backend.AbstractData, error) {
 }
 
 // GetAbstractsByState filters abstracts by their state
-func (a *App) GetAbstractsByState(state string) ([]backend.AbstractData, error) {
+func (a *App) GetAbstractsByState(state string) ([]indico.AbstractData, error) {
 	if a.handler == nil {
 		return nil, errors.Errorf("data handler not initialized")
 	}
@@ -116,7 +117,7 @@ func (a *App) GetAbstractsByState(state string) ([]backend.AbstractData, error) 
 }
 
 // GetContributionByID retrieves a specific contribution by ID
-func (a *App) GetContributionByID(id string) (*backend.ContributionData, error) {
+func (a *App) GetContributionByID(id string) (*indico.ContributionData, error) {
 	if a.handler == nil {
 		return nil, errors.Errorf("data handler not initialized")
 	}
@@ -124,7 +125,7 @@ func (a *App) GetContributionByID(id string) (*backend.ContributionData, error) 
 }
 
 // GetContributionsBySession filters contributions by session
-func (a *App) GetContributionsBySession(session string) ([]backend.ContributionData, error) {
+func (a *App) GetContributionsBySession(session string) ([]indico.ContributionData, error) {
 	if a.handler == nil {
 		return nil, errors.Errorf("data handler not initialized")
 	}
@@ -132,7 +133,7 @@ func (a *App) GetContributionsBySession(session string) ([]backend.ContributionD
 }
 
 // GetContributionsByTrack filters contributions by track
-func (a *App) GetContributionsByTrack(track string) ([]backend.ContributionData, error) {
+func (a *App) GetContributionsByTrack(track string) ([]indico.ContributionData, error) {
 	if a.handler == nil {
 		return nil, errors.Errorf("data handler not initialized")
 	}
@@ -197,7 +198,7 @@ func (a *App) ApplyConfigYAML(yamlContent string) error {
 		return errors.Wrap(err, "failed to save config")
 	}
 	// Reload handler
-	h, err := backend.NewDataSourceHandlerFromConfigFile(a.configPath)
+	h, err := data.NewDataSourceHandlerFromConfigFile(a.configPath)
 	if err != nil {
 		return errors.Wrap(err, "failed to reload handler")
 	}
@@ -251,7 +252,7 @@ func (a *App) ApplyStructuredConfigUI(configData *config.ConfigDataUI) error {
 	}
 
 	// Reload handler
-	h, err := backend.NewDataSourceHandlerFromConfigFile(a.configPath)
+	h, err := data.NewDataSourceHandlerFromConfigFile(a.configPath)
 	if err != nil {
 		return errors.Wrap(err, "failed to reload handler")
 	}
@@ -358,9 +359,9 @@ func (a *App) IsTestMode() bool {
 }
 
 // GetCacheEntries returns all cache entries with metadata grouped by data source
-func (a *App) GetCacheEntries() map[string][]*backend.CacheEntry {
+func (a *App) GetCacheEntries() map[string][]*cache.CacheEntry {
 	if a.handler == nil {
-		return make(map[string][]*backend.CacheEntry)
+		return make(map[string][]*cache.CacheEntry)
 	}
 	return a.handler.GetCacheEntries()
 }
@@ -368,7 +369,7 @@ func (a *App) GetCacheEntries() map[string][]*backend.CacheEntry {
 // AddAPIToken stores the token secret in OS keyring and updates the config metadata (without storing the raw token in YAML).
 func (a *App) AddAPIToken(entry config.APITokenEntry, rawToken string) error {
 	// store in keyring
-	if err := backend.SetAPITokenSecret(entry.Name, rawToken); err != nil {
+	if err := utils.SetAPITokenSecret(entry.Name, rawToken); err != nil {
 		return errors.Wrap(err, "failed to store token in keyring")
 	}
 
@@ -409,7 +410,7 @@ func (a *App) DeleteAPIToken(name string) error {
 	if name == "" {
 		return errors.Errorf("token name required")
 	}
-	if err := backend.DeleteAPITokenSecret(name); err != nil {
+	if err := utils.DeleteAPITokenSecret(name); err != nil {
 		return errors.Wrap(err, "failed to delete token from keyring")
 	}
 	cfgData, err := a.GetStructuredConfigUI()
@@ -434,7 +435,7 @@ func (a *App) HasAPITokenSecret(name string) (bool, error) {
 	if name == "" {
 		return false, errors.Errorf("token name required")
 	}
-	_, err := backend.GetAPITokenSecret(name)
+	_, err := utils.GetAPITokenSecret(name)
 	if err != nil {
 		// keyring returns "secret not found" style errors; treat any error as absent
 		return false, nil
@@ -447,7 +448,7 @@ func (a *App) RevealAPIToken(name string) (string, error) {
 	if name == "" {
 		return "", errors.Errorf("token name required")
 	}
-	tok, err := backend.GetAPITokenSecret(name)
+	tok, err := utils.GetAPITokenSecret(name)
 	if err != nil {
 		return "", errors.Wrap(err, "failed to read token from keyring")
 	}

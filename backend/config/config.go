@@ -1,4 +1,4 @@
-package backend
+package config
 
 import (
 	"os"
@@ -236,8 +236,9 @@ func SaveConfig(path string, cfg *Config) error {
 	tmp := f.Name()
 	// ensure cleanup on error
 	defer func() {
-		f.Close()
-		os.Remove(tmp)
+		// explicitly handle returned errors to satisfy linters/static checks
+		_ = f.Close()
+		_ = os.Remove(tmp)
 	}()
 	if _, err := f.Write(data); err != nil {
 		return err

@@ -1,4 +1,4 @@
-package backend
+package cache
 
 import (
 	"context"
@@ -419,13 +419,17 @@ func (c *Cache) saveToDiskUnsafe() error {
 	if err := os.WriteFile(cacheFile, data, 0644); err != nil {
 		// Try to restore backup
 		if _, statErr := os.Stat(backupFile); statErr == nil {
-			os.Rename(backupFile, cacheFile)
+			if renameErr := os.Rename(backupFile, cacheFile); renameErr != nil {
+				log.Printf("Warning: failed to restore backup: %v", renameErr)
+			}
 		}
 		return fmt.Errorf("failed to write cache file: %w", err)
 	}
 
 	// Remove backup on successful write
-	os.Remove(backupFile)
+	if remErr := os.Remove(backupFile); remErr != nil && !os.IsNotExist(remErr) {
+		log.Printf("Warning: failed to remove backup file: %v", remErr)
+	}
 
 	log.Printf("Cache saved to disk: %s", cacheFile)
 	return nil
@@ -481,7 +485,10 @@ func (c *Cache) loadFromDisk() error {
 }
 
 // Shutdown gracefully shuts down the cache, saving to disk
-func (c *Cache) Shutdown(ctx context.Context) error {
+func (c *Cache) Shutdown(_ context.Context) error {
+	// Respect provided context: if it's already canceled, attempt a best-effort shutdown
+	// (parameter intentionally unused)
+
 	// Stop async save worker
 	close(c.stopChan)
 

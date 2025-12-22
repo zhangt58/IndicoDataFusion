@@ -1,18 +1,26 @@
-package backend
+package data
 
 import (
+	"IndicoDataFusion/backend/config"
 	"context"
 	"os"
 	"path/filepath"
 	"testing"
 )
 
+var testConfig = config.TestConfig{
+	DataDir:   "../../testdata",
+	EventInfo: "info.json",
+	Abstracts: "abstracts.json",
+	Contribs:  "contribs.json",
+}
+
 func TestNewDataSourceHandler(t *testing.T) {
 	// Test with Indico config
-	indicoDS := &DataSource{
+	indicoDS := &config.DataSource{
 		Name: "indico",
 		Type: "indico",
-		Indico: &IndicoConfig{
+		Indico: &config.IndicoConfig{
 			BaseURL:      "https://example.com",
 			EventID:      123,
 			APITokenName: "token",
@@ -21,7 +29,7 @@ func TestNewDataSourceHandler(t *testing.T) {
 	}
 
 	// Provide api token entries so the token name can be resolved
-	tokens := []APITokenEntry{{Name: "token", BaseURL: "https://example.com", Token: "token"}}
+	tokens := []config.APITokenEntry{{Name: "token", BaseURL: "https://example.com", Token: "token"}}
 
 	handler, err := NewDataSourceHandler(indicoDS, nil, tokens)
 	if err != nil {
@@ -35,15 +43,10 @@ func TestNewDataSourceHandler(t *testing.T) {
 	}
 
 	// Test with Test config
-	testDS := &DataSource{
+	testDS := &config.DataSource{
 		Name: "test",
 		Type: "test",
-		Test: &TestConfig{
-			DataDir:   "./testdata",
-			EventInfo: "info.json",
-			Abstracts: "abstracts.json",
-			Contribs:  "contribs.json",
-		},
+		Test: &testConfig,
 	}
 
 	handler, err = NewDataSourceHandler(testDS, nil, nil)
@@ -59,7 +62,7 @@ func TestNewDataSourceHandler(t *testing.T) {
 	}
 
 	// Test with invalid config
-	invalidDS := &DataSource{Name: "invalid"}
+	invalidDS := &config.DataSource{Name: "invalid"}
 	_, err = NewDataSourceHandler(invalidDS, nil, nil)
 	if err == nil {
 		t.Fatalf("Expected error for invalid data source, got nil")
@@ -68,14 +71,9 @@ func TestNewDataSourceHandler(t *testing.T) {
 
 func TestDataSourceHandlerGetInfo(t *testing.T) {
 	// Create test config pointing to testdata directory
-	testDS := &DataSource{
+	testDS := &config.DataSource{
 		Name: "test",
-		Test: &TestConfig{
-			DataDir:   "../testdata",
-			EventInfo: "info.json",
-			Abstracts: "abstracts.json",
-			Contribs:  "contribs.json",
-		},
+		Test: &testConfig,
 	}
 
 	handler, err := NewDataSourceHandler(testDS, nil, nil)
@@ -103,14 +101,9 @@ func TestDataSourceHandlerGetInfo(t *testing.T) {
 
 func TestDataSourceHandlerGetAbstracts(t *testing.T) {
 	// Create test config pointing to testdata directory
-	testDS := &DataSource{
+	testDS := &config.DataSource{
 		Name: "test",
-		Test: &TestConfig{
-			DataDir:   "../testdata",
-			EventInfo: "info.json",
-			Abstracts: "abstracts.json",
-			Contribs:  "contribs.json",
-		},
+		Test: &testConfig,
 	}
 
 	handler, err := NewDataSourceHandler(testDS, nil, nil)
@@ -138,14 +131,9 @@ func TestDataSourceHandlerGetAbstracts(t *testing.T) {
 
 func TestDataSourceHandlerGetContributions(t *testing.T) {
 	// Create test config pointing to testdata directory
-	testDS := &DataSource{
+	testDS := &config.DataSource{
 		Name: "test",
-		Test: &TestConfig{
-			DataDir:   "../testdata",
-			EventInfo: "info.json",
-			Abstracts: "abstracts.json",
-			Contribs:  "contribs.json",
-		},
+		Test: &testConfig,
 	}
 
 	handler, err := NewDataSourceHandler(testDS, nil, nil)
@@ -176,8 +164,8 @@ func TestNewDataSourceHandlerFromConfig(t *testing.T) {
 	dir := t.TempDir()
 	configPath := filepath.Join(dir, "config.yaml")
 
-	cfg := &Config{
-		ActiveDataSource: ActiveDataSource{
+	cfg := &config.Config{
+		ActiveDataSource: config.ActiveDataSource{
 			Use: "test",
 		},
 		DataSources: map[string]map[string]any{
@@ -191,7 +179,7 @@ func TestNewDataSourceHandlerFromConfig(t *testing.T) {
 		},
 	}
 
-	if err := SaveConfig(configPath, cfg); err != nil {
+	if err := config.SaveConfig(configPath, cfg); err != nil {
 		t.Fatalf("SaveConfig failed: %v", err)
 	}
 
@@ -210,14 +198,9 @@ func TestNewDataSourceHandlerFromConfig(t *testing.T) {
 
 func TestGetAbstractsByState(t *testing.T) {
 	// Create test config pointing to testdata directory
-	testDS := &DataSource{
+	testDS := &config.DataSource{
 		Name: "test",
-		Test: &TestConfig{
-			DataDir:   "../testdata",
-			EventInfo: "info.json",
-			Abstracts: "abstracts.json",
-			Contribs:  "contribs.json",
-		},
+		Test: &testConfig,
 	}
 
 	handler, err := NewDataSourceHandler(testDS, nil, nil)
@@ -241,14 +224,9 @@ func TestGetAbstractsByState(t *testing.T) {
 
 func TestGetContributionsBySession(t *testing.T) {
 	// Create test config pointing to testdata directory
-	testDS := &DataSource{
+	testDS := &config.DataSource{
 		Name: "test",
-		Test: &TestConfig{
-			DataDir:   "../testdata",
-			EventInfo: "info.json",
-			Abstracts: "abstracts.json",
-			Contribs:  "contribs.json",
-		},
+		Test: &testConfig,
 	}
 
 	handler, err := NewDataSourceHandler(testDS, nil, nil)
