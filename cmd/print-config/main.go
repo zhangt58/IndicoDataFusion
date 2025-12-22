@@ -6,7 +6,8 @@ import (
 	"fmt"
 	"os"
 
-	"IndicoDataFusion/backend"
+	"IndicoDataFusion/backend/config"
+
 	"gopkg.in/yaml.v3"
 )
 
@@ -37,7 +38,7 @@ func main() {
 		return
 	}
 
-	cfg, err := backend.LoadConfig(cfgPath)
+	cfg, err := config.LoadConfig(cfgPath)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "failed to load config: %v\n", err)
 		// attempt to print raw file as fallback
