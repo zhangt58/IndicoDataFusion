@@ -30,7 +30,7 @@ jobs:
         shell: bash
         run: |
           # Extract the version from app.go
-          ver=$(grep 'AppVersion' app.go | awk -F'v' '{print $2}' | tr -d "',\"")  # 1.0.0
+          ver=$(grep 'AppVersion' backend/consts/consts.go | awk -F'v' '{print $2}' | tr -d "',\"")  # 1.0.0
           echo "pkg_version=${ver}" >> $GITHUB_OUTPUT
           echo "pkg_name=IndicoDataFusion_${ver}.exe" >> $GITHUB_OUTPUT
 
