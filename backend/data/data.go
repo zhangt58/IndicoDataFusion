@@ -1,6 +1,9 @@
-package backend
+package data
 
 import (
+	"IndicoDataFusion/backend/cache"
+	"IndicoDataFusion/backend/indico"
+	"IndicoDataFusion/backend/utils"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -11,23 +14,25 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
+
+	"IndicoDataFusion/backend/config"
 )
 
 // DataSourceHandler provides a high-level interface for accessing event data
 // from different sources (Indico API or local test files).
 type DataSourceHandler struct {
-	config     *DataSource
-	client     *IndicoClient
+	config     *config.DataSource
+	client     *indico.IndicoClient
 	dataDir    string
 	isTestMode bool
-	cache      *Cache
+	cache      *cache.Cache
 	// initProblems collects non-fatal initialization issues (e.g., missing API token)
 	initProblems []string
 }
 
 // NewDataSourceHandler creates a new data source handler with optional cache config
 // and a list of APITokenEntry to resolve api tokens referenced by name.
-func NewDataSourceHandler(ds *DataSource, cacheConfig *CacheConfig, tokens []APITokenEntry) (*DataSourceHandler, error) {
+func NewDataSourceHandler(ds *config.DataSource, cacheConfig *config.CacheConfig, tokens []config.APITokenEntry) (*DataSourceHandler, error) {
 	handler := &DataSourceHandler{
 		config: ds,
 	}
@@ -58,7 +63,7 @@ func NewDataSourceHandler(ds *DataSource, cacheConfig *CacheConfig, tokens []API
 	}
 
 	// Initialize cache
-	cache, err := NewCache(CacheOptions{
+	cobj, err := cache.NewCache(cache.CacheOptions{
 		CacheDir:       cacheDir,
 		LoadOnStartup:  true,
 		TTL:            ttl,
@@ -69,7 +74,7 @@ func NewDataSourceHandler(ds *DataSource, cacheConfig *CacheConfig, tokens []API
 		log.Printf("Warning: failed to initialize cache: %v", err)
 		// Continue without cache
 	}
-	handler.cache = cache
+	handler.cache = cobj
 
 	if ds.Indico != nil {
 		// Resolve API token: require a token name and find it in provided tokens by Name only.
@@ -95,7 +100,7 @@ func NewDataSourceHandler(ds *DataSource, cacheConfig *CacheConfig, tokens []API
 		}
 		// Match by Name only
 		target := ds.Indico.APITokenName
-		var matched *APITokenEntry
+		var matched *config.APITokenEntry
 		for _, e := range tokens {
 			if e.Name == target {
 				// copy the entry so we can inspect it
@@ -117,7 +122,7 @@ func NewDataSourceHandler(ds *DataSource, cacheConfig *CacheConfig, tokens []API
 		apiToken = matched.Token
 		// If token is empty in config, try keyring
 		if apiToken == "" {
-			if secret, err := GetAPITokenSecret(matched.Name); err == nil {
+			if secret, err := utils.GetAPITokenSecret(matched.Name); err == nil {
 				apiToken = secret
 			} else {
 				// keyring lookup failed or not present - record problem but continue
@@ -130,7 +135,7 @@ func NewDataSourceHandler(ds *DataSource, cacheConfig *CacheConfig, tokens []API
 		}
 
 		// Initialize Indico client
-		client := NewIndicoClient(
+		client := indico.NewIndicoClient(
 			ds.Indico.BaseURL,
 			ds.Indico.EventID,
 			apiToken,
@@ -194,7 +199,7 @@ func parseSize(sizeStr string) (int64, error) {
 }
 
 // NewDataSourceHandlerFromConfig creates a handler from a full Config using the default data source.
-func NewDataSourceHandlerFromConfig(cfg *Config) (*DataSourceHandler, error) {
+func NewDataSourceHandlerFromConfig(cfg *config.Config) (*DataSourceHandler, error) {
 	// Validate config before using it
 	if err := cfg.Validate(); err != nil {
 		return nil, fmt.Errorf("config validation failed: %w", err)
@@ -210,7 +215,7 @@ func NewDataSourceHandlerFromConfig(cfg *Config) (*DataSourceHandler, error) {
 
 // NewDataSourceHandlerFromConfigFile creates a handler by loading a config file.
 func NewDataSourceHandlerFromConfigFile(configPath string) (*DataSourceHandler, error) {
-	cfg, err := LoadConfig(configPath)
+	cfg, err := config.LoadConfig(configPath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to load config: %w", err)
 	}
@@ -226,7 +231,7 @@ func (h *DataSourceHandler) Shutdown(ctx context.Context) error {
 }
 
 // GetInfo retrieves event information from the configured data source.
-func (h *DataSourceHandler) GetInfo(ctx context.Context) (*Event, error) {
+func (h *DataSourceHandler) GetInfo(ctx context.Context) (*indico.Event, error) {
 	if h.isTestMode {
 		return h.getInfoFromFile()
 	}
@@ -236,7 +241,7 @@ func (h *DataSourceHandler) GetInfo(ctx context.Context) (*Event, error) {
 		if cached, found := h.cache.Get("event_info"); found {
 			log.Printf("Using cached event info (type: %T)", cached)
 			// Try direct type assertion first
-			if event, ok := cached.(*Event); ok {
+			if event, ok := cached.(*indico.Event); ok {
 				log.Printf("Successfully retrieved event info from cache")
 				return event, nil
 			}
@@ -245,7 +250,7 @@ func (h *DataSourceHandler) GetInfo(ctx context.Context) (*Event, error) {
 			log.Printf("Direct type assertion failed, attempting JSON conversion...")
 			jsonData, err := json.Marshal(cached)
 			if err == nil {
-				var event Event
+				var event indico.Event
 				if err := json.Unmarshal(jsonData, &event); err == nil {
 					log.Printf("Successfully converted event info from cache via JSON")
 					return &event, nil
@@ -274,7 +279,7 @@ func (h *DataSourceHandler) GetInfo(ctx context.Context) (*Event, error) {
 }
 
 // getInfoFromFile reads event info from a local JSON file (test mode).
-func (h *DataSourceHandler) getInfoFromFile() (*Event, error) {
+func (h *DataSourceHandler) getInfoFromFile() (*indico.Event, error) {
 	if h.config.Test == nil {
 		return nil, fmt.Errorf("test configuration not available")
 	}
@@ -286,7 +291,7 @@ func (h *DataSourceHandler) getInfoFromFile() (*Event, error) {
 		return nil, fmt.Errorf("failed to read %s: %w", filePath, err)
 	}
 
-	var ev EventAPIResponse
+	var ev indico.EventAPIResponse
 	if err := json.Unmarshal(data, &ev); err != nil {
 		return nil, fmt.Errorf("failed to parse %s: %w", filePath, err)
 	}
@@ -295,7 +300,8 @@ func (h *DataSourceHandler) getInfoFromFile() (*Event, error) {
 }
 
 // getInfoFromAPI fetches event info from the Indico API.
-func (h *DataSourceHandler) getInfoFromAPI(ctx context.Context) (*Event, error) {
+func (h *DataSourceHandler) getInfoFromAPI(ctx context.Context) (*indico.Event, error) {
+	_ = ctx // referenced to avoid unused parameter warning
 	if h.client == nil {
 		return nil, fmt.Errorf("indico client not initialized")
 	}
@@ -304,7 +310,7 @@ func (h *DataSourceHandler) getInfoFromAPI(ctx context.Context) (*Event, error) 
 }
 
 // GetAbstracts retrieves abstract data from the configured data source.
-func (h *DataSourceHandler) GetAbstracts(ctx context.Context) ([]AbstractData, error) {
+func (h *DataSourceHandler) GetAbstracts(ctx context.Context) ([]indico.AbstractData, error) {
 	if h.isTestMode {
 		return h.getAbstractsFromFile()
 	}
@@ -314,7 +320,7 @@ func (h *DataSourceHandler) GetAbstracts(ctx context.Context) ([]AbstractData, e
 		if cached, found := h.cache.Get("abstracts"); found {
 			log.Printf("Using cached abstracts (type: %T)", cached)
 			// Try direct type assertion first
-			if abstracts, ok := cached.([]AbstractData); ok {
+			if abstracts, ok := cached.([]indico.AbstractData); ok {
 				log.Printf("Successfully retrieved %d abstracts from cache", len(abstracts))
 				return abstracts, nil
 			}
@@ -323,7 +329,7 @@ func (h *DataSourceHandler) GetAbstracts(ctx context.Context) ([]AbstractData, e
 			log.Printf("Direct type assertion failed, attempting JSON conversion...")
 			jsonData, err := json.Marshal(cached)
 			if err == nil {
-				var abstracts []AbstractData
+				var abstracts []indico.AbstractData
 				if err := json.Unmarshal(jsonData, &abstracts); err == nil {
 					log.Printf("Successfully converted %d abstracts from cache via JSON", len(abstracts))
 					return abstracts, nil
@@ -352,7 +358,7 @@ func (h *DataSourceHandler) GetAbstracts(ctx context.Context) ([]AbstractData, e
 }
 
 // getAbstractsFromFile reads abstracts from a local JSON file (test mode).
-func (h *DataSourceHandler) getAbstractsFromFile() ([]AbstractData, error) {
+func (h *DataSourceHandler) getAbstractsFromFile() ([]indico.AbstractData, error) {
 	if h.config.Test == nil {
 		return nil, fmt.Errorf("test configuration not available")
 	}
@@ -364,7 +370,7 @@ func (h *DataSourceHandler) getAbstractsFromFile() ([]AbstractData, error) {
 		return nil, fmt.Errorf("failed to read %s: %w", filePath, err)
 	}
 
-	var response AbstractsResponse
+	var response indico.AbstractsResponse
 	if err := json.Unmarshal(data, &response); err != nil {
 		return nil, fmt.Errorf("failed to parse %s: %w", filePath, err)
 	}
@@ -374,7 +380,7 @@ func (h *DataSourceHandler) getAbstractsFromFile() ([]AbstractData, error) {
 
 // getAbstractsFromAPI fetches abstracts from the Indico API.
 // This is a placeholder for future implementation that would fetch from the live API.
-func (h *DataSourceHandler) getAbstractsFromAPI(ctx context.Context) ([]AbstractData, error) {
+func (h *DataSourceHandler) getAbstractsFromAPI(ctx context.Context) ([]indico.AbstractData, error) {
 	if h.client == nil {
 		return nil, fmt.Errorf("indico client not initialized")
 	}
@@ -388,7 +394,7 @@ func (h *DataSourceHandler) getAbstractsFromAPI(ctx context.Context) ([]Abstract
 	}
 
 	if len(ids) == 0 {
-		return []AbstractData{}, nil
+		return []indico.AbstractData{}, nil
 	}
 
 	// Fetch the abstracts data
@@ -409,7 +415,7 @@ func (h *DataSourceHandler) getAbstractsFromAPI(ctx context.Context) ([]Abstract
 		return nil, fmt.Errorf("failed to marshal abstracts: %w", err)
 	}
 
-	var response AbstractsResponse
+	var response indico.AbstractsResponse
 	if err := json.Unmarshal(jsonData, &response); err != nil {
 		return nil, fmt.Errorf("failed to unmarshal abstracts: %w", err)
 	}
@@ -418,7 +424,7 @@ func (h *DataSourceHandler) getAbstractsFromAPI(ctx context.Context) ([]Abstract
 }
 
 // GetContributions retrieves contribution data from the configured data source.
-func (h *DataSourceHandler) GetContributions(ctx context.Context) ([]ContributionData, error) {
+func (h *DataSourceHandler) GetContributions(ctx context.Context) ([]indico.ContributionData, error) {
 	if h.isTestMode {
 		return h.getContributionsFromFile()
 	}
@@ -428,7 +434,7 @@ func (h *DataSourceHandler) GetContributions(ctx context.Context) ([]Contributio
 		if cached, found := h.cache.Get("contributions"); found {
 			log.Printf("Using cached contributions (type: %T)", cached)
 			// Try direct type assertion first
-			if contribs, ok := cached.([]ContributionData); ok {
+			if contribs, ok := cached.([]indico.ContributionData); ok {
 				log.Printf("Successfully retrieved %d contributions from cache", len(contribs))
 				return contribs, nil
 			}
@@ -437,7 +443,7 @@ func (h *DataSourceHandler) GetContributions(ctx context.Context) ([]Contributio
 			log.Printf("Direct type assertion failed, attempting JSON conversion...")
 			jsonData, err := json.Marshal(cached)
 			if err == nil {
-				var contribs []ContributionData
+				var contribs []indico.ContributionData
 				if err := json.Unmarshal(jsonData, &contribs); err == nil {
 					log.Printf("Successfully converted %d contributions from cache via JSON", len(contribs))
 					return contribs, nil
@@ -466,7 +472,7 @@ func (h *DataSourceHandler) GetContributions(ctx context.Context) ([]Contributio
 }
 
 // getContributionsFromFile reads contributions from a local JSON file (test mode).
-func (h *DataSourceHandler) getContributionsFromFile() ([]ContributionData, error) {
+func (h *DataSourceHandler) getContributionsFromFile() ([]indico.ContributionData, error) {
 	if h.config.Test == nil {
 		return nil, fmt.Errorf("test configuration not available")
 	}
@@ -478,20 +484,20 @@ func (h *DataSourceHandler) getContributionsFromFile() ([]ContributionData, erro
 		return nil, fmt.Errorf("failed to read %s: %w", filePath, err)
 	}
 
-	var response ContributionsAPIResponse
+	var response indico.ContributionsAPIResponse
 	if err := json.Unmarshal(data, &response); err != nil {
 		return nil, fmt.Errorf("failed to parse %s: %w", filePath, err)
 	}
 
 	if len(response.Results) == 0 {
-		return []ContributionData{}, nil
+		return []indico.ContributionData{}, nil
 	}
 
 	return response.Results[0].Contributions, nil
 }
 
 // getContributionsFromAPI fetches contributions from the Indico API.
-func (h *DataSourceHandler) getContributionsFromAPI(ctx context.Context) ([]ContributionData, error) {
+func (h *DataSourceHandler) getContributionsFromAPI(ctx context.Context) ([]indico.ContributionData, error) {
 	if h.client == nil {
 		return nil, fmt.Errorf("indico client not initialized")
 	}
@@ -505,20 +511,20 @@ func (h *DataSourceHandler) getContributionsFromAPI(ctx context.Context) ([]Cont
 	queryValues.Set("detail", "contributions")
 
 	// Fetch the contribution data
-	var response ContributionsAPIResponse
-	if err := h.client.doGet(ctx, path, queryValues, &response); err != nil {
+	var response indico.ContributionsAPIResponse
+	if err := h.client.DoGet(ctx, path, queryValues, &response); err != nil {
 		return nil, fmt.Errorf("failed to fetch contributions: %w", err)
 	}
 
 	if len(response.Results) == 0 {
-		return []ContributionData{}, nil
+		return []indico.ContributionData{}, nil
 	}
 
 	return response.Results[0].Contributions, nil
 }
 
 // GetContributionByID retrieves a specific contribution by ID.
-func (h *DataSourceHandler) GetContributionByID(ctx context.Context, id string) (*ContributionData, error) {
+func (h *DataSourceHandler) GetContributionByID(ctx context.Context, id string) (*indico.ContributionData, error) {
 	contributions, err := h.GetContributions(ctx)
 	if err != nil {
 		return nil, err
@@ -534,7 +540,7 @@ func (h *DataSourceHandler) GetContributionByID(ctx context.Context, id string) 
 }
 
 // GetAbstractByID retrieves a specific abstract by ID.
-func (h *DataSourceHandler) GetAbstractByID(ctx context.Context, id int) (*AbstractData, error) {
+func (h *DataSourceHandler) GetAbstractByID(ctx context.Context, id int) (*indico.AbstractData, error) {
 	abstracts, err := h.GetAbstracts(ctx)
 	if err != nil {
 		return nil, err
@@ -550,13 +556,13 @@ func (h *DataSourceHandler) GetAbstractByID(ctx context.Context, id int) (*Abstr
 }
 
 // GetAbstractsByState filters abstracts by their state.
-func (h *DataSourceHandler) GetAbstractsByState(ctx context.Context, state string) ([]AbstractData, error) {
+func (h *DataSourceHandler) GetAbstractsByState(ctx context.Context, state string) ([]indico.AbstractData, error) {
 	abstracts, err := h.GetAbstracts(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	var filtered []AbstractData
+	var filtered []indico.AbstractData
 	for _, abstract := range abstracts {
 		if abstract.State == state {
 			filtered = append(filtered, abstract)
@@ -567,13 +573,13 @@ func (h *DataSourceHandler) GetAbstractsByState(ctx context.Context, state strin
 }
 
 // GetContributionsBySession filters contributions by session.
-func (h *DataSourceHandler) GetContributionsBySession(ctx context.Context, session string) ([]ContributionData, error) {
+func (h *DataSourceHandler) GetContributionsBySession(ctx context.Context, session string) ([]indico.ContributionData, error) {
 	contributions, err := h.GetContributions(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	var filtered []ContributionData
+	var filtered []indico.ContributionData
 	for _, contrib := range contributions {
 		if contrib.Session == session {
 			filtered = append(filtered, contrib)
@@ -584,13 +590,13 @@ func (h *DataSourceHandler) GetContributionsBySession(ctx context.Context, sessi
 }
 
 // GetContributionsByTrack filters contributions by track.
-func (h *DataSourceHandler) GetContributionsByTrack(ctx context.Context, track string) ([]ContributionData, error) {
+func (h *DataSourceHandler) GetContributionsByTrack(ctx context.Context, track string) ([]indico.ContributionData, error) {
 	contributions, err := h.GetContributions(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	var filtered []ContributionData
+	var filtered []indico.ContributionData
 	for _, contrib := range contributions {
 		if contrib.Track == track {
 			filtered = append(filtered, contrib)
@@ -701,9 +707,9 @@ func (h *DataSourceHandler) GetDataSourceName() string {
 }
 
 // GetCacheEntries returns all cache entries with metadata grouped by data source
-func (h *DataSourceHandler) GetCacheEntries() map[string][]*CacheEntry {
+func (h *DataSourceHandler) GetCacheEntries() map[string][]*cache.CacheEntry {
 	if h.cache == nil {
-		return make(map[string][]*CacheEntry)
+		return make(map[string][]*cache.CacheEntry)
 	}
 	return h.cache.GetAllEntriesWithMetadata()
 }

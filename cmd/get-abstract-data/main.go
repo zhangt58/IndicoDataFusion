@@ -8,7 +8,8 @@ import (
 	"log"
 	"os"
 
-	"IndicoDataFusion/backend"
+	"IndicoDataFusion/backend/config"
+	"IndicoDataFusion/backend/data"
 )
 
 func writeDataToFile(path string, data any) error {
@@ -31,12 +32,12 @@ func main() {
 		log.Fatalf("config path is required")
 	}
 
-	cfg, err := backend.LoadConfig(*cfgPath)
+	cfg, err := config.LoadConfig(*cfgPath)
 	if err != nil {
 		log.Fatalf("load config: %v", err)
 	}
 
-	dataHandler, err := backend.NewDataSourceHandlerFromConfig(cfg)
+	dataHandler, err := data.NewDataSourceHandlerFromConfig(cfg)
 	if err != nil {
 		log.Fatalf("NewDataSourceHandlerFromConfig failed: %v", err)
 	}

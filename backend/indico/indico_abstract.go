@@ -1,4 +1,4 @@
-package backend
+package indico
 
 // Person represents a person in an abstract (author, speaker, etc.)
 type Person struct {

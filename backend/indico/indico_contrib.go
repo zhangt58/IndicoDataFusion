@@ -1,4 +1,4 @@
-package backend
+package indico
 
 // DateInfo represents date and time information in Indico
 type DateInfo struct {

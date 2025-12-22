@@ -1,6 +1,8 @@
 package main
 
 import (
+	"IndicoDataFusion/backend/config"
+	"IndicoDataFusion/backend/utils"
 	"flag"
 	"fmt"
 	"io"
@@ -8,8 +10,6 @@ import (
 	"os"
 	"path/filepath"
 	"time"
-
-	"IndicoDataFusion/backend"
 )
 
 func copyFile(src, dst string) error {
@@ -55,7 +55,7 @@ func main() {
 		log.Fatalf("Failed to resolve config path: %v", err)
 	}
 
-	cfg, err := backend.LoadConfig(absPath)
+	cfg, err := config.LoadConfig(absPath)
 	if err != nil {
 		log.Fatalf("Failed to load config: %v", err)
 	}
@@ -80,7 +80,7 @@ func main() {
 		}
 		total++
 		// Check existing keyring secret
-		existing, gerr := backend.GetAPITokenSecret(entry.Name)
+		existing, gerr := utils.GetAPITokenSecret(entry.Name)
 		if gerr == nil && existing != "" {
 			if !*overwrite {
 				actions = append(actions, fmt.Sprintf("[%s] keyring already has a secret, skipping (use --overwrite to replace)", entry.Name))
@@ -94,7 +94,7 @@ func main() {
 			continue
 		}
 		// store in keyring
-		if err := backend.SetAPITokenSecret(entry.Name, entry.Token); err != nil {
+		if err := utils.SetAPITokenSecret(entry.Name, entry.Token); err != nil {
 			actions = append(actions, fmt.Sprintf("[%s] FAILED to store secret: %v", entry.Name, err))
 			continue
 		}
@@ -124,7 +124,7 @@ func main() {
 	}
 
 	// Save updated config (with cleared tokens)
-	if err := backend.SaveConfig(absPath, cfg); err != nil {
+	if err := config.SaveConfig(absPath, cfg); err != nil {
 		log.Fatalf("Failed to save migrated config: %v", err)
 	}
 

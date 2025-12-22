@@ -1,6 +1,7 @@
 package main
 
 import (
+	"IndicoDataFusion/backend/consts"
 	"context"
 	"embed"
 	"flag"
@@ -36,7 +37,7 @@ func main() {
 
 	// Create application with options
 	err := wails.Run(&options.App{
-		Title:     AppName,
+		Title:     consts.AppName,
 		Width:     1280,
 		Height:    800,
 		Frameless: true,
@@ -50,7 +51,7 @@ func main() {
 			Icon:                icon,
 			WindowIsTranslucent: true,
 			WebviewGpuPolicy:    linux.WebviewGpuPolicyOnDemand,
-			ProgramName:         AppName,
+			ProgramName:         consts.AppName,
 		},
 		Mac: &mac.Options{
 			TitleBar:             &mac.TitleBar{HideTitleBar: true},

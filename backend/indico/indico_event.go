@@ -1,4 +1,4 @@
-package backend
+package indico
 
 // Event holds the essential information about an Indico event.
 type Event struct {

@@ -1,4 +1,4 @@
-package backend
+package indico
 
 import (
 	"context"
@@ -47,7 +47,7 @@ func (c *IndicoClient) GetEventInfo() (*Event, error) {
 	q := url.Values{}
 
 	var resp EventAPIResponse
-	if err := c.doGet(ctx, path, q, &resp); err != nil {
+	if err := c.DoGet(ctx, path, q, &resp); err != nil {
 		return nil, err
 	}
 
@@ -58,7 +58,7 @@ func (c *IndicoClient) GetEventInfo() (*Event, error) {
 	return &resp.Results[0], nil
 }
 
-func (c *IndicoClient) doGet(ctx context.Context, path string, query url.Values, out interface{}) error {
+func (c *IndicoClient) DoGet(ctx context.Context, path string, query url.Values, out interface{}) error {
 	// prepare URL
 	u, err := url.Parse(c.BaseURL)
 	if err != nil {
@@ -86,7 +86,7 @@ func (c *IndicoClient) doGet(ctx context.Context, path string, query url.Values,
 	if err != nil {
 		return err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		b, _ := io.ReadAll(io.LimitReader(resp.Body, 4*1024))
@@ -122,73 +122,6 @@ func StringsTrimRightSlash(s string) string {
 	return s
 }
 
-// parseDateField accepts either a string date or a map with date/time/tz and returns time.Time
-func parseDateField(v any) (time.Time, error) {
-	switch t := v.(type) {
-	case string:
-		// Try parsing ISO 8601 format (e.g., "2025-06-22T15:00:00+02:00")
-		if tt, err := time.Parse(time.RFC3339, t); err == nil {
-			return tt, nil
-		}
-		// Try parsing date only
-		if tt, err := time.Parse("2006-01-02", t); err == nil {
-			return tt, nil
-		}
-		// Try other common formats
-		if tt, err := time.Parse("2006-01-02 15:04:05", t); err == nil {
-			return tt, nil
-		}
-		if tt, err := time.Parse("2006-01-02 15:04", t); err == nil {
-			return tt, nil
-		}
-		return time.Time{}, fmt.Errorf("unrecognized date string format: %s", t)
-	case map[string]any:
-		// expected keys: date, time, tz
-		dateStr := ""
-		timeStr := ""
-		tzStr := ""
-		if d, ok := t["date"]; ok && d != nil {
-			dateStr = fmt.Sprintf("%v", d)
-		}
-		if tm, ok := t["time"]; ok && tm != nil {
-			timeStr = fmt.Sprintf("%v", tm)
-		}
-		if tz, ok := t["tz"]; ok && tz != nil {
-			tzStr = fmt.Sprintf("%v", tz)
-		}
-		if dateStr == "" {
-			return time.Time{}, fmt.Errorf("missing date field")
-		}
-		loc := time.UTC
-		if tzStr != "" {
-			if l, err := time.LoadLocation(tzStr); err == nil {
-				loc = l
-			}
-		}
-		if timeStr == "" {
-			// parse date only
-			if tt, err := time.ParseInLocation("2006-01-02", dateStr, loc); err == nil {
-				return tt, nil
-			} else {
-				return time.Time{}, err
-			}
-		}
-		// combine
-		combined := dateStr + " " + timeStr
-		// primary layout with seconds
-		if tt, err := time.ParseInLocation("2006-01-02 15:04:05", combined, loc); err == nil {
-			return tt, nil
-		}
-		// try without seconds
-		if tt, err := time.ParseInLocation("2006-01-02 15:04", combined, loc); err == nil {
-			return tt, nil
-		}
-		return time.Time{}, fmt.Errorf("unrecognized combined datetime: %s", combined)
-	default:
-		return time.Time{}, fmt.Errorf("unsupported date field type: %T", v)
-	}
-}
-
 // ExtractAbstractIDsAndCSRFFromFile parses an HTML file and returns two values:
 //   - a slice of `value` attributes for any <input> element found within a
 //     <tr> element whose class contains the token "abstract-row";
@@ -201,7 +134,7 @@ func (c *IndicoClient) ExtractAbstractIDsAndCSRFFromFile(htmlPath string) ([]str
 	if err != nil {
 		return nil, "", fmt.Errorf("open html file: %w", err)
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 
 	doc, err := xhtml.Parse(f)
 	if err != nil {
@@ -383,7 +316,7 @@ func (c *IndicoClient) FetchAbstractsData(ctx context.Context, ids []string, csr
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		b, _ := io.ReadAll(io.LimitReader(resp.Body, 4*1024))
@@ -426,7 +359,7 @@ func (c *IndicoClient) ListAbstracts(ctx context.Context) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		b, _ := io.ReadAll(io.LimitReader(resp.Body, 8*1024))

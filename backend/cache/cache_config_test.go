@@ -1,6 +1,8 @@
-package backend
+package cache
 
 import (
+	"IndicoDataFusion/backend/config"
+	"context"
 	"os"
 	"path/filepath"
 	"testing"
@@ -14,30 +16,26 @@ func TestCacheConfigWithCustomDirectory(t *testing.T) {
 	customCacheDir := filepath.Join(tmpDir, "custom_cache")
 
 	// Create a cache config with custom directory
-	cacheConfig := &CacheConfig{
+	cacheConfig := &config.CacheConfig{
 		TTL:      "1h",
 		MaxSize:  "50MB",
 		CacheDir: customCacheDir,
 	}
 
-	// Create a test data source
-	ds := &DataSource{
-		Name: "test-custom-cache",
-		Type: "test",
-		Test: &TestConfig{
-			DataDir:   "../testdata",
-			EventInfo: "info.json",
-			Abstracts: "abstracts.json",
-			Contribs:  "contribs.json",
-		},
+	// Create a Cache directly using equivalent options
+	opts := CacheOptions{
+		CacheDir:       cacheConfig.CacheDir,
+		LoadOnStartup:  true,
+		TTL:            time.Hour,
+		MaxSize:        50 * 1024 * 1024,
+		DataSourceName: "test-custom-cache",
 	}
 
-	// Create handler with custom cache config
-	handler, err := NewDataSourceHandler(ds, cacheConfig, nil)
+	c, err := NewCache(opts)
 	if err != nil {
-		t.Fatalf("Failed to create handler: %v", err)
+		t.Fatalf("Failed to create cache: %v", err)
 	}
-	defer handler.Shutdown(nil)
+	defer c.Shutdown(context.Background())
 
 	// Verify cache directory was created
 	if _, err := os.Stat(customCacheDir); os.IsNotExist(err) {
@@ -45,7 +43,7 @@ func TestCacheConfigWithCustomDirectory(t *testing.T) {
 	}
 
 	// Verify cache stats reflect custom configuration
-	stats := handler.GetCacheStats()
+	stats := c.GetStats()
 	if stats["cache_dir"] != customCacheDir {
 		t.Errorf("Expected cache_dir %s, got %s", customCacheDir, stats["cache_dir"])
 	}
@@ -56,26 +54,23 @@ func TestCacheConfigWithCustomDirectory(t *testing.T) {
 
 // TestCacheConfigDefaults tests cache initialization with default values
 func TestCacheConfigDefaults(t *testing.T) {
-	ds := &DataSource{
-		Name: "test-defaults",
-		Type: "test",
-		Test: &TestConfig{
-			DataDir:   "../testdata",
-			EventInfo: "info.json",
-			Abstracts: "abstracts.json",
-			Contribs:  "contribs.json",
-		},
+	tmpDir := t.TempDir()
+
+	// Create cache with defaults but point cache dir to temp to avoid touching user cache
+	opts := CacheOptions{
+		CacheDir:      tmpDir,
+		LoadOnStartup: true,
+		// TTL and MaxSize left zero to trigger defaults inside NewCache
 	}
 
-	// Create handler with nil cache config (should use defaults)
-	handler, err := NewDataSourceHandler(ds, nil, nil)
+	c, err := NewCache(opts)
 	if err != nil {
-		t.Fatalf("Failed to create handler: %v", err)
+		t.Fatalf("Failed to create cache: %v", err)
 	}
-	defer handler.Shutdown(nil)
+	defer c.Shutdown(context.Background())
 
 	// Verify cache stats use defaults
-	stats := handler.GetCacheStats()
+	stats := c.GetStats()
 	if stats["ttl"] != "24h0m0s" {
 		t.Errorf("Expected default TTL 24h0m0s, got %s", stats["ttl"])
 	}
@@ -89,46 +84,27 @@ func TestGetCacheEntries(t *testing.T) {
 	// Use a temporary cache directory to avoid loading old cache
 	tmpDir := t.TempDir()
 
-	ds := &DataSource{
-		Name: "test-entries",
-		Type: "test",
-		Test: &TestConfig{
-			DataDir:   "../testdata",
-			EventInfo: "info.json",
-			Abstracts: "abstracts.json",
-			Contribs:  "contribs.json",
-		},
+	// Create cache directly with known data source name
+	opts := CacheOptions{
+		CacheDir:       tmpDir,
+		TTL:            24 * time.Hour,
+		MaxSize:        100 * 1024 * 1024,
+		DataSourceName: "test-entries",
 	}
 
-	// Create handler with custom cache directory
-	cacheConfig := &CacheConfig{
-		CacheDir: tmpDir,
-		TTL:      "24h",
-		MaxSize:  "100MB",
-	}
-
-	handler, err := NewDataSourceHandler(ds, cacheConfig, nil)
+	c, err := NewCache(opts)
 	if err != nil {
-		t.Fatalf("Failed to create handler: %v", err)
+		t.Fatalf("Failed to create cache: %v", err)
 	}
-	defer handler.Shutdown(nil)
+	defer c.Shutdown(context.Background())
 
-	// Manually populate cache for testing (since test mode doesn't use cache)
-	if handler.cache != nil {
-		handler.cache.Set("event_info", map[string]string{"test": "data1"})
-		handler.cache.Set("abstracts", map[string]string{"test": "data2"})
-		handler.cache.Set("contributions", map[string]string{"test": "data3"})
-	}
+	// Populate cache for testing
+	c.Set("event_info", map[string]string{"test": "data1"})
+	c.Set("abstracts", map[string]string{"test": "data2"})
+	c.Set("contributions", map[string]string{"test": "data3"})
 
 	// Get cache entries
-	// Prefer using the underlying cache's grouped metadata so the test does not depend
-	// on DataSourceHandler.GetCacheEntries() signature. Flatten to a slice for assertions.
-	var entriesMap map[string][]*CacheEntry
-	if handler.cache != nil {
-		entriesMap = handler.cache.GetAllEntriesWithMetadata()
-	} else {
-		entriesMap = make(map[string][]*CacheEntry)
-	}
+	entriesMap := c.GetAllEntriesWithMetadata()
 
 	var entries []*CacheEntry
 	for _, group := range entriesMap {
@@ -172,9 +148,9 @@ func TestGetCacheEntries(t *testing.T) {
 
 // TestConfigDataUIWithCache tests that ConfigDataUI includes cache configuration
 func TestConfigDataUIWithCache(t *testing.T) {
-	cfg := &Config{
-		ActiveDataSource: ActiveDataSource{Use: "test"},
-		Cache: &CacheConfig{
+	cfg := &config.Config{
+		ActiveDataSource: config.ActiveDataSource{Use: "test"},
+		Cache: &config.CacheConfig{
 			TTL:      "12h",
 			MaxSize:  "200MB",
 			CacheDir: "/custom/path",
@@ -190,12 +166,12 @@ func TestConfigDataUIWithCache(t *testing.T) {
 		},
 	}
 
-	pathInfo := ConfigPathInfo{
+	pathInfo := config.ConfigPathInfo{
 		Path: "/test/config.yaml",
 	}
 
 	// Convert to UI format
-	uiConfig := GetStructuredConfigUI(cfg, pathInfo)
+	uiConfig := config.GetStructuredConfigUI(cfg, pathInfo)
 
 	// Verify cache config is included
 	if uiConfig.Cache == nil {
@@ -213,7 +189,7 @@ func TestConfigDataUIWithCache(t *testing.T) {
 	}
 
 	// Convert back to Config
-	rebuiltConfig := BuildConfigFromStructuredUI(uiConfig)
+	rebuiltConfig := config.BuildConfigFromStructuredUI(uiConfig)
 
 	// Verify cache config is preserved
 	if rebuiltConfig.Cache == nil {
