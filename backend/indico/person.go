@@ -15,7 +15,7 @@ type Affiliation struct {
 
 // Person represents a person in an abstract (author, speaker, etc.)
 type Person struct {
-	Affiliation *Affiliation `json:"-"` // populated from affiliation_link
+	Affiliation *Affiliation `json:"affiliation,omitempty"` // populated from affiliation_link
 	Email       string       `json:"email"`
 	AuthorType  string       `json:"author_type"`
 	FirstName   string       `json:"first_name"`
@@ -28,7 +28,8 @@ type Person struct {
 func (p *Person) UnmarshalJSON(data []byte) error {
 	type Alias Person
 	aux := &struct {
-		AffiliationLink *Affiliation `json:"affiliation_link"`
+		AffiliationString string       `json:"affiliation"` // ignore the string field
+		AffiliationLink   *Affiliation `json:"affiliation_link"`
 		*Alias
 	}{
 		Alias: (*Alias)(p),
@@ -42,7 +43,7 @@ func (p *Person) UnmarshalJSON(data []byte) error {
 
 // Judge represents the judge information for an abstract
 type Judge struct {
-	Affiliation *Affiliation `json:"-"` // populated from affiliation_meta
+	Affiliation *Affiliation `json:"affiliation,omitempty"` // populated from affiliation_meta
 	Email       string       `json:"email"`
 	FirstName   string       `json:"first_name"`
 	LastName    string       `json:"last_name"`
@@ -56,7 +57,8 @@ type Judge struct {
 func (j *Judge) UnmarshalJSON(data []byte) error {
 	type Alias Judge
 	aux := &struct {
-		AffiliationMeta *Affiliation `json:"affiliation_meta"`
+		AffiliationString string       `json:"affiliation"` // ignore the string field
+		AffiliationMeta   *Affiliation `json:"affiliation_meta"`
 		*Alias
 	}{
 		Alias: (*Alias)(j),
@@ -71,7 +73,7 @@ func (j *Judge) UnmarshalJSON(data []byte) error {
 // Submitter represents the person who submitted the abstract
 // Affiliation is a structured Affiliation pointer.
 type Submitter struct {
-	Affiliation *Affiliation `json:"-"` // populated from affiliation_meta
+	Affiliation *Affiliation `json:"affiliation,omitempty"` // populated from affiliation_meta
 	Email       string       `json:"email"`
 	FirstName   string       `json:"first_name"`
 	LastName    string       `json:"last_name"`
@@ -85,7 +87,8 @@ type Submitter struct {
 func (s *Submitter) UnmarshalJSON(data []byte) error {
 	type Alias Submitter
 	aux := &struct {
-		AffiliationMeta *Affiliation `json:"affiliation_meta"`
+		AffiliationString string       `json:"affiliation"` // ignore the string field
+		AffiliationMeta   *Affiliation `json:"affiliation_meta"`
 		*Alias
 	}{
 		Alias: (*Alias)(s),
