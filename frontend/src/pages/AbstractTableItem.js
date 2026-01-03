@@ -117,13 +117,28 @@ export function transformAbstractToTableItem(abstract) {
     if (!isNaN(d.getTime())) submittedMillis = d.getTime();
   }
 
+  // Extract affiliation display text and full data
+  let affiliationDisplay = '';
+  let affiliationData = null;
+  if (abstract.submitter?.affiliation) {
+    if (typeof abstract.submitter.affiliation === 'object') {
+      // Structured affiliation object
+      affiliationDisplay = abstract.submitter.affiliation.name || '';
+      affiliationData = abstract.submitter.affiliation;
+    } else {
+      // Legacy string affiliation
+      affiliationDisplay = abstract.submitter.affiliation;
+    }
+  }
+
   return {
     ID: rawId,
     IDNumber: isNaN(idNum) ? null : idNum,
     Title: abstract.title || '',
     State: abstract.state || '',
     Submitter: abstract.submitter?.full_name || '',
-    Affiliation: abstract.submitter?.affiliation || '',
+    Affiliation: affiliationDisplay,
+    AffiliationFull: affiliationData ? JSON.stringify(affiliationData) : '',
     Track: getShortTrackName(trackTitle),
     TrackFull: JSON.stringify(allTracks), // Store all tracks as JSON for the dialog
     TrackType: abstract.accepted_track ? 'accepted' : 'reviewed',
@@ -229,6 +244,30 @@ export function createRenderTrack() {
 }
 
 /**
+ * Custom column rendering for Affiliation with clickable link
+ * data-affiliation will be set by rowRender
+ * @returns {Function} Render function
+ */
+export function createRenderAffiliation() {
+  return function (data, cell, dataIndex, cellIndex) {
+    const affiliationStr = String(data || '');
+    if (!affiliationStr) return;
+
+    cell.childNodes = [
+      {
+        nodeName: 'A',
+        attributes: {
+          class: 'affiliation-link',
+          href: '#',
+          'data-affiliation': '', // Will be filled by rowRender
+        },
+        childNodes: [{ nodeName: '#text', data: affiliationStr }],
+      },
+    ];
+  };
+}
+
+/**
  * Custom column rendering for Type with badge styling
  */
 export function renderType(data, cell, dataIndex, cellIndex) {
@@ -251,9 +290,10 @@ export function renderType(data, cell, dataIndex, cellIndex) {
 export function rowRender(row, tr, index) {
   // Get values from row cells
   const id = row.cells[0]?.data || ''; // ID column
+  const affiliationFull = row.cells[5]?.data || ''; // AffiliationFull column
   const trackType = row.cells[7]?.data || ''; // TrackType column
   const trackFull = row.cells[6]?.data || '[]'; // TrackFull column
-  const authorsTooltip = row.cells[12]?.data || ''; // AuthorsTooltip column
+  const authorsTooltip = row.cells[13]?.data || ''; // AuthorsTooltip column
 
   // Update Title link (column 1) with data-id
   if (tr.childNodes && tr.childNodes[1]) {
@@ -263,9 +303,17 @@ export function rowRender(row, tr, index) {
     }
   }
 
+  // Update Affiliation link (column 4) with data-affiliation
+  if (tr.childNodes && tr.childNodes[4]) {
+    const affiliationCell = tr.childNodes[4];
+    if (affiliationCell.childNodes && affiliationCell.childNodes[0]?.attributes) {
+      affiliationCell.childNodes[0].attributes['data-affiliation'] = affiliationFull;
+    }
+  }
+
   // Update Track link (column 5) with data-tracks and proper class
-  if (tr.childNodes && tr.childNodes[5]) {
-    const trackCell = tr.childNodes[5];
+  if (tr.childNodes && tr.childNodes[6]) {
+    const trackCell = tr.childNodes[6];
     if (trackCell.childNodes && trackCell.childNodes[0]?.attributes) {
       trackCell.childNodes[0].attributes['data-tracks'] = trackFull;
       trackCell.childNodes[0].attributes.class =
@@ -276,8 +324,8 @@ export function rowRender(row, tr, index) {
   }
 
   // Update Authors span (column 11) with tooltip
-  if (tr.childNodes && tr.childNodes[11]) {
-    const authorsCell = tr.childNodes[11];
+  if (tr.childNodes && tr.childNodes[12]) {
+    const authorsCell = tr.childNodes[12];
     if (authorsCell.childNodes && authorsCell.childNodes[0]?.attributes) {
       authorsCell.childNodes[0].attributes.title = authorsTooltip;
     }
@@ -385,15 +433,16 @@ export function createDataTableOptions() {
       { select: 1, render: createRenderTitle(), sortable: true, type: 'string' }, // Title
       { select: 2, render: renderState, sortable: true, type: 'string' }, // State
       { select: 3, sortable: true, type: 'string' }, // Submitter
-      { select: 4, sortable: true, type: 'string' }, // Affiliation
-      { select: 5, render: createRenderTrack(), sortable: true, type: 'string' }, // Track
-      { select: 6, hidden: true, type: 'string' }, // TrackFull (hidden - JSON of all tracks)
-      { select: 7, hidden: true, type: 'string' }, // TrackType (hidden helper column)
-      { select: 8, render: renderType, sortable: true, type: 'string' }, // Type
-      { select: 9, sortable: true, type: 'number' }, // Score
-      { select: 10, sortable: true, type: 'string' }, // Submitted
-      { select: 11, render: createRenderAuthors(), sortable: true, type: 'string' }, // Authors
-      { select: 12, hidden: true, type: 'string' }, // AuthorsTooltip (hidden)
+      { select: 4, render: createRenderAffiliation(), sortable: true, type: 'string' }, // Affiliation
+      { select: 5, hidden: true, type: 'string' }, // AffiliationFull (hidden - JSON of full affiliation)
+      { select: 6, render: createRenderTrack(), sortable: true, type: 'string' }, // Track
+      { select: 7, hidden: true, type: 'string' }, // TrackFull (hidden - JSON of all tracks)
+      { select: 8, hidden: true, type: 'string' }, // TrackType (hidden helper column)
+      { select: 9, render: renderType, sortable: true, type: 'string' }, // Type
+      { select: 10, sortable: true, type: 'number' }, // Score
+      { select: 11, sortable: true, type: 'string' }, // Submitted
+      { select: 12, render: createRenderAuthors(), sortable: true, type: 'string' }, // Authors
+      { select: 13, hidden: true, type: 'string' }, // AuthorsTooltip (hidden)
     ],
   };
 }
