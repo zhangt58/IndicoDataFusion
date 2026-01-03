@@ -3,6 +3,7 @@
   import TypeBadge from './TypeBadge.svelte';
   import AbstractDetailsDialog from './AbstractDetailsDialog.svelte';
   import TrackDetailsDialog from './TrackDetailsDialog.svelte';
+  import AffiliationDialog from '../components/AffiliationDialog.svelte';
   import TitleLink from '../components/TitleLink.svelte';
   import TrackBadge from './TrackBadge.svelte';
   import { getTableItems } from './AbstractTableItem.js';
@@ -16,6 +17,10 @@
   // Track dialog state
   let showTrackDialog = $state(false);
   let selectedTracks = $state([]);
+
+  // Affiliation dialog state
+  let showAffiliationDialog = $state(false);
+  let selectedAffiliation = $state(null);
 
   // Simple client-side controls (search/sort/pagination)
   // We will use the event-based API like the example: DataTableControls emits pagechange/searchchange
@@ -103,6 +108,21 @@
     } catch (e) {
       console.error('Failed to parse trackFull:', e);
       selectedTracks = [];
+    }
+  }
+
+  // Open affiliation dialog from AffiliationFull data
+  function openAffiliation(affiliationFull) {
+    try {
+      if (!affiliationFull) {
+        selectedAffiliation = null;
+        return;
+      }
+      selectedAffiliation = typeof affiliationFull === 'string' ? JSON.parse(affiliationFull) : affiliationFull;
+      if (selectedAffiliation) showAffiliationDialog = true;
+    } catch (e) {
+      console.error('Failed to parse affiliationFull:', e);
+      selectedAffiliation = null;
     }
   }
 
@@ -311,6 +331,21 @@
                   : 'state-badge state-other'}>{item.State}</span
             >
           {/if}
+        {:else if col.id === 'Affiliation'}
+          {#if item.Affiliation && item.AffiliationFull}
+            <button
+              type="button"
+              class="affiliation-link hover:underline"
+              onclick={(e) => {
+                e.stopPropagation();
+                openAffiliation(item.AffiliationFull);
+              }}
+            >
+              {item.Affiliation}
+            </button>
+          {:else if item.Affiliation}
+            {item.Affiliation}
+          {/if}
         {:else if col.id === 'Track'}
           {#if item.Track}
             <TrackBadge
@@ -387,6 +422,9 @@
   allTracks={allAvailableTracks}
 />
 
+<!-- Affiliation Details Dialog -->
+<AffiliationDialog bind:open={showAffiliationDialog} affiliation={selectedAffiliation} />
+
 <style>
   /* Component-specific styling for AbstractTableView */
 
@@ -417,6 +455,27 @@
   /* Authors cell with tooltip (scoped) */
   .authors-cell {
     cursor: help;
+  }
+
+  /* Affiliation link styling */
+  .affiliation-link {
+    color: #2563eb;
+    cursor: pointer;
+    text-decoration: none;
+    transition: all 0.2s;
+  }
+
+  .affiliation-link:hover {
+    text-decoration: underline;
+    color: #1d4ed8;
+  }
+
+  :global(.dark) .affiliation-link {
+    color: #60a5fa;
+  }
+
+  :global(.dark) .affiliation-link:hover {
+    color: #93c5fd;
   }
 
   /* Other table/badge helpers moved to shared CSS */

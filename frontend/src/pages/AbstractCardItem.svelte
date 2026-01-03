@@ -1,8 +1,20 @@
 <script>
   import TypeBadge from './TypeBadge.svelte';
   import TrackBadge from './TrackBadge.svelte';
+  import AffiliationDialog from '../components/AffiliationDialog.svelte';
+  import AffiliationBadge from '../components/AffiliationBadge.svelte';
 
   let { abstract = {} } = $props();
+
+  // Dialog state
+  let showAffiliationDialog = $state(false);
+  let selectedAffiliation = $state(null);
+
+  // Handle affiliation click
+  function handleAffiliationClick(affiliation) {
+    selectedAffiliation = affiliation;
+    showAffiliationDialog = true;
+  }
 </script>
 
 <div
@@ -42,10 +54,14 @@
       <p class="text-xs font-semibold text-gray-600 dark:text-gray-400">Submitted by:</p>
       <p class="text-sm text-gray-700 dark:text-gray-300">
         {abstract.submitter.full_name}
-        {#if abstract.submitter.affiliation}
-          <span class="text-xs text-gray-500">({abstract.submitter.affiliation})</span>
-        {/if}
       </p>
+      {#if abstract.submitter.affiliation}
+        <AffiliationBadge
+          affiliation={abstract.submitter.affiliation}
+          onclick={handleAffiliationClick}
+          className="text-gray-600 dark:text-gray-400"
+        />
+      {/if}
       <p class="text-xs text-gray-500">{abstract.submitted_dt}</p>
     </div>
   {/if}
@@ -94,6 +110,13 @@
         <p class="text-sm text-gray-700 dark:text-gray-300">
           {abstract.judge.full_name}
         </p>
+        {#if abstract.judge.affiliation}
+          <AffiliationBadge
+            affiliation={abstract.judge.affiliation}
+            onclick={handleAffiliationClick}
+            className="text-gray-600 dark:text-gray-400"
+          />
+        {/if}
       </div>
     {/if}
   </div>
@@ -116,7 +139,13 @@
               <span class="ml-1 text-xs text-blue-600 dark:text-blue-300">(Primary)</span>
             {/if}
             {#if person.affiliation}
-              <div class="text-xs text-blue-600 dark:text-blue-400">{person.affiliation}</div>
+              <div class="mt-1">
+                <AffiliationBadge
+                  affiliation={person.affiliation}
+                  onclick={handleAffiliationClick}
+                  className="text-blue-600 dark:text-blue-400"
+                />
+              </div>
             {/if}
           </div>
         {/each}
@@ -137,3 +166,7 @@
     </div>
   </div>
 </div>
+
+<!-- Affiliation Details Dialog -->
+<AffiliationDialog bind:open={showAffiliationDialog} affiliation={selectedAffiliation} />
+
