@@ -20,7 +20,7 @@
     title="Click to view affiliation details"
   >
     <BuildingOutline class="w-3 h-3" />
-    <span>{affiliation.name}</span>
+    <span class="block text-left">{affiliation.name}</span>
     {#if showCity && (affiliation.city || affiliation.country_code)}
       <span class="text-gray-500 dark:text-gray-400">
         ({affiliation.city || ''}{affiliation.city && affiliation.country_code ? ', ' : ''}{affiliation.country_code || ''})
