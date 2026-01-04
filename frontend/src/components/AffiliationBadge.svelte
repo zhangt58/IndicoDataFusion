@@ -1,7 +1,7 @@
 <script>
   import { BuildingOutline } from 'flowbite-svelte-icons';
 
-  let { affiliation, onclick, className = '' } = $props();
+  let { affiliation, onclick, className = '', showCity = true } = $props();
 
   function handleClick(e) {
     e.stopPropagation();
@@ -9,6 +9,7 @@
       onclick(affiliation);
     }
   }
+
 </script>
 
 {#if affiliation}
@@ -20,7 +21,7 @@
   >
     <BuildingOutline class="w-3 h-3" />
     <span>{affiliation.name}</span>
-    {#if affiliation.city || affiliation.country_code}
+    {#if showCity && (affiliation.city || affiliation.country_code)}
       <span class="text-gray-500 dark:text-gray-400">
         ({affiliation.city || ''}{affiliation.city && affiliation.country_code ? ', ' : ''}{affiliation.country_code || ''})
       </span>
