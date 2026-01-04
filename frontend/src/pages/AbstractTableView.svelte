@@ -4,6 +4,7 @@
   import AbstractDetailsDialog from './AbstractDetailsDialog.svelte';
   import TrackDetailsDialog from './TrackDetailsDialog.svelte';
   import AffiliationDialog from '../components/AffiliationDialog.svelte';
+  import AffiliationBadge from "../components/AffiliationBadge.svelte";
   import TitleLink from '../components/TitleLink.svelte';
   import TrackBadge from './TrackBadge.svelte';
   import { getTableItems } from './AbstractTableItem.js';
@@ -333,16 +334,13 @@
           {/if}
         {:else if col.id === 'Affiliation'}
           {#if item.Affiliation && item.AffiliationFull}
-            <button
-              type="button"
-              class="affiliation-link hover:underline"
-              onclick={(e) => {
-                e.stopPropagation();
-                openAffiliation(item.AffiliationFull);
-              }}
-            >
-              {item.Affiliation}
-            </button>
+            {@const affiliationObj = JSON.parse(item.AffiliationFull)}
+            <AffiliationBadge
+              affiliation={affiliationObj}
+              onclick={() => openAffiliation(item.AffiliationFull)}
+              showCity={false}
+              className="text-gray-600 dark:text-gray-400"
+            />
           {:else if item.Affiliation}
             {item.Affiliation}
           {/if}
@@ -457,26 +455,6 @@
     cursor: help;
   }
 
-  /* Affiliation link styling */
-  .affiliation-link {
-    color: #2563eb;
-    cursor: pointer;
-    text-decoration: none;
-    transition: all 0.2s;
-  }
-
-  .affiliation-link:hover {
-    text-decoration: underline;
-    color: #1d4ed8;
-  }
-
-  :global(.dark) .affiliation-link {
-    color: #60a5fa;
-  }
-
-  :global(.dark) .affiliation-link:hover {
-    color: #93c5fd;
-  }
 
   /* Other table/badge helpers moved to shared CSS */
 </style>
