@@ -14,6 +14,19 @@ export function getSpeakersDisplay(speakers) {
 }
 
 /**
+ * Get speakers affiliations (first affiliation, with ... if more exist)
+ * @param {Array} speakers - Array of speaker objects
+ * @returns {string} Display text for speakers' affiliations
+ */
+export function getSpeakersAffiliations(speakers) {
+  if (!speakers || speakers.length === 0) return '';
+
+  const first = speakers[0];
+  const affiliation = first.affiliation || '';
+  return speakers.length > 1 ? `${affiliation} ...` : affiliation;
+}
+
+/**
  * Get all speakers as a string for tooltip
  * @param {Array} speakers - Array of speaker objects
  * @returns {string} All speakers joined by newlines
@@ -119,6 +132,7 @@ export function transformContributionToTableItem(contribution) {
     Location: contribution.location || '',
     Room: contribution.roomFullname || contribution.room || '',
     Speakers: getSpeakersDisplay(contribution.speakers),
+    SpeakersAffiliations: getSpeakersAffiliations(contribution.speakers),
     SpeakersTooltip: getSpeakersTooltip(contribution.speakers),
     Authors: getPrimaryAuthorsDisplay(contribution.primaryauthors),
     AuthorsTooltip: getAllAuthorsTooltip(contribution.primaryauthors, contribution.coauthors),
