@@ -1,27 +1,7 @@
 package indico
 
-// Person represents a person in an abstract (author, speaker, etc.)
-type Person struct {
-	Affiliation string `json:"affiliation"`
-	Email       string `json:"email"`
-	AuthorType  string `json:"author_type"`
-	FirstName   string `json:"first_name"`
-	LastName    string `json:"last_name"`
-	IsSpeaker   bool   `json:"is_speaker"`
-	PersonID    int    `json:"person_id"`
-}
-
-// Judge represents the judge information for an abstract
-type Judge struct {
-	Affiliation string `json:"affiliation"`
-	Email       string `json:"email"`
-	FirstName   string `json:"first_name"`
-	LastName    string `json:"last_name"`
-	FullName    string `json:"full_name"`
-	AvatarURL   string `json:"avatar_url"`
-	ID          int    `json:"id"`
-	Identifier  string `json:"identifier"`
-}
+// Person, Judge, Submitter and Affiliation types have been moved to person.go
+// See backend/indico/person.go for their definitions.
 
 // Track represents a conference track
 type Track struct {
@@ -34,18 +14,6 @@ type Track struct {
 type ContribType struct {
 	ID   int    `json:"id"`
 	Name string `json:"name"`
-}
-
-// Submitter represents the person who submitted the abstract
-type Submitter struct {
-	Affiliation string `json:"affiliation"`
-	Email       string `json:"email"`
-	FirstName   string `json:"first_name"`
-	LastName    string `json:"last_name"`
-	FullName    string `json:"full_name"`
-	AvatarURL   string `json:"avatar_url"`
-	ID          int    `json:"id"`
-	Identifier  string `json:"identifier"`
 }
 
 // Review represents a review of the abstract

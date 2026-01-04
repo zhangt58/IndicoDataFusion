@@ -202,6 +202,7 @@
     { id: 'Duration', title: 'Duration', stretch: 1 },
     { id: 'Room', title: 'Room', stretch: 1 },
     { id: 'Speakers', title: 'Speakers', stretch: 2 },
+    { id: 'Affiliations', title: 'Affiliations', stretch: 3 },
   ];
 
   const visibleKeys = columns.map((c) => c.title);
@@ -487,6 +488,12 @@
         {:else if col.id === 'Speakers'}
           {#if item.Speakers}
             <span class="speakers-cell" title={item.SpeakersTooltip}>{item.Speakers}</span>
+          {/if}
+        {:else if col.id === 'Affiliations'}
+          {#if item.SpeakersAffiliations}
+            <span title={item.SpeakersTooltip}>
+              {item.SpeakersAffiliations}
+            </span>
           {/if}
         {:else}
           {item[col.id]}
