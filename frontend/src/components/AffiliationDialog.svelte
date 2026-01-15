@@ -1,6 +1,11 @@
 <script>
   import { Modal } from 'flowbite-svelte';
-  import { CloseOutline, BuildingOutline, GlobeOutline, MapPinOutline } from 'flowbite-svelte-icons';
+  import {
+    CloseOutline,
+    BuildingOutline,
+    GlobeOutline,
+    MapPinOutline,
+  } from 'flowbite-svelte-icons';
 
   let { open = $bindable(false), affiliation = null } = $props();
 
@@ -15,7 +20,7 @@
     const codePoints = countryCode
       .toUpperCase()
       .split('')
-      .map(char => 127397 + char.charCodeAt());
+      .map((char) => 127397 + char.charCodeAt());
     return String.fromCodePoint(...codePoints);
   }
 
@@ -115,4 +120,3 @@
     max-width: 500px;
   }
 </style>
-

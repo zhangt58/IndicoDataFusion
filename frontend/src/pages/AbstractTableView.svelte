@@ -4,7 +4,7 @@
   import AbstractDetailsDialog from './AbstractDetailsDialog.svelte';
   import TrackDetailsDialog from './TrackDetailsDialog.svelte';
   import AffiliationDialog from '../components/AffiliationDialog.svelte';
-  import AffiliationBadge from "../components/AffiliationBadge.svelte";
+  import AffiliationBadge from '../components/AffiliationBadge.svelte';
   import TitleLink from '../components/TitleLink.svelte';
   import TrackBadge from './TrackBadge.svelte';
   import { getTableItems } from './AbstractTableItem.js';
@@ -119,7 +119,8 @@
         selectedAffiliation = null;
         return;
       }
-      selectedAffiliation = typeof affiliationFull === 'string' ? JSON.parse(affiliationFull) : affiliationFull;
+      selectedAffiliation =
+        typeof affiliationFull === 'string' ? JSON.parse(affiliationFull) : affiliationFull;
       if (selectedAffiliation) showAffiliationDialog = true;
     } catch (e) {
       console.error('Failed to parse affiliationFull:', e);
@@ -454,7 +455,6 @@
   .authors-cell {
     cursor: help;
   }
-
 
   /* Other table/badge helpers moved to shared CSS */
 </style>
