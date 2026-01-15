@@ -1,11 +1,17 @@
 <script>
   import { onMount, onDestroy } from 'svelte';
-  import { GridOutline, CreditCardOutline, RefreshOutline } from 'flowbite-svelte-icons';
+  import {
+    GridOutline,
+    CreditCardOutline,
+    RefreshOutline,
+    ChartOutline,
+  } from 'flowbite-svelte-icons';
   import { GetAbstracts, IsTestMode, GetCacheStats } from '../../wailsjs/go/main/App';
   import { EventsOn, EventsOff } from '../../wailsjs/runtime/runtime';
   import { createCachePage } from '../utils/cacheUtils.js';
   import AbstractCardView from './AbstractCardView.svelte';
   import AbstractTableView from './AbstractTableView.svelte';
+  import AbstractChartView from './AbstractChartView.svelte';
   import LoadErrorHint from './LoadErrorHint.svelte';
 
   let loading = $state(false);
@@ -139,6 +145,17 @@
       >
         <GridOutline class="shrink-0 h-6 w-6" />
       </button>
+      <button
+        onclick={() => (viewMode = 'chart')}
+        class="p-1.5 rounded transition-colors {viewMode === 'chart'
+          ? 'bg-sky-400'
+          : 'hover:bg-sky-100'}"
+        title="Chart View"
+        aria-label="Chart View"
+        disabled={loading || abstractData.length === 0}
+      >
+        <ChartOutline class="shrink-0 h-6 w-6" />
+      </button>
     </div>
   </div>
 
@@ -148,6 +165,12 @@
   >
     {#if viewMode === 'table'}
       <AbstractTableView {abstractData} />
+    {:else if viewMode === 'chart'}
+      {#if abstractData && abstractData.length > 0}
+        <AbstractChartView {abstractData} />
+      {:else}
+        <div class="p-4 text-center text-slate-500">No abstracts to display for chart.</div>
+      {/if}
     {:else}
       <AbstractCardView {abstractData} />
     {/if}
