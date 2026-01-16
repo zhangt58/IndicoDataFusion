@@ -38,7 +38,6 @@
 
 @source "../node_modules/flowbite-svelte/dist";
 @source "../node_modules/flowbite-svelte-icons/dist";
-@source "../node_modules/@flowbite-svelte-plugins/chart/dist";
 
 .datatable-pagination .datatable-active a,
 .datatable-pagination .datatable-active a:focus,

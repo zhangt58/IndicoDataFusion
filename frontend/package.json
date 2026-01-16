@@ -19,9 +19,9 @@
     "vite": "^7.2.2"
   },
   "dependencies": {
-    "@flowbite-svelte-plugins/chart": "^0.2.4",
     "@tailwindcss/vite": "^4.1.17",
     "@zhangt58/svelte-vtable": "^0.1.2",
+    "echarts": "^6.0.0",
     "flowbite": "^4.0.1",
     "flowbite-svelte": "^1.28.1",
     "flowbite-svelte-icons": "^3.0.0",
