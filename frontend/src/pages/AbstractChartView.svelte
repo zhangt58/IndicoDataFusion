@@ -1,5 +1,6 @@
 <script>
   import AffiliationDonut from '../components/AffiliationDonut.svelte';
+  import AffiliationBarChart from '../components/AffiliationBarChart.svelte';
   import { Tabs, TabItem } from 'flowbite-svelte';
 
   // Props: array of abstract objects (same shape returned by GetAbstracts)
@@ -199,16 +200,23 @@
     const countryTop = topN(countryMap, 8);
     const continentTop = topN(continentMap, 8);
 
+    // Prepare full institute list sorted desc for bar chart
+    const instFullArr = Array.from(instMap.entries()).sort((a, b) => b[1] - a[1]);
+    const instFullLabels = instFullArr.map((e) => e[0]);
+    const instFullSeries = instFullArr.map((e) => e[1]);
+
     return {
       institute: buildChartOptions(instTop, instituteColors),
       country: buildChartOptions(countryTop, countryColors),
       continent: buildChartOptions(continentTop, continentColors),
+      instituteFull: { labels: instFullLabels, series: instFullSeries, colors: instituteColors },
     };
   });
 
   const instituteOptions = $derived(chartData.institute);
   const countryOptions = $derived(chartData.country);
   const continentOptions = $derived(chartData.continent);
+  const instituteFullOptions = $derived(chartData.instituteFull);
 </script>
 
 <div class="p-2 mb-1">
@@ -225,6 +233,19 @@
             colors={instituteOptions.colors}
             title={'Institutions'}
           />
+
+          <!-- Full institutions bar chart below donut -->
+          {#if instituteFullOptions && instituteFullOptions.series && instituteFullOptions.series.length}
+            <div class="mt-4">
+              <AffiliationBarChart
+                labels={instituteFullOptions.labels}
+                series={instituteFullOptions.series}
+                colors={instituteFullOptions.colors}
+                title={'Institutions (All)'}
+                horizontal={true}
+              />
+            </div>
+          {/if}
         {:else}
           <div class="text-sm text-gray-500 text-center py-8">No data available</div>
         {/if}
