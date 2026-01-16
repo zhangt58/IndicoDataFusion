@@ -1,6 +1,6 @@
 <script>
-  import { Chart } from '@flowbite-svelte-plugins/chart';
-  import { Card, Tabs, TabItem } from 'flowbite-svelte';
+  import AffiliationDonut from '../components/AffiliationDonut.svelte';
+  import { Tabs, TabItem } from 'flowbite-svelte';
 
   // Props: array of abstract objects (same shape returned by GetAbstracts)
   let { abstractData = [] } = $props();
@@ -163,81 +163,14 @@
     return countryToContinent[country] || 'Other';
   }
 
-  // Chart creation with enhanced options
-  function buildDonutFromMap(title, map, colors) {
+  function buildChartOptions(map, colors) {
     const labels = Array.from(map.keys());
     const values = Array.from(map.values());
 
     return {
-      chart: {
-        type: 'donut',
-        toolbar: { show: false },
-        height: '320px',
-        fontFamily: 'Inter, sans-serif',
-      },
       labels,
       series: values,
-      colors: colors.slice(0, labels.length),
-      legend: {
-        position: 'bottom',
-        fontFamily: 'Inter, sans-serif',
-        fontSize: '12px',
-      },
-      dataLabels: {
-        enabled: true,
-        style: {
-          fontFamily: 'Inter, sans-serif',
-          fontSize: '11px',
-        },
-      },
-      plotOptions: {
-        pie: {
-          donut: {
-            size: '65%',
-            labels: {
-              show: true,
-              name: {
-                show: true,
-                fontFamily: 'Inter, sans-serif',
-                fontSize: '14px',
-              },
-              value: {
-                show: true,
-                fontFamily: 'Inter, sans-serif',
-                fontSize: '20px',
-                fontWeight: 600,
-              },
-              total: {
-                show: true,
-                label: title,
-                fontFamily: 'Inter, sans-serif',
-                fontSize: '14px',
-                fontWeight: 600,
-                formatter: function (w) {
-                  return w.globals.seriesTotals.reduce((a, b) => a + b, 0);
-                },
-              },
-            },
-          },
-        },
-      },
-      tooltip: {
-        enabled: true,
-        y: {
-          formatter: function (value) {
-            return value + ' affiliations';
-          },
-        },
-      },
-      responsive: [
-        {
-          breakpoint: 640,
-          options: {
-            chart: { width: '100%' },
-            legend: { position: 'bottom' },
-          },
-        },
-      ],
+      colors: colors.slice(0, labels.length)
     };
   }
 
@@ -267,9 +200,9 @@
     const continentTop = topN(continentMap, 8);
 
     return {
-      institute: buildDonutFromMap('Institutions', instTop, instituteColors),
-      country: buildDonutFromMap('Countries', countryTop, countryColors),
-      continent: buildDonutFromMap('Continents', continentTop, continentColors),
+      institute: buildChartOptions(instTop, instituteColors),
+      country: buildChartOptions(countryTop, countryColors),
+      continent: buildChartOptions(continentTop, continentColors),
     };
   });
 
@@ -278,15 +211,20 @@
   const continentOptions = $derived(chartData.continent);
 </script>
 
-<Card class="p-2 mb-1">
+<div class="p-2 mb-1">
   <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-0.5">Affiliation Overview</h3>
 
   <Tabs tabStyle="underline">
     <TabItem open title="By Institution">
       <div class="p-0.5">
         {#if instituteOptions && instituteOptions.series && instituteOptions.series.length}
-          <!-- @ts-ignore - ApexCharts type inference issue with dynamic options -->
-          <Chart options={instituteOptions} />
+          <!-- Use local ECharts-based donut component -->
+          <AffiliationDonut
+            labels={instituteOptions.labels}
+            series={instituteOptions.series}
+            colors={instituteOptions.colors}
+            title={'Institutions'}
+          />
         {:else}
           <div class="text-sm text-gray-500 text-center py-8">No data available</div>
         {/if}
@@ -296,8 +234,12 @@
     <TabItem title="By Country">
       <div class="p-0.5">
         {#if countryOptions && countryOptions.series && countryOptions.series.length}
-          <!-- @ts-ignore - ApexCharts type inference issue with dynamic options -->
-          <Chart options={countryOptions} />
+          <AffiliationDonut
+            labels={countryOptions.labels}
+            series={countryOptions.series}
+            colors={countryOptions.colors}
+            title={'Countries'}
+          />
         {:else}
           <div class="text-sm text-gray-500 text-center py-8">No data available</div>
         {/if}
@@ -307,12 +249,16 @@
     <TabItem title="By Continent">
       <div class="p-0.5">
         {#if continentOptions && continentOptions.series && continentOptions.series.length}
-          <!-- @ts-ignore - ApexCharts type inference issue with dynamic options -->
-          <Chart options={continentOptions} />
+          <AffiliationDonut
+            labels={continentOptions.labels}
+            series={continentOptions.series}
+            colors={continentOptions.colors}
+            title={'Continents'}
+          />
         {:else}
           <div class="text-sm text-gray-500 text-center py-8">No data available</div>
         {/if}
       </div>
     </TabItem>
   </Tabs>
-</Card>
+</div>
