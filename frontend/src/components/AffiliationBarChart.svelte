@@ -7,7 +7,7 @@
     series = [],
     colors = [],
     title = 'Institutes',
-    horizontal = true,
+    height = '40vh',
   } = $props();
 
   let container = $state(null);
@@ -125,7 +125,7 @@
 </script>
 
 {#if series && series.length}
-  <div bind:this={container} role="img" aria-label={title} style="height:360px;width:100%"></div>
+  <div bind:this={container} role="img" aria-label={title} style="height: {height}; width: 100%"></div>
 {:else}
   <div class="text-sm text-gray-500 text-center py-8">No data available</div>
 {/if}

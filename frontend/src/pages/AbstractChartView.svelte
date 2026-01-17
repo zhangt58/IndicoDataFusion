@@ -217,6 +217,10 @@
   const countryOptions = $derived(chartData.country);
   const continentOptions = $derived(chartData.continent);
   const instituteFullOptions = $derived(chartData.instituteFull);
+
+  // Shared chart height for the paired donut/bar display.
+  // Use a non-pixel unit so layout remains responsive. Adjust as needed.
+  const chartHeight = '50vh';
 </script>
 
 <div class="p-2 mb-1">
@@ -226,60 +230,66 @@
     <TabItem open title="By Institution">
       <div class="p-0.5">
         {#if instituteOptions && instituteOptions.series && instituteOptions.series.length}
-          <!-- Use local ECharts-based donut component -->
-          <AffiliationDonut
-            labels={instituteOptions.labels}
-            series={instituteOptions.series}
-            colors={instituteOptions.colors}
-            title={'Institutions'}
-          />
-
-          <!-- Full institutions bar chart below donut -->
-          {#if instituteFullOptions && instituteFullOptions.series && instituteFullOptions.series.length}
-            <div class="mt-4">
-              <AffiliationBarChart
-                labels={instituteFullOptions.labels}
-                series={instituteFullOptions.series}
-                colors={instituteFullOptions.colors}
-                title={'Institutions (All)'}
-                horizontal={true}
+          <div class="flex flex-col md:flex-row gap-0.5">
+            <div class="w-full md:w-3/5">
+              <AffiliationDonut
+                labels={instituteOptions.labels}
+                series={instituteOptions.series}
+                colors={instituteOptions.colors}
+                title={'Institutions'}
+                height={chartHeight}
+                legendPosition={'bottom'}
               />
             </div>
-          {/if}
-        {:else}
-          <div class="text-sm text-gray-500 text-center py-8">No data available</div>
-        {/if}
-      </div>
-    </TabItem>
 
-    <TabItem title="By Country">
-      <div class="p-0.5">
-        {#if countryOptions && countryOptions.series && countryOptions.series.length}
-          <AffiliationDonut
-            labels={countryOptions.labels}
-            series={countryOptions.series}
-            colors={countryOptions.colors}
-            title={'Countries'}
-          />
-        {:else}
-          <div class="text-sm text-gray-500 text-center py-8">No data available</div>
-        {/if}
-      </div>
-    </TabItem>
+            {#if instituteFullOptions && instituteFullOptions.series && instituteFullOptions.series.length}
+              <div class="w-full md:w-2/5">
+                <AffiliationBarChart
+                  labels={instituteFullOptions.labels}
+                  series={instituteFullOptions.series}
+                  colors={instituteFullOptions.colors}
+                  title={'Institutions (All)'}
+                  height={chartHeight}
+                />
+              </div>
+            {/if}
+          </div>
+         {:else}
+           <div class="text-sm text-gray-500 text-center py-8">No data available</div>
+         {/if}
+       </div>
+     </TabItem>
 
-    <TabItem title="By Continent">
-      <div class="p-0.5">
-        {#if continentOptions && continentOptions.series && continentOptions.series.length}
-          <AffiliationDonut
-            labels={continentOptions.labels}
-            series={continentOptions.series}
-            colors={continentOptions.colors}
-            title={'Continents'}
-          />
-        {:else}
-          <div class="text-sm text-gray-500 text-center py-8">No data available</div>
-        {/if}
-      </div>
-    </TabItem>
-  </Tabs>
-</div>
+     <TabItem title="By Country">
+       <div class="p-0.5">
+         {#if countryOptions && countryOptions.series && countryOptions.series.length}
+           <AffiliationDonut
+             labels={countryOptions.labels}
+             series={countryOptions.series}
+             colors={countryOptions.colors}
+             title={'Countries'}
+             height={chartHeight}
+           />
+         {:else}
+           <div class="text-sm text-gray-500 text-center py-8">No data available</div>
+         {/if}
+       </div>
+     </TabItem>
+
+     <TabItem title="By Continent">
+       <div class="p-0.5">
+         {#if continentOptions && continentOptions.series && continentOptions.series.length}
+           <AffiliationDonut
+             labels={continentOptions.labels}
+             series={continentOptions.series}
+             colors={continentOptions.colors}
+             title={'Continents'}
+             height={chartHeight}
+           />
+         {:else}
+           <div class="text-sm text-gray-500 text-center py-8">No data available</div>
+         {/if}
+       </div>
+     </TabItem>
+   </Tabs>
+ </div>
