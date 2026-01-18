@@ -222,14 +222,29 @@
 </script>
 
 {#if series && series.length}
-  <div bind:this={container} class="echarts-container" role="img" aria-label={title} style="width:100%; height: {height}"></div>
+  <div
+    bind:this={container}
+    class="echarts-container"
+    role="img"
+    aria-label={title}
+    style="width:100%; height: {height}"
+  ></div>
 {:else}
   <div class="text-sm text-gray-500 text-center py-8">No data available</div>
 {/if}
 
 <style>
   :global(.echarts-container) {
-    font-family: Inter, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans', sans-serif;
+    font-family:
+      Inter,
+      system-ui,
+      -apple-system,
+      'Segoe UI',
+      Roboto,
+      'Helvetica Neue',
+      Arial,
+      'Noto Sans',
+      sans-serif;
     /* height is controlled via the `height` prop on the element */
   }
 </style>

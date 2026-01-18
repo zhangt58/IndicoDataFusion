@@ -253,24 +253,39 @@
     <div class="inline-flex rounded-md border bg-white dark:bg-gray-800">
       <button
         type="button"
-        class="px-3 py-1 text-sm rounded-l-md focus:outline-none {selectedInterval === 'day' ? 'bg-indigo-600 text-white' : 'hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200'}"
-        onclick={() => { selectedInterval = 'day'; setOptions(); }}
+        class="px-3 py-1 text-sm rounded-l-md focus:outline-none {selectedInterval === 'day'
+          ? 'bg-indigo-600 text-white'
+          : 'hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200'}"
+        onclick={() => {
+          selectedInterval = 'day';
+          setOptions();
+        }}
         aria-pressed={selectedInterval === 'day'}
       >
         Day
       </button>
       <button
         type="button"
-        class="px-3 py-1 text-sm focus:outline-none {selectedInterval === 'week' ? 'bg-indigo-600 text-white' : 'hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200'}"
-        onclick={() => { selectedInterval = 'week'; setOptions(); }}
+        class="px-3 py-1 text-sm focus:outline-none {selectedInterval === 'week'
+          ? 'bg-indigo-600 text-white'
+          : 'hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200'}"
+        onclick={() => {
+          selectedInterval = 'week';
+          setOptions();
+        }}
         aria-pressed={selectedInterval === 'week'}
       >
         Week
       </button>
       <button
         type="button"
-        class="px-3 py-1 text-sm rounded-r-md focus:outline-none {selectedInterval === 'month' ? 'bg-indigo-600 text-white' : 'hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200'}"
-        onclick={() => { selectedInterval = 'month'; setOptions(); }}
+        class="px-3 py-1 text-sm rounded-r-md focus:outline-none {selectedInterval === 'month'
+          ? 'bg-indigo-600 text-white'
+          : 'hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200'}"
+        onclick={() => {
+          selectedInterval = 'month';
+          setOptions();
+        }}
         aria-pressed={selectedInterval === 'month'}
       >
         Month
@@ -285,7 +300,12 @@
       </label>
     </div>
   </div>
-  <div bind:this={container} role="img" aria-label={title} style="height: {height}; width: 100%"></div>
+  <div
+    bind:this={container}
+    role="img"
+    aria-label={title}
+    style="height: {height}; width: 100%"
+  ></div>
 {:else}
   <div class="text-sm text-gray-500 text-center py-8">No data available</div>
 {/if}

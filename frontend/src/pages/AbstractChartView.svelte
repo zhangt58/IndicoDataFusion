@@ -172,7 +172,7 @@
     return {
       labels,
       series: values,
-      colors: colors.slice(0, labels.length)
+      colors: colors.slice(0, labels.length),
     };
   }
 
@@ -258,10 +258,10 @@
                       </div>
                     {/if}
                   </div>
-                 {:else}
-                   <div class="text-sm text-gray-500 text-center py-8">No data available</div>
-                 {/if}
-               </div>
+                {:else}
+                  <div class="text-sm text-gray-500 text-center py-8">No data available</div>
+                {/if}
+              </div>
             </TabItem>
 
             <TabItem title="By Country">
