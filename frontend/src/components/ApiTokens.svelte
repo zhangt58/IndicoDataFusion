@@ -163,7 +163,10 @@
     try {
       await DeleteAPIToken(name);
     } catch (e) {
-      showToastMsg('Failed to delete token from keyring: ' + (e && e.message ? e.message : e), 'error');
+      showToastMsg(
+        'Failed to delete token from keyring: ' + (e && e.message ? e.message : e),
+        'error',
+      );
       return;
     }
     onDelete(i);
@@ -215,7 +218,14 @@
       {#if toastType === 'error'}
         <Toast color="red">
           {#snippet icon()}
-            <svg class="h-5 w-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+            <svg class="h-5 w-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"
+              ><path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M6 18L18 6M6 6l12 12"
+              /></svg
+            >
             <span class="sr-only">Error icon</span>
           {/snippet}
           <div class="flex items-center w-full">
@@ -225,7 +235,14 @@
       {:else if toastType === 'info'}
         <Toast color="blue">
           {#snippet icon()}
-            <svg class="h-5 w-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01"/></svg>
+            <svg class="h-5 w-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"
+              ><path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M13 16h-1v-4h-1m1-4h.01"
+              /></svg
+            >
             <span class="sr-only">Info icon</span>
           {/snippet}
           <div class="flex items-center w-full">
@@ -235,7 +252,18 @@
       {:else}
         <Toast color="green">
           {#snippet icon()}
-            <svg class="h-5 w-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+            <svg
+              class="h-5 w-5 text-green-600"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+              ><path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M5 13l4 4L19 7"
+              /></svg
+            >
             <span class="sr-only">Success icon</span>
           {/snippet}
           <div class="flex items-center w-full">
@@ -433,8 +461,8 @@
             if you prefer.
           </li>
           <li>
-            The UI allows you to reveal a token temporarily. Use this cautiously and
-            avoid pasting tokens into insecure places.
+            The UI allows you to reveal a token temporarily. Use this cautiously and avoid pasting
+            tokens into insecure places.
           </li>
         </ul>
         <div class="flex justify-end">
@@ -478,5 +506,4 @@
     error={reveal.error}
     onClose={closeReveal}
   />
-
 </div>

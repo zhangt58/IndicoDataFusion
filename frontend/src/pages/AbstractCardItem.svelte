@@ -169,4 +169,3 @@
 
 <!-- Affiliation Details Dialog -->
 <AffiliationDialog bind:open={showAffiliationDialog} affiliation={selectedAffiliation} />
-

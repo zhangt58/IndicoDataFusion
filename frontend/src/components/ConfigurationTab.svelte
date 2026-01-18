@@ -118,7 +118,6 @@
     indicoDialogOpen = false;
   }
 
-
   // Validate data source names: non-empty and unique
   function validateNames() {
     nameErrors = {};

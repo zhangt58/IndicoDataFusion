@@ -9,7 +9,6 @@
       onclick(affiliation);
     }
   }
-
 </script>
 
 {#if affiliation}
@@ -23,9 +22,10 @@
     <span class="block text-left">{affiliation.name}</span>
     {#if showCity && (affiliation.city || affiliation.country_code)}
       <span class="text-gray-500 dark:text-gray-400">
-        ({affiliation.city || ''}{affiliation.city && affiliation.country_code ? ', ' : ''}{affiliation.country_code || ''})
+        ({affiliation.city || ''}{affiliation.city && affiliation.country_code
+          ? ', '
+          : ''}{affiliation.country_code || ''})
       </span>
     {/if}
   </button>
 {/if}
-
