@@ -240,7 +240,7 @@
                         labels={instituteOptions.labels}
                         series={instituteOptions.series}
                         colors={instituteOptions.colors}
-                        title={'Institutions'}
+                        title={''}
                         height={chartHeight}
                         legendPosition={'bottom'}
                       />
@@ -252,7 +252,7 @@
                           labels={instituteFullOptions.labels}
                           series={instituteFullOptions.series}
                           colors={instituteFullOptions.colors}
-                          title={'Institutions (All)'}
+                          title={''}
                           height={chartHeight}
                         />
                       </div>
@@ -271,7 +271,7 @@
                     labels={countryOptions.labels}
                     series={countryOptions.series}
                     colors={countryOptions.colors}
-                    title={'Countries'}
+                    title={''}
                     height={chartHeight}
                   />
                 {:else}
@@ -287,7 +287,7 @@
                     labels={continentOptions.labels}
                     series={continentOptions.series}
                     colors={continentOptions.colors}
-                    title={'Continents'}
+                    title={''}
                     height={chartHeight}
                   />
                 {:else}
@@ -304,7 +304,7 @@
       <!-- Submission content -->
       <div class="p-0.5">
         {#if abstractData && abstractData.length}
-          <AbstractSubmissionTrend submittedTimes={abstractData} title={'Submission trend'} height={'40vh'} />
+          <AbstractSubmissionTrend submittedTimes={abstractData} title={''} height={'40vh'} />
         {:else}
           <div class="text-sm text-gray-500 text-center py-8">No abstracts to display.</div>
         {/if}
