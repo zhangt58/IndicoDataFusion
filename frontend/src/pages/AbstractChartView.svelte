@@ -1,6 +1,7 @@
 <script>
   import AffiliationDonut from '../components/AffiliationDonut.svelte';
   import AffiliationBarChart from '../components/AffiliationBarChart.svelte';
+  import AbstractSubmissionTrend from '../components/AbstractSubmissionTrend.svelte';
   import { Tabs, TabItem } from 'flowbite-svelte';
 
   // Props: array of abstract objects (same shape returned by GetAbstracts)
@@ -224,72 +225,90 @@
 </script>
 
 <div class="p-2 mb-1">
-  <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-0.5">Affiliation Overview</h3>
+  <!-- Top-level tabs: Affiliation vs Submission -->
+  <Tabs class="shadow-md rounded-md">
+    <TabItem open title="Affiliation">
+      <div class="grid grid-cols-1 md:grid-cols-1 gap-4">
+        <div>
+          <Tabs tabStyle="underline">
+            <TabItem open title="By Institution">
+              <div class="p-0.5">
+                {#if instituteOptions && instituteOptions.series && instituteOptions.series.length}
+                  <div class="flex flex-col md:flex-row gap-0.5">
+                    <div class="w-full md:w-3/5">
+                      <AffiliationDonut
+                        labels={instituteOptions.labels}
+                        series={instituteOptions.series}
+                        colors={instituteOptions.colors}
+                        title={'Institutions'}
+                        height={chartHeight}
+                        legendPosition={'bottom'}
+                      />
+                    </div>
 
-  <Tabs tabStyle="underline">
-    <TabItem open title="By Institution">
-      <div class="p-0.5">
-        {#if instituteOptions && instituteOptions.series && instituteOptions.series.length}
-          <div class="flex flex-col md:flex-row gap-0.5">
-            <div class="w-full md:w-3/5">
-              <AffiliationDonut
-                labels={instituteOptions.labels}
-                series={instituteOptions.series}
-                colors={instituteOptions.colors}
-                title={'Institutions'}
-                height={chartHeight}
-                legendPosition={'bottom'}
-              />
-            </div>
+                    {#if instituteFullOptions && instituteFullOptions.series && instituteFullOptions.series.length}
+                      <div class="w-full md:w-2/5">
+                        <AffiliationBarChart
+                          labels={instituteFullOptions.labels}
+                          series={instituteFullOptions.series}
+                          colors={instituteFullOptions.colors}
+                          title={'Institutions (All)'}
+                          height={chartHeight}
+                        />
+                      </div>
+                    {/if}
+                  </div>
+                 {:else}
+                   <div class="text-sm text-gray-500 text-center py-8">No data available</div>
+                 {/if}
+               </div>
+            </TabItem>
 
-            {#if instituteFullOptions && instituteFullOptions.series && instituteFullOptions.series.length}
-              <div class="w-full md:w-2/5">
-                <AffiliationBarChart
-                  labels={instituteFullOptions.labels}
-                  series={instituteFullOptions.series}
-                  colors={instituteFullOptions.colors}
-                  title={'Institutions (All)'}
-                  height={chartHeight}
-                />
+            <TabItem title="By Country">
+              <div class="p-0.5">
+                {#if countryOptions && countryOptions.series && countryOptions.series.length}
+                  <AffiliationDonut
+                    labels={countryOptions.labels}
+                    series={countryOptions.series}
+                    colors={countryOptions.colors}
+                    title={'Countries'}
+                    height={chartHeight}
+                  />
+                {:else}
+                  <div class="text-sm text-gray-500 text-center py-8">No data available</div>
+                {/if}
               </div>
-            {/if}
-          </div>
-         {:else}
-           <div class="text-sm text-gray-500 text-center py-8">No data available</div>
-         {/if}
-       </div>
-     </TabItem>
+            </TabItem>
 
-     <TabItem title="By Country">
-       <div class="p-0.5">
-         {#if countryOptions && countryOptions.series && countryOptions.series.length}
-           <AffiliationDonut
-             labels={countryOptions.labels}
-             series={countryOptions.series}
-             colors={countryOptions.colors}
-             title={'Countries'}
-             height={chartHeight}
-           />
-         {:else}
-           <div class="text-sm text-gray-500 text-center py-8">No data available</div>
-         {/if}
-       </div>
-     </TabItem>
+            <TabItem title="By Continent">
+              <div class="p-0.5">
+                {#if continentOptions && continentOptions.series && continentOptions.series.length}
+                  <AffiliationDonut
+                    labels={continentOptions.labels}
+                    series={continentOptions.series}
+                    colors={continentOptions.colors}
+                    title={'Continents'}
+                    height={chartHeight}
+                  />
+                {:else}
+                  <div class="text-sm text-gray-500 text-center py-8">No data available</div>
+                {/if}
+              </div>
+            </TabItem>
+          </Tabs>
+        </div>
+      </div>
+    </TabItem>
 
-     <TabItem title="By Continent">
-       <div class="p-0.5">
-         {#if continentOptions && continentOptions.series && continentOptions.series.length}
-           <AffiliationDonut
-             labels={continentOptions.labels}
-             series={continentOptions.series}
-             colors={continentOptions.colors}
-             title={'Continents'}
-             height={chartHeight}
-           />
-         {:else}
-           <div class="text-sm text-gray-500 text-center py-8">No data available</div>
-         {/if}
-       </div>
-     </TabItem>
-   </Tabs>
- </div>
+    <TabItem title="Submission">
+      <!-- Submission content -->
+      <div class="p-0.5">
+        {#if abstractData && abstractData.length}
+          <AbstractSubmissionTrend submittedTimes={abstractData} title={'Submission trend'} height={'40vh'} />
+        {:else}
+          <div class="text-sm text-gray-500 text-center py-8">No abstracts to display.</div>
+        {/if}
+      </div>
+    </TabItem>
+  </Tabs>
+</div>
