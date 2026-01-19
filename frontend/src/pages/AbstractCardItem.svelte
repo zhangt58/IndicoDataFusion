@@ -9,11 +9,32 @@
   // Dialog state
   let showAffiliationDialog = $state(false);
   let selectedAffiliation = $state(null);
+  // Add state to control the raw JSON collapsible
+  let showRawJson = $state(false);
+
+  // copied-state for copy button
+  let showCopied = $state(false);
 
   // Handle affiliation click
   function handleAffiliationClick(affiliation) {
     selectedAffiliation = affiliation;
     showAffiliationDialog = true;
+  }
+
+  async function copyRawJson() {
+    // prevent details toggle (additional precaution)
+    try {
+      const text = JSON.stringify(abstract, null, 2);
+
+      if (navigator && navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(text);
+        showCopied = true;
+        setTimeout(() => (showCopied = false), 2000);
+      }
+    } catch (err) {
+      // best-effort: inform user
+      alert('Copy failed: ' + (err && err.message ? err.message : String(err)));
+    }
   }
 </script>
 
@@ -165,6 +186,36 @@
       {/if}
     </div>
   </div>
+</div>
+
+<!-- Raw JSON (collapsible) -->
+<div class="mt-1">
+  <details class="bg-gray-50 dark:bg-gray-700 rounded p-3" bind:open={showRawJson}>
+    <summary
+      class="cursor-pointer text-sm font-semibold text-gray-700 dark:text-gray-300 flex justify-between items-center"
+    >
+      <span>Raw abstract JSON</span>
+      <span class="inline-flex items-center gap-2">
+        <span class="relative inline-flex items-center">
+          <button
+            onclick={copyRawJson}
+            class="text-xs px-2 py-1 rounded bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 transition-colors duration-150 hover:bg-gray-100 hover:text-gray-900 dark:hover:bg-gray-900 dark:hover:text-white focus:outline-none focus:ring-2 focus:ring-indigo-300 dark:focus:ring-indigo-600"
+            aria-label="Copy raw JSON to clipboard"
+            aria-describedby="copy-tooltip"
+            title="Copy JSON"
+          >
+            {showCopied ? 'Copied' : 'Copy'}
+          </button>
+        </span>
+        <span class="text-xs text-gray-500">{showRawJson ? 'Hide' : 'Show'}</span>
+      </span>
+    </summary>
+    <pre
+      class="mt-1 overflow-auto text-xs text-gray-700 dark:text-gray-300"
+      style="max-height:360px;white-space:pre-wrap;">
+{JSON.stringify(abstract, null, 2)}
+    </pre>
+  </details>
 </div>
 
 <!-- Affiliation Details Dialog -->
