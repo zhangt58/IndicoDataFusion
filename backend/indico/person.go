@@ -99,3 +99,34 @@ func (s *Submitter) UnmarshalJSON(data []byte) error {
 	s.Affiliation = aux.AffiliationMeta
 	return nil
 }
+
+// Reviewer represents the user who submitted a review
+// Similar structure to Judge/Submitter
+type Reviewer struct {
+	Affiliation *Affiliation `json:"affiliation,omitempty"` // populated from affiliation_meta
+	Email       string       `json:"email"`
+	FirstName   string       `json:"first_name"`
+	LastName    string       `json:"last_name"`
+	FullName    string       `json:"full_name"`
+	AvatarURL   string       `json:"avatar_url"`
+	ID          int          `json:"id"`
+	Identifier  string       `json:"identifier"`
+	Title       *string      `json:"title"` // pointer to handle null values
+}
+
+// UnmarshalJSON custom unmarshaler for Reviewer to extract affiliation from affiliation_meta
+func (r *Reviewer) UnmarshalJSON(data []byte) error {
+	type Alias Reviewer
+	aux := &struct {
+		AffiliationString string       `json:"affiliation"` // ignore the string field
+		AffiliationMeta   *Affiliation `json:"affiliation_meta"`
+		*Alias
+	}{
+		Alias: (*Alias)(r),
+	}
+	if err := json.Unmarshal(data, &aux); err != nil {
+		return err
+	}
+	r.Affiliation = aux.AffiliationMeta
+	return nil
+}

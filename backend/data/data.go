@@ -375,6 +375,28 @@ func (h *DataSourceHandler) getAbstractsFromFile() ([]indico.AbstractData, error
 		return nil, fmt.Errorf("failed to parse %s: %w", filePath, err)
 	}
 
+	// Build question lookup map
+	questionMap := make(map[int]*indico.QuestionData)
+	for i := range response.Questions {
+		q := &response.Questions[i]
+		questionMap[q.ID] = q
+	}
+
+	// Expand question details in reviews
+	for i := range response.Abstracts {
+		for j := range response.Abstracts[i].Reviews {
+			for k := range response.Abstracts[i].Reviews[j].Ratings {
+				rating := &response.Abstracts[i].Reviews[j].Ratings[k]
+				if q, ok := questionMap[rating.Question]; ok {
+					rating.QuestionDetails = q
+				}
+			}
+		}
+		// Compute aggregated ratings for frontend
+		response.Abstracts[i].FirstPriority = response.Abstracts[i].GetAggregatedRatingByTitle("First priority")
+		response.Abstracts[i].SecondPriority = response.Abstracts[i].GetAggregatedRatingByTitle("Second priority")
+	}
+
 	return response.Abstracts, nil
 }
 
@@ -409,8 +431,14 @@ func (h *DataSourceHandler) getAbstractsFromAPI(ctx context.Context) ([]indico.A
 		return nil, fmt.Errorf("no abstracts field in response")
 	}
 
+	// Also get questions if available
+	questionsIface := rawData["questions"]
+
 	// Convert to JSON and back to properly deserialize
-	jsonData, err := json.Marshal(map[string]any{"abstracts": abstractsIface})
+	jsonData, err := json.Marshal(map[string]any{
+		"abstracts": abstractsIface,
+		"questions": questionsIface,
+	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to marshal abstracts: %w", err)
 	}
@@ -418,6 +446,28 @@ func (h *DataSourceHandler) getAbstractsFromAPI(ctx context.Context) ([]indico.A
 	var response indico.AbstractsResponse
 	if err := json.Unmarshal(jsonData, &response); err != nil {
 		return nil, fmt.Errorf("failed to unmarshal abstracts: %w", err)
+	}
+
+	// Build question lookup map
+	questionMap := make(map[int]*indico.QuestionData)
+	for i := range response.Questions {
+		q := &response.Questions[i]
+		questionMap[q.ID] = q
+	}
+
+	// Expand question details in reviews
+	for i := range response.Abstracts {
+		for j := range response.Abstracts[i].Reviews {
+			for k := range response.Abstracts[i].Reviews[j].Ratings {
+				rating := &response.Abstracts[i].Reviews[j].Ratings[k]
+				if q, ok := questionMap[rating.Question]; ok {
+					rating.QuestionDetails = q
+				}
+			}
+		}
+		// Compute aggregated ratings for frontend
+		response.Abstracts[i].FirstPriority = response.Abstracts[i].GetAggregatedRatingByTitle("First priority")
+		response.Abstracts[i].SecondPriority = response.Abstracts[i].GetAggregatedRatingByTitle("Second priority")
 	}
 
 	return response.Abstracts, nil

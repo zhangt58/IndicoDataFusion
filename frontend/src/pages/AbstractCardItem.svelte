@@ -3,17 +3,49 @@
   import TrackBadge from './TrackBadge.svelte';
   import AffiliationDialog from '../components/AffiliationDialog.svelte';
   import AffiliationBadge from '../components/AffiliationBadge.svelte';
+  import AbstractReviewsDialog from '../components/AbstractReviewsDialog.svelte';
 
   let { abstract = {} } = $props();
 
   // Dialog state
   let showAffiliationDialog = $state(false);
   let selectedAffiliation = $state(null);
+  let showReviewsDialog = $state(false);
+  // Add state to control the raw JSON collapsible
+  let showRawJson = $state(false);
+
+  // copied-state for copy button
+  let showCopied = $state(false);
 
   // Handle affiliation click
   function handleAffiliationClick(affiliation) {
     selectedAffiliation = affiliation;
     showAffiliationDialog = true;
+  }
+
+  // Handle reviews click
+  function handleReviewsClick() {
+    showReviewsDialog = true;
+  }
+
+  // Use precomputed aggregated ratings from backend
+  const firstPriorityTotal = $derived(abstract.first_priority || 0);
+  const secondPriorityTotal = $derived(abstract.second_priority || 0);
+
+  async function copyRawJson() {
+    // prevent details toggle (additional precaution)
+    try {
+      const text = JSON.stringify(abstract, null, 2);
+
+      if (navigator && navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(text);
+        showCopied = true;
+        setTimeout(() => (showCopied = false), 2000);
+      }
+    } catch (err) {
+      // best-effort: inform user
+      alert('Copy failed: ' + (err && err.message ? err.message : String(err)));
+    }
   }
 </script>
 
@@ -96,7 +128,7 @@
   {/if}
 
   <!-- Score and Judge -->
-  <div class="flex gap-4 mb-3">
+  <div class="flex gap-4">
     {#if abstract.score !== null && abstract.score !== undefined}
       <div>
         <p class="text-xs font-semibold text-gray-600 dark:text-gray-400">Score:</p>
@@ -120,6 +152,31 @@
       </div>
     {/if}
   </div>
+
+  <!-- Ratings Summary -->
+  {#if abstract.reviews && abstract.reviews.length > 0 && (firstPriorityTotal > 0 || secondPriorityTotal > 0)}
+    <div class="mt-1">
+      <p class="text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1">Ratings:</p>
+      <div class="text-sm flex gap-4 items-center">
+        {#if firstPriorityTotal > 0}
+          <div class="flex items-center gap-2">
+            <span class="text-gray-600 dark:text-gray-400">First Priority:</span>
+            <span class="font-semibold text-blue-600 dark:text-blue-400">
+              {firstPriorityTotal}
+            </span>
+          </div>
+        {/if}
+        {#if secondPriorityTotal > 0}
+          <div class="flex items-center gap-2">
+            <span class="text-gray-600 dark:text-gray-400">Second Priority:</span>
+            <span class="font-semibold text-green-600 dark:text-green-400">
+              {secondPriorityTotal}
+            </span>
+          </div>
+        {/if}
+      </div>
+    </div>
+  {/if}
 
   <!-- Authors/Persons -->
   {#if abstract.persons && abstract.persons.length > 0}
@@ -155,17 +212,61 @@
 
   <!-- Metadata -->
   <div class="mt-3 pt-3 border-t border-gray-200 dark:border-gray-600 text-xs text-gray-500">
-    <div class="flex gap-4">
+    <div class="flex gap-4 items-center">
       <span>Modified: {abstract.modified_dt}</span>
       {#if abstract.custom_fields && abstract.custom_fields.length > 0}
         <span>Custom Fields: {abstract.custom_fields.length}</span>
       {/if}
       {#if abstract.reviews && abstract.reviews.length > 0}
-        <span>Reviews: {abstract.reviews.length}</span>
+        <button
+          type="button"
+          class="text-blue-600 dark:text-blue-400 hover:underline cursor-pointer font-semibold"
+          onclick={handleReviewsClick}
+        >
+          Reviews: {abstract.reviews.length}
+        </button>
       {/if}
     </div>
+  </div>
+
+  <!-- Raw JSON (collapsible) -->
+  <div class="mt-2">
+    <details class="bg-gray-50 dark:bg-gray-700 rounded p-1" bind:open={showRawJson}>
+      <summary
+        class="cursor-pointer text-sm font-semibold text-gray-700 dark:text-gray-300 flex justify-between items-center"
+      >
+        <span>Raw abstract JSON</span>
+        <span class="inline-flex items-center gap-1">
+          <span class="relative inline-flex items-center">
+            <button
+              onclick={copyRawJson}
+              class="text-xs px-1 py-1 rounded bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 transition-colors duration-150 hover:bg-gray-100 hover:text-gray-900 dark:hover:bg-gray-900 dark:hover:text-white focus:outline-none focus:ring-2 focus:ring-indigo-300 dark:focus:ring-indigo-600"
+              aria-label="Copy raw JSON to clipboard"
+              aria-describedby="copy-tooltip"
+              title="Copy JSON"
+            >
+              {showCopied ? 'Copied' : 'Copy'}
+            </button>
+          </span>
+          <span class="text-xs text-gray-500">{showRawJson ? 'Hide' : 'Show'}</span>
+        </span>
+      </summary>
+      <pre
+        class="mt-1 overflow-auto text-xs text-gray-700 dark:text-gray-300"
+        style="max-height:360px;white-space:pre-wrap;">
+{JSON.stringify(abstract, null, 2)}
+    </pre>
+    </details>
   </div>
 </div>
 
 <!-- Affiliation Details Dialog -->
 <AffiliationDialog bind:open={showAffiliationDialog} affiliation={selectedAffiliation} />
+
+<!-- Abstract Reviews Dialog -->
+<AbstractReviewsDialog
+  bind:open={showReviewsDialog}
+  reviews={abstract.reviews || []}
+  abstractTitle={abstract.title}
+  onAffiliationClick={handleAffiliationClick}
+/>

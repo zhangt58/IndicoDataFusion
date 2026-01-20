@@ -149,6 +149,8 @@ export function transformAbstractToTableItem(abstract) {
     SubmittedMillis: submittedMillis,
     Authors: getPrimaryAuthorsDisplay(abstract.persons),
     AuthorsTooltip: getAllAuthorsTooltip(abstract.persons), // All authors for tooltip
+    FirstPriority: abstract.first_priority ?? 0,
+    SecondPriority: abstract.second_priority ?? 0,
   };
 }
 
