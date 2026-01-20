@@ -13,10 +13,19 @@ type ContribType struct {
 	Name string `json:"name"`
 }
 
+// QuestionData represents a review question from the abstracts response
+type QuestionData struct {
+	ID       int    `json:"id"`
+	NoScore  bool   `json:"no_score"`
+	Position int    `json:"position"`
+	Title    string `json:"title"`
+}
+
 // Rating represents a rating given in a review
 type Rating struct {
-	Question int         `json:"question"`
-	Value    interface{} `json:"value"` // can be int or bool depending on question type
+	Question        int           `json:"question"`
+	Value           interface{}   `json:"value"`                      // can be int or bool depending on question type
+	QuestionDetails *QuestionData `json:"question_details,omitempty"` // Expanded question info
 }
 
 // RelatedAbstract represents a reference to another abstract
@@ -92,4 +101,6 @@ type AbstractData struct {
 // AbstractsResponse represents the top-level structure of abstracts.json
 type AbstractsResponse struct {
 	Abstracts []AbstractData `json:"abstracts"`
+	Questions []QuestionData `json:"questions"`
+	Version   int            `json:"version,omitempty"`
 }
