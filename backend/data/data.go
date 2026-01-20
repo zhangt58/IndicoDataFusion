@@ -392,6 +392,9 @@ func (h *DataSourceHandler) getAbstractsFromFile() ([]indico.AbstractData, error
 				}
 			}
 		}
+		// Compute aggregated ratings for frontend
+		response.Abstracts[i].FirstPriority = response.Abstracts[i].GetAggregatedRatingByTitle("First priority")
+		response.Abstracts[i].SecondPriority = response.Abstracts[i].GetAggregatedRatingByTitle("Second priority")
 	}
 
 	return response.Abstracts, nil
@@ -462,6 +465,9 @@ func (h *DataSourceHandler) getAbstractsFromAPI(ctx context.Context) ([]indico.A
 				}
 			}
 		}
+		// Compute aggregated ratings for frontend
+		response.Abstracts[i].FirstPriority = response.Abstracts[i].GetAggregatedRatingByTitle("First priority")
+		response.Abstracts[i].SecondPriority = response.Abstracts[i].GetAggregatedRatingByTitle("Second priority")
 	}
 
 	return response.Abstracts, nil

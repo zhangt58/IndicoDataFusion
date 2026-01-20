@@ -98,6 +98,10 @@ type AbstractData struct {
 	DuplicateOf       *int          `json:"duplicate_of"`
 	MergedInto        *int          `json:"merged_into"`
 	Files             []interface{} `json:"files"` // generic for now
+
+	// Aggregated Ratings (computed fields for frontend convenience)
+	FirstPriority  float64 `json:"first_priority"`
+	SecondPriority float64 `json:"second_priority"`
 }
 
 // AggRatings aggregates ratings from a single review by question ID.

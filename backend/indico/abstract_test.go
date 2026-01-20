@@ -319,3 +319,66 @@ func TestGetAggregatedRatingByTitle(t *testing.T) {
 		})
 	}
 }
+
+// TestAbstractDataPrecomputedFields tests that FirstPriority and SecondPriority fields
+// are correctly computed when populated by the data handler
+func TestAbstractDataPrecomputedFields(t *testing.T) {
+	abstract := AbstractData{
+		Reviews: []Review{
+			{
+				Ratings: []Rating{
+					{
+						Question: 19,
+						Value:    1,
+						QuestionDetails: &QuestionData{
+							ID:    19,
+							Title: "First priority",
+						},
+					},
+					{
+						Question: 20,
+						Value:    true,
+						QuestionDetails: &QuestionData{
+							ID:    20,
+							Title: "Second Priority",
+						},
+					},
+				},
+			},
+			{
+				Ratings: []Rating{
+					{
+						Question: 19,
+						Value:    2,
+						QuestionDetails: &QuestionData{
+							ID:    19,
+							Title: "First priority",
+						},
+					},
+					{
+						Question: 20,
+						Value:    "yes",
+						QuestionDetails: &QuestionData{
+							ID:    20,
+							Title: "Second Priority",
+						},
+					},
+				},
+			},
+		},
+	}
+
+	// Simulate what the data handler does - populate the fields
+	abstract.FirstPriority = abstract.GetAggregatedRatingByTitle("First priority")
+	abstract.SecondPriority = abstract.GetAggregatedRatingByTitle("Second priority")
+
+	// Verify the fields are correctly populated
+	if abstract.FirstPriority != 3.0 {
+		t.Errorf("FirstPriority: expected 3.0, got %.2f", abstract.FirstPriority)
+	}
+	if abstract.SecondPriority != 2.0 {
+		t.Errorf("SecondPriority: expected 2.0, got %.2f", abstract.SecondPriority)
+	}
+
+	t.Logf("✅ FirstPriority: %.0f, SecondPriority: %.0f", abstract.FirstPriority, abstract.SecondPriority)
+}
