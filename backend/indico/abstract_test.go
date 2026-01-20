@@ -127,3 +127,195 @@ func TestReviewFieldsParsing(t *testing.T) {
 
 	t.Logf("Successfully found all review action types")
 }
+
+// TestReviewAggRatings tests the AggRatings method
+func TestReviewAggRatings(t *testing.T) {
+	tests := []struct {
+		name     string
+		review   Review
+		expected map[int]float64
+	}{
+		{
+			name: "single numeric rating",
+			review: Review{
+				Ratings: []Rating{
+					{Question: 1, Value: 5},
+				},
+			},
+			expected: map[int]float64{1: 5.0},
+		},
+		{
+			name: "boolean ratings",
+			review: Review{
+				Ratings: []Rating{
+					{Question: 1, Value: true},
+					{Question: 2, Value: false},
+				},
+			},
+			expected: map[int]float64{1: 1.0, 2: 0.0},
+		},
+		{
+			name: "string boolean ratings",
+			review: Review{
+				Ratings: []Rating{
+					{Question: 1, Value: "yes"},
+					{Question: 2, Value: "no"},
+					{Question: 3, Value: "true"},
+					{Question: 4, Value: "false"},
+				},
+			},
+			expected: map[int]float64{1: 1.0, 2: 0.0, 3: 1.0, 4: 0.0},
+		},
+		{
+			name: "mixed types",
+			review: Review{
+				Ratings: []Rating{
+					{Question: 1, Value: 3},
+					{Question: 2, Value: true},
+					{Question: 3, Value: "yes"},
+					{Question: 4, Value: 2.5},
+				},
+			},
+			expected: map[int]float64{1: 3.0, 2: 1.0, 3: 1.0, 4: 2.5},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := tt.review.AggRatings()
+			if len(result) != len(tt.expected) {
+				t.Errorf("expected %d ratings, got %d", len(tt.expected), len(result))
+			}
+			for q, expectedVal := range tt.expected {
+				if val, ok := result[q]; !ok {
+					t.Errorf("missing question %d in result", q)
+				} else if val != expectedVal {
+					t.Errorf("question %d: expected %.2f, got %.2f", q, expectedVal, val)
+				}
+			}
+		})
+	}
+}
+
+// TestAbstractDataAggregateAllRatings tests aggregating ratings across all reviews
+func TestAbstractDataAggregateAllRatings(t *testing.T) {
+	abstract := AbstractData{
+		Reviews: []Review{
+			{
+				Ratings: []Rating{
+					{Question: 1, Value: 3},
+					{Question: 2, Value: true},
+				},
+			},
+			{
+				Ratings: []Rating{
+					{Question: 1, Value: 2},
+					{Question: 2, Value: false},
+					{Question: 3, Value: "yes"},
+				},
+			},
+		},
+	}
+
+	expected := map[int]float64{
+		1: 5.0, // 3 + 2
+		2: 1.0, // 1 + 0
+		3: 1.0, // 1
+	}
+
+	result := abstract.AggregateAllRatings()
+	if len(result) != len(expected) {
+		t.Errorf("expected %d questions, got %d", len(expected), len(result))
+	}
+	for q, expectedVal := range expected {
+		if val, ok := result[q]; !ok {
+			t.Errorf("missing question %d in result", q)
+		} else if val != expectedVal {
+			t.Errorf("question %d: expected %.2f, got %.2f", q, expectedVal, val)
+		}
+	}
+}
+
+// TestGetAggregatedRatingByTitle tests getting aggregated ratings by question title
+func TestGetAggregatedRatingByTitle(t *testing.T) {
+	abstract := AbstractData{
+		Reviews: []Review{
+			{
+				Ratings: []Rating{
+					{
+						Question: 19,
+						Value:    1,
+						QuestionDetails: &QuestionData{
+							ID:    19,
+							Title: "First priority",
+						},
+					},
+					{
+						Question: 20,
+						Value:    true,
+						QuestionDetails: &QuestionData{
+							ID:    20,
+							Title: "Second Priority",
+						},
+					},
+				},
+			},
+			{
+				Ratings: []Rating{
+					{
+						Question: 19,
+						Value:    2,
+						QuestionDetails: &QuestionData{
+							ID:    19,
+							Title: "First priority",
+						},
+					},
+					{
+						Question: 20,
+						Value:    "yes",
+						QuestionDetails: &QuestionData{
+							ID:    20,
+							Title: "Second Priority",
+						},
+					},
+				},
+			},
+		},
+	}
+
+	tests := []struct {
+		name     string
+		title    string
+		expected float64
+	}{
+		{
+			name:     "first priority exact case",
+			title:    "First priority",
+			expected: 3.0, // 1 + 2
+		},
+		{
+			name:     "first priority different case",
+			title:    "FIRST PRIORITY",
+			expected: 3.0,
+		},
+		{
+			name:     "second priority mixed case",
+			title:    "second priority",
+			expected: 2.0, // 1 + 1 (true + "yes")
+		},
+		{
+			name:     "non-existent question",
+			title:    "Third priority",
+			expected: 0.0,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := abstract.GetAggregatedRatingByTitle(tt.title)
+			if result != tt.expected {
+				t.Errorf("expected %.2f, got %.2f", tt.expected, result)
+			}
+		})
+	}
+}

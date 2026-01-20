@@ -1,5 +1,7 @@
 package indico
 
+import "strings"
+
 // Track represents a conference track
 type Track struct {
 	Code  string `json:"code"`
@@ -96,6 +98,82 @@ type AbstractData struct {
 	DuplicateOf       *int          `json:"duplicate_of"`
 	MergedInto        *int          `json:"merged_into"`
 	Files             []interface{} `json:"files"` // generic for now
+}
+
+// AggRatings aggregates ratings from a single review by question ID.
+// For numeric values, it treats s numbers;
+// For boolean values, it treats true/yes as 1 and false/no as 0.
+// Returns a map of question ID to aggregated value.
+func (r *Review) AggRatings() map[int]float64 {
+	agg := make(map[int]float64)
+	for _, rating := range r.Ratings {
+		value := convertRatingValue(rating.Value)
+		agg[rating.Question] = value
+	}
+	return agg
+}
+
+// AggregateAllRatings aggregates ratings across all reviews for an abstract.
+// Returns a map of question ID to total aggregated value.
+func (a *AbstractData) AggregateAllRatings() map[int]float64 {
+	agg := make(map[int]float64)
+	for _, review := range a.Reviews {
+		reviewAgg := review.AggRatings()
+		for qID, value := range reviewAgg {
+			agg[qID] += value
+		}
+	}
+	return agg
+}
+
+// GetAggregatedRatingByTitle gets the aggregated rating for a question by its title (case-insensitive).
+// Returns 0 if the question is not found or has no ratings.
+func (a *AbstractData) GetAggregatedRatingByTitle(questionTitle string) float64 {
+	agg := a.AggregateAllRatings()
+
+	// Find question ID by title
+	for _, review := range a.Reviews {
+		for _, rating := range review.Ratings {
+			if rating.QuestionDetails != nil {
+				if equalsCaseInsensitive(rating.QuestionDetails.Title, questionTitle) {
+					if val, ok := agg[rating.Question]; ok {
+						return val
+					}
+				}
+			}
+		}
+	}
+	return 0
+}
+
+// convertRatingValue converts a rating value to float64.
+// Handles int, float64, bool, and string types.
+func convertRatingValue(value interface{}) float64 {
+	switch v := value.(type) {
+	case int:
+		return float64(v)
+	case float64:
+		return v
+	case bool:
+		if v {
+			return 1.0
+		}
+		return 0.0
+	case string:
+		// Handle string representations of boolean
+		lower := strings.ToLower(v)
+		if lower == "true" || lower == "yes" || lower == "1" {
+			return 1.0
+		}
+		return 0.0
+	default:
+		return 0.0
+	}
+}
+
+// Helper function for case-insensitive comparison
+func equalsCaseInsensitive(a, b string) bool {
+	return strings.ToLower(a) == strings.ToLower(b)
 }
 
 // AbstractsResponse represents the top-level structure of abstracts.json
