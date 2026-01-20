@@ -1,8 +1,5 @@
 package indico
 
-// Person, Judge, Submitter and Affiliation types have been moved to person.go
-// See backend/indico/person.go for their definitions.
-
 // Track represents a conference track
 type Track struct {
 	Code  string `json:"code"`
@@ -16,9 +13,32 @@ type ContribType struct {
 	Name string `json:"name"`
 }
 
+// Rating represents a rating given in a review
+type Rating struct {
+	Question int         `json:"question"`
+	Value    interface{} `json:"value"` // can be int or bool depending on question type
+}
+
+// RelatedAbstract represents a reference to another abstract
+type RelatedAbstract struct {
+	FriendlyID int    `json:"friendly_id"`
+	ID         int    `json:"id"`
+	Title      string `json:"title"`
+}
+
 // Review represents a review of the abstract
 type Review struct {
-	// Add fields as needed when review structure is known
+	Comment                 string           `json:"comment"`
+	CreatedDT               string           `json:"created_dt"`
+	ID                      int              `json:"id"`
+	ModifiedDT              *string          `json:"modified_dt"` // pointer to handle null values
+	ProposedAction          string           `json:"proposed_action"`
+	ProposedContribType     *ContribType     `json:"proposed_contrib_type"`     // pointer to handle null values
+	ProposedRelatedAbstract *RelatedAbstract `json:"proposed_related_abstract"` // pointer to handle null values
+	ProposedTracks          []Track          `json:"proposed_tracks"`
+	Ratings                 []Rating         `json:"ratings"`
+	Track                   Track            `json:"track"`
+	User                    Reviewer         `json:"user"`
 }
 
 // CustomField represents custom fields in the abstract
