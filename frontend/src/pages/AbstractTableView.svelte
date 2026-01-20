@@ -46,6 +46,8 @@
     { id: 'Score', title: 'Score', stretch: 1 },
     { id: 'Submitted', title: 'Submitted', stretch: 2 },
     { id: 'Authors', title: 'Authors', stretch: 2 },
+    { id: 'FirstPriority', title: 'First Priority', stretch: 1 },
+    { id: 'SecondPriority', title: 'Second Priority', stretch: 1 },
   ];
 
   // Map of visible column keys in the data objects (header titles)
@@ -195,7 +197,7 @@
     }),
   );
 
-  // Sorting helper (handles ID numeric, Score numeric, Submitted timestamp, and Track numeric extraction)
+  // Sorting helper (handles ID numeric, Score numeric, Submitted timestamp, Track numeric extraction, and priority columns)
   function compare(a, b, key) {
     const va = a[key];
     const vb = b[key];
@@ -214,6 +216,22 @@
     if (key === 'Score') {
       const na = Number(va === '' ? NaN : va);
       const nb = Number(vb === '' ? NaN : vb);
+      if (isNaN(na) && isNaN(nb)) return 0;
+      if (isNaN(na)) return -1;
+      if (isNaN(nb)) return 1;
+      return na - nb;
+    }
+
+    // numeric sort for First Priority and Second Priority
+    if (key === 'First Priority' || key === 'Second Priority') {
+      let na, nb;
+      if (key === 'First Priority') {
+        na = Number(a.FirstPriority);
+        nb = Number(b.FirstPriority);
+      } else {
+        na = Number(a.SecondPriority);
+        nb = Number(b.SecondPriority);
+      }
       if (isNaN(na) && isNaN(nb)) return 0;
       if (isNaN(na)) return -1;
       if (isNaN(nb)) return 1;

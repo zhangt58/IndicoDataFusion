@@ -28,6 +28,10 @@
     showReviewsDialog = true;
   }
 
+  // Use precomputed aggregated ratings from backend
+  const firstPriorityTotal = $derived(abstract.first_priority || 0);
+  const secondPriorityTotal = $derived(abstract.second_priority || 0);
+
   async function copyRawJson() {
     // prevent details toggle (additional precaution)
     try {
@@ -198,6 +202,31 @@
         </button>
       {/if}
     </div>
+
+    <!-- Aggregated Ratings -->
+    {#if abstract.reviews && abstract.reviews.length > 0 && (firstPriorityTotal > 0 || secondPriorityTotal > 0)}
+      <div class="mt-2 pt-2 border-t border-gray-200 dark:border-gray-600">
+        <p class="text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1">Ratings:</p>
+        <div class="flex gap-4 items-center">
+          {#if firstPriorityTotal > 0}
+            <div class="flex items-center gap-2">
+              <span class="text-gray-600 dark:text-gray-400">First Priority:</span>
+              <span class="font-semibold text-blue-600 dark:text-blue-400">
+                {firstPriorityTotal}
+              </span>
+            </div>
+          {/if}
+          {#if secondPriorityTotal > 0}
+            <div class="flex items-center gap-2">
+              <span class="text-gray-600 dark:text-gray-400">Second Priority:</span>
+              <span class="font-semibold text-green-600 dark:text-green-400">
+                {secondPriorityTotal}
+              </span>
+            </div>
+          {/if}
+        </div>
+      </div>
+    {/if}
   </div>
 </div>
 
