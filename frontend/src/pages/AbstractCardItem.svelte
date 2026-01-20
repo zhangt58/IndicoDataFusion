@@ -3,12 +3,14 @@
   import TrackBadge from './TrackBadge.svelte';
   import AffiliationDialog from '../components/AffiliationDialog.svelte';
   import AffiliationBadge from '../components/AffiliationBadge.svelte';
+  import AbstractReviewsDialog from '../components/AbstractReviewsDialog.svelte';
 
   let { abstract = {} } = $props();
 
   // Dialog state
   let showAffiliationDialog = $state(false);
   let selectedAffiliation = $state(null);
+  let showReviewsDialog = $state(false);
   // Add state to control the raw JSON collapsible
   let showRawJson = $state(false);
 
@@ -19,6 +21,11 @@
   function handleAffiliationClick(affiliation) {
     selectedAffiliation = affiliation;
     showAffiliationDialog = true;
+  }
+
+  // Handle reviews click
+  function handleReviewsClick() {
+    showReviewsDialog = true;
   }
 
   async function copyRawJson() {
@@ -176,13 +183,19 @@
 
   <!-- Metadata -->
   <div class="mt-3 pt-3 border-t border-gray-200 dark:border-gray-600 text-xs text-gray-500">
-    <div class="flex gap-4">
+    <div class="flex gap-4 items-center">
       <span>Modified: {abstract.modified_dt}</span>
       {#if abstract.custom_fields && abstract.custom_fields.length > 0}
         <span>Custom Fields: {abstract.custom_fields.length}</span>
       {/if}
       {#if abstract.reviews && abstract.reviews.length > 0}
-        <span>Reviews: {abstract.reviews.length}</span>
+        <button
+          type="button"
+          class="text-blue-600 dark:text-blue-400 hover:underline cursor-pointer font-semibold"
+          onclick={handleReviewsClick}
+        >
+          Reviews: {abstract.reviews.length}
+        </button>
       {/if}
     </div>
   </div>
@@ -220,3 +233,11 @@
 
 <!-- Affiliation Details Dialog -->
 <AffiliationDialog bind:open={showAffiliationDialog} affiliation={selectedAffiliation} />
+
+<!-- Abstract Reviews Dialog -->
+<AbstractReviewsDialog
+  bind:open={showReviewsDialog}
+  reviews={abstract.reviews || []}
+  abstractTitle={abstract.title}
+  onAffiliationClick={handleAffiliationClick}
+/>
