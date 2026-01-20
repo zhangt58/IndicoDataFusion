@@ -162,11 +162,25 @@
           <StarOutline class="w-4 h-4 text-yellow-500" />
           <span class="text-xs font-semibold text-gray-700 dark:text-gray-300">Ratings</span>
         </div>
-        <div class="space-y-1">
+        <div class="space-y-2">
           {#each review.ratings as rating}
-            <div class="flex items-center justify-between text-sm">
-              <span class="text-gray-600 dark:text-gray-400">Question {rating.question}:</span>
-              <span class="font-semibold text-gray-800 dark:text-white">
+            <div class="flex items-start justify-between text-sm gap-2">
+              <div class="flex-1 min-w-0">
+                {#if rating.question_details}
+                  <div class="text-gray-700 dark:text-gray-300 font-medium">
+                    {rating.question_details.title}
+                  </div>
+                  <div class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                    Question {rating.question} · Position {rating.question_details.position}
+                    {#if rating.question_details.no_score}
+                      <span class="ml-1 text-orange-600 dark:text-orange-400">(No Score)</span>
+                    {/if}
+                  </div>
+                {:else}
+                  <span class="text-gray-600 dark:text-gray-400">Question {rating.question}:</span>
+                {/if}
+              </div>
+              <span class="font-semibold text-gray-800 dark:text-white shrink-0">
                 {formatRatingValue(rating.value)}
               </span>
             </div>
