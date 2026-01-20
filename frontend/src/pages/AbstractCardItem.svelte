@@ -128,7 +128,7 @@
   {/if}
 
   <!-- Score and Judge -->
-  <div class="flex gap-4 mb-3">
+  <div class="flex gap-4">
     {#if abstract.score !== null && abstract.score !== undefined}
       <div>
         <p class="text-xs font-semibold text-gray-600 dark:text-gray-400">Score:</p>
@@ -152,6 +152,31 @@
       </div>
     {/if}
   </div>
+
+  <!-- Ratings Summary -->
+  {#if abstract.reviews && abstract.reviews.length > 0 && (firstPriorityTotal > 0 || secondPriorityTotal > 0)}
+    <div class="mt-1">
+      <p class="text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1">Ratings:</p>
+      <div class="text-sm flex gap-4 items-center">
+        {#if firstPriorityTotal > 0}
+          <div class="flex items-center gap-2">
+            <span class="text-gray-600 dark:text-gray-400">First Priority:</span>
+            <span class="font-semibold text-blue-600 dark:text-blue-400">
+              {firstPriorityTotal}
+            </span>
+          </div>
+        {/if}
+        {#if secondPriorityTotal > 0}
+          <div class="flex items-center gap-2">
+            <span class="text-gray-600 dark:text-gray-400">Second Priority:</span>
+            <span class="font-semibold text-green-600 dark:text-green-400">
+              {secondPriorityTotal}
+            </span>
+          </div>
+        {/if}
+      </div>
+    </div>
+  {/if}
 
   <!-- Authors/Persons -->
   {#if abstract.persons && abstract.persons.length > 0}
@@ -202,62 +227,37 @@
         </button>
       {/if}
     </div>
-
-    <!-- Aggregated Ratings -->
-    {#if abstract.reviews && abstract.reviews.length > 0 && (firstPriorityTotal > 0 || secondPriorityTotal > 0)}
-      <div class="mt-2 pt-2 border-t border-gray-200 dark:border-gray-600">
-        <p class="text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1">Ratings:</p>
-        <div class="flex gap-4 items-center">
-          {#if firstPriorityTotal > 0}
-            <div class="flex items-center gap-2">
-              <span class="text-gray-600 dark:text-gray-400">First Priority:</span>
-              <span class="font-semibold text-blue-600 dark:text-blue-400">
-                {firstPriorityTotal}
-              </span>
-            </div>
-          {/if}
-          {#if secondPriorityTotal > 0}
-            <div class="flex items-center gap-2">
-              <span class="text-gray-600 dark:text-gray-400">Second Priority:</span>
-              <span class="font-semibold text-green-600 dark:text-green-400">
-                {secondPriorityTotal}
-              </span>
-            </div>
-          {/if}
-        </div>
-      </div>
-    {/if}
   </div>
-</div>
 
-<!-- Raw JSON (collapsible) -->
-<div class="mt-1">
-  <details class="bg-gray-50 dark:bg-gray-700 rounded p-3" bind:open={showRawJson}>
-    <summary
-      class="cursor-pointer text-sm font-semibold text-gray-700 dark:text-gray-300 flex justify-between items-center"
-    >
-      <span>Raw abstract JSON</span>
-      <span class="inline-flex items-center gap-2">
-        <span class="relative inline-flex items-center">
-          <button
-            onclick={copyRawJson}
-            class="text-xs px-2 py-1 rounded bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 transition-colors duration-150 hover:bg-gray-100 hover:text-gray-900 dark:hover:bg-gray-900 dark:hover:text-white focus:outline-none focus:ring-2 focus:ring-indigo-300 dark:focus:ring-indigo-600"
-            aria-label="Copy raw JSON to clipboard"
-            aria-describedby="copy-tooltip"
-            title="Copy JSON"
-          >
-            {showCopied ? 'Copied' : 'Copy'}
-          </button>
+  <!-- Raw JSON (collapsible) -->
+  <div class="mt-2">
+    <details class="bg-gray-50 dark:bg-gray-700 rounded p-1" bind:open={showRawJson}>
+      <summary
+        class="cursor-pointer text-sm font-semibold text-gray-700 dark:text-gray-300 flex justify-between items-center"
+      >
+        <span>Raw abstract JSON</span>
+        <span class="inline-flex items-center gap-1">
+          <span class="relative inline-flex items-center">
+            <button
+              onclick={copyRawJson}
+              class="text-xs px-1 py-1 rounded bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 transition-colors duration-150 hover:bg-gray-100 hover:text-gray-900 dark:hover:bg-gray-900 dark:hover:text-white focus:outline-none focus:ring-2 focus:ring-indigo-300 dark:focus:ring-indigo-600"
+              aria-label="Copy raw JSON to clipboard"
+              aria-describedby="copy-tooltip"
+              title="Copy JSON"
+            >
+              {showCopied ? 'Copied' : 'Copy'}
+            </button>
+          </span>
+          <span class="text-xs text-gray-500">{showRawJson ? 'Hide' : 'Show'}</span>
         </span>
-        <span class="text-xs text-gray-500">{showRawJson ? 'Hide' : 'Show'}</span>
-      </span>
-    </summary>
-    <pre
-      class="mt-1 overflow-auto text-xs text-gray-700 dark:text-gray-300"
-      style="max-height:360px;white-space:pre-wrap;">
+      </summary>
+      <pre
+        class="mt-1 overflow-auto text-xs text-gray-700 dark:text-gray-300"
+        style="max-height:360px;white-space:pre-wrap;">
 {JSON.stringify(abstract, null, 2)}
     </pre>
-  </details>
+    </details>
+  </div>
 </div>
 
 <!-- Affiliation Details Dialog -->
