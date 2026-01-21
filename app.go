@@ -108,6 +108,14 @@ func (a *App) GetAbstractByID(id int) (*indico.AbstractData, error) {
 	return a.handler.GetAbstractByID(a.ctx, id)
 }
 
+// RefreshAbstractByID fetches fresh data for a single abstract from the API
+func (a *App) RefreshAbstractByID(id int) (*indico.AbstractData, error) {
+	if a.handler == nil {
+		return nil, errors.Errorf("data handler not initialized")
+	}
+	return a.handler.RefreshAbstractByID(a.ctx, id)
+}
+
 // GetAbstractsByState filters abstracts by their state
 func (a *App) GetAbstractsByState(state string) ([]indico.AbstractData, error) {
 	if a.handler == nil {
