@@ -421,12 +421,11 @@
         {:else if col.id === 'State'}
           {#if item.State}
             <span
-              class={item.State.toLowerCase() === 'accepted'
-                ? 'state-badge state-accepted'
-                : item.State.toLowerCase() === 'rejected'
-                  ? 'state-badge state-rejected'
-                  : 'state-badge state-other'}>{item.State}</span
-            >
+              class="state-badge"
+              class:state-accepted={item.State && item.State.toLowerCase() === 'accepted'}
+              class:state-rejected={item.State && item.State.toLowerCase() === 'rejected'}
+              class:state-other={item.State && item.State.toLowerCase() !== 'accepted' && item.State.toLowerCase() !== 'rejected'}
+            >{item.State}</span>
           {/if}
         {:else if col.id === 'Affiliation'}
           {#if item.Affiliation && item.AffiliationFull}
