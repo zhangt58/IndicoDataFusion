@@ -6,7 +6,7 @@
   import TrackDetailsDialog from './TrackDetailsDialog.svelte';
   import AffiliationDialog from '../components/AffiliationDialog.svelte';
   import AffiliationBadge from '../components/AffiliationBadge.svelte';
-  import TitleLink from '../components/TitleLink.svelte';
+  import TitleButton from '../components/TitleButton.svelte';
   import TrackBadge from './TrackBadge.svelte';
   import { getTableItems } from './AbstractTableItem.js';
 
@@ -412,11 +412,10 @@
         {#if col.id === 'ID'}
           {item.ID}
         {:else if col.id === 'Title'}
-          <TitleLink
-            as="button"
+          <TitleButton
             onclick={() => openAbstract(item.DatabaseID)}
             data-id={item.ID}
-            data-title={item.Title}>{item.Title}</TitleLink
+            data-title={item.Title}>{item.Title}</TitleButton
           >
         {:else if col.id === 'State'}
           {#if item.State}

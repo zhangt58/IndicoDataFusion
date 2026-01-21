@@ -5,7 +5,7 @@
   import SessionBadge from './SessionBadge.svelte';
   import TrackBadge from './TrackBadge.svelte';
   import TypeBadge from './TypeBadge.svelte';
-  import TitleLink from '../components/TitleLink.svelte';
+  import TitleLink from '../components/TitleButton.svelte';
   import TrackDetailsDialog from './TrackDetailsDialog.svelte';
   import SessionDetailsDialog from './SessionDetailsDialog.svelte';
 
