@@ -47,6 +47,7 @@
     },
   );
 
+
   onMount(async () => {
     try {
       isTestMode = await IsTestMode();
@@ -164,7 +165,7 @@
               mt-8 mb-4 h-[calc(100vh-9rem)]"
   >
     {#if viewMode === 'table'}
-      <AbstractTableView {abstractData} />
+      <AbstractTableView bind:abstractData />
     {:else if viewMode === 'chart'}
       {#if abstractData && abstractData.length > 0}
         <AbstractChartView {abstractData} />
@@ -172,7 +173,7 @@
         <div class="p-4 text-center text-slate-500">No abstracts to display for chart.</div>
       {/if}
     {:else}
-      <AbstractCardView {abstractData} />
+      <AbstractCardView bind:abstractData />
     {/if}
   </div>
 {/if}
