@@ -1,4 +1,5 @@
 <script>
+  import { RefreshAbstractByID } from '../../wailsjs/go/main/App';
   import { DataTable, DataTableControls } from '@zhangt58/svelte-vtable';
   import TypeBadge from './TypeBadge.svelte';
   import AbstractDetailsDialog from './AbstractDetailsDialog.svelte';
@@ -9,7 +10,7 @@
   import TrackBadge from './TrackBadge.svelte';
   import { getTableItems } from './AbstractTableItem.js';
 
-  let { abstractData = [] } = $props();
+  let { abstractData = $bindable([]) } = $props();
 
   // Abstract dialog state
   let showAbstractDialog = $state(false);
@@ -22,6 +23,9 @@
   // Affiliation dialog state
   let showAffiliationDialog = $state(false);
   let selectedAffiliation = $state(null);
+
+  // Refresh state - track which rows are currently refreshing
+  let refreshingIds = $state(new Set());
 
   // Simple client-side controls (search/sort/pagination)
   // We will use the event-based API like the example: DataTableControls emits pagechange/searchchange
@@ -48,6 +52,7 @@
     { id: 'Authors', title: 'Authors', stretch: 2 },
     { id: 'FirstPriority', title: 'First Priority', stretch: 1 },
     { id: 'SecondPriority', title: 'Second Priority', stretch: 1 },
+    { id: 'Refresh', title: 'Refresh', stretch: 1 },
   ];
 
   // Map of visible column keys in the data objects (header titles)
@@ -127,6 +132,41 @@
     } catch (e) {
       console.error('Failed to parse affiliationFull:', e);
       selectedAffiliation = null;
+    }
+  }
+
+  // Handle row refresh
+  async function handleRowRefresh(abstractId) {
+    if (refreshingIds.has(abstractId)) return;
+
+    refreshingIds = new Set([...refreshingIds, abstractId]);
+
+    try {
+      const refreshedAbstract = await RefreshAbstractByID(abstractId);
+
+      if (refreshedAbstract) {
+        // Update the abstract in the abstractData array directly
+        const index = abstractData.findIndex((a) => a.id === refreshedAbstract.id);
+
+        if (index !== -1) {
+          // Create a new array with the updated abstract to trigger reactivity
+          abstractData = [
+            ...abstractData.slice(0, index),
+            refreshedAbstract,
+            ...abstractData.slice(index + 1),
+          ];
+        } else {
+          // If not found, add it to the array
+          abstractData = [...abstractData, refreshedAbstract];
+        }
+      }
+    } catch (err) {
+      alert('Failed to refresh abstract: ' + (err && err.message ? err.message : String(err)));
+    } finally {
+      const newSet = new Set(refreshingIds);
+      newSet.delete(abstractId);
+      refreshingIds = newSet;
+      console.log('Refresh complete for abstract ID:', abstractId);
     }
   }
 
@@ -382,6 +422,21 @@
           {#if item.Authors}
             <span class="authors-cell" title={item.AuthorsTooltip}>{item.Authors}</span>
           {/if}
+        {:else if col.id === 'Refresh'}
+          {@const isRefreshing = refreshingIds.has(item.DatabaseID)}
+          <button
+            type="button"
+            onclick={(e) => {
+              e.stopPropagation();
+              handleRowRefresh(item.DatabaseID);
+            }}
+            disabled={isRefreshing}
+            class="refresh-button"
+            class:refreshing={isRefreshing}
+            title="Refresh this abstract"
+          >
+            {isRefreshing ? '↻' : '↻'}
+          </button>
         {:else}
           {item[col.id]}
         {/if}
@@ -472,6 +527,41 @@
   /* Authors cell with tooltip (scoped) */
   .authors-cell {
     cursor: help;
+  }
+
+  /* Refresh button styling */
+  .refresh-button {
+    padding: 0.25rem 0.5rem;
+    font-size: 1rem;
+    border-radius: 0.25rem;
+    background-color: #dbeafe;
+    color: #1e40af;
+    border: none;
+    cursor: pointer;
+    transition: all 0.15s ease-in-out;
+  }
+
+  .refresh-button:hover:not(:disabled) {
+    background-color: #bfdbfe;
+  }
+
+  .refresh-button:disabled {
+    background-color: #e5e7eb;
+    color: #9ca3af;
+    cursor: not-allowed;
+  }
+
+  .refresh-button.refreshing {
+    animation: spin 1s linear infinite;
+  }
+
+  @keyframes spin {
+    from {
+      transform: rotate(0deg);
+    }
+    to {
+      transform: rotate(360deg);
+    }
   }
 
   /* Other table/badge helpers moved to shared CSS */

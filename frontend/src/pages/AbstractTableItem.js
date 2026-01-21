@@ -134,6 +134,7 @@ export function transformAbstractToTableItem(abstract) {
   return {
     ID: rawId,
     IDNumber: isNaN(idNum) ? null : idNum,
+    DatabaseID: abstract.id, // Always the actual database ID for API calls
     Title: abstract.title || '',
     State: abstract.state || '',
     Submitter: abstract.submitter?.full_name || '',
