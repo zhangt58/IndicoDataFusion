@@ -94,8 +94,11 @@
 </script>
 
 {#if loading}
-  <div class="p-6 text-center">Loading abstracts...</div>
-{:else if error}
+  <div class="flex items-center justify-center py-12">
+    <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-400"></div>
+    <span class="ml-3 text-2xl text-gray-600 dark:text-gray-400">Loading...</span>
+  </div>
+  {:else if error}
   <LoadErrorHint {error} message="Failed to load abstracts." />
 {:else}
   <div
