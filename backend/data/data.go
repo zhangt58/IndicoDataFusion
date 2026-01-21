@@ -409,8 +409,8 @@ func (h *DataSourceHandler) getAbstractsFromAPI(ctx context.Context) ([]indico.A
 
 	log.Printf("Reading abstract data from Indico API\n")
 
-	// Fetch the abstracts list page to get IDs and CSRF token
-	ids, csrfToken, err := h.client.GetAbstractIDsAndCSRFFromList(ctx)
+	// Fetch the abstracts list page to get all IDs and cache CSRF token internally
+	ids, err := h.client.GetAbstractIDsAndCSRFFromList(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get abstract IDs: %w", err)
 	}
@@ -420,7 +420,7 @@ func (h *DataSourceHandler) getAbstractsFromAPI(ctx context.Context) ([]indico.A
 	}
 
 	// Fetch the abstracts data
-	rawData, err := h.client.FetchAbstractsData(ctx, ids, csrfToken)
+	rawData, err := h.client.FetchAbstractsData(ctx, ids)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch abstracts data: %w", err)
 	}
@@ -603,6 +603,112 @@ func (h *DataSourceHandler) GetAbstractByID(ctx context.Context, id int) (*indic
 	}
 
 	return nil, fmt.Errorf("abstract with ID %d not found", id)
+}
+
+// RefreshAbstractByID fetches fresh data for a single abstract from the API.
+// This bypasses the cache and always fetches from the live API.
+func (h *DataSourceHandler) RefreshAbstractByID(ctx context.Context, id int) (*indico.AbstractData, error) {
+	if h.client == nil {
+		return nil, fmt.Errorf("indico client not initialized (test mode or no API access)")
+	}
+
+	log.Printf("Refreshing abstract %d from Indico API\n", id)
+
+	// Fetch the single abstract data
+	rawData, err := h.client.FetchAbstractsData(ctx, []string{fmt.Sprintf("%d", id)})
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch abstract %d: %w", id, err)
+	}
+
+	// Parse the response
+	abstractsIface, ok := rawData["abstracts"]
+	if !ok {
+		return nil, fmt.Errorf("no abstracts field in response")
+	}
+
+	// Also get questions if available
+	questionsIface := rawData["questions"]
+
+	// Convert to JSON and back to properly deserialize
+	jsonData, err := json.Marshal(map[string]any{
+		"abstracts": abstractsIface,
+		"questions": questionsIface,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal abstract: %w", err)
+	}
+
+	var response indico.AbstractsResponse
+	if err := json.Unmarshal(jsonData, &response); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal abstract: %w", err)
+	}
+
+	if len(response.Abstracts) == 0 {
+		return nil, fmt.Errorf("abstract with ID %d not found in API response", id)
+	}
+
+	// Build question lookup map
+	questionMap := make(map[int]*indico.QuestionData)
+	for i := range response.Questions {
+		q := &response.Questions[i]
+		questionMap[q.ID] = q
+	}
+
+	// Expand question details in reviews for the single abstract
+	abstract := &response.Abstracts[0]
+	for j := range abstract.Reviews {
+		for k := range abstract.Reviews[j].Ratings {
+			rating := &abstract.Reviews[j].Ratings[k]
+			if q, ok := questionMap[rating.Question]; ok {
+				rating.QuestionDetails = q
+			}
+		}
+	}
+
+	// Compute aggregated ratings for frontend
+	abstract.FirstPriority = abstract.GetAggregatedRatingByTitle("First priority")
+	abstract.SecondPriority = abstract.GetAggregatedRatingByTitle("Second priority")
+
+	// Update the cache if available
+	if h.cache != nil {
+		// Get current cached abstracts
+		if cached, found := h.cache.Get("abstracts"); found {
+			var abstracts []indico.AbstractData
+
+			// Try direct type assertion first
+			if cachedAbstracts, ok := cached.([]indico.AbstractData); ok {
+				abstracts = cachedAbstracts
+			} else {
+				// Try JSON conversion
+				jsonData, err := json.Marshal(cached)
+				if err == nil {
+					_ = json.Unmarshal(jsonData, &abstracts)
+				}
+			}
+
+			// Update the abstract in the cache
+			updated := false
+			for i := range abstracts {
+				if abstracts[i].ID == id {
+					abstracts[i] = *abstract
+					updated = true
+					break
+				}
+			}
+
+			// If not found in cache, append it
+			if !updated {
+				abstracts = append(abstracts, *abstract)
+			}
+
+			// Save back to cache
+			h.cache.Set("abstracts", abstracts)
+			log.Printf("Updated abstract %d in cache\n", id)
+		}
+	}
+
+	log.Printf("Successfully refreshed abstract %d from API: %v\n", id, abstract)
+	return abstract, nil
 }
 
 // GetAbstractsByState filters abstracts by their state.

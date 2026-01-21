@@ -21,11 +21,12 @@ type HTTPClient interface {
 
 // IndicoClient performs REST calls to the backend API.
 type IndicoClient struct {
-	BaseURL  string
-	EventID  int
-	APIToken string
-	Client   HTTPClient
-	Timeout  time.Duration
+	BaseURL   string
+	EventID   int
+	APIToken  string
+	Client    HTTPClient
+	Timeout   time.Duration
+	csrfToken string // Cached CSRF token for authenticated requests
 }
 
 // NewIndicoClient constructs a client with a sensible default http.Client.
@@ -277,13 +278,19 @@ func (c *IndicoClient) ExtractAbstractIDsAndCSRFFromHTML(htmlContent string) ([]
 
 // FetchAbstractsData posts to the Indico manage abstracts endpoint and returns the decoded JSON
 // response as a map[string]any. It posts form-encoded data with csrf_token and repeated abstract_id
-// form fields. The caller must provide a non-empty csrfToken and at least one id.
-func (c *IndicoClient) FetchAbstractsData(ctx context.Context, ids []string, csrfToken string) (map[string]any, error) {
-	if csrfToken == "" {
-		return nil, fmt.Errorf("empty csrf token")
-	}
+// form fields. The CSRF token will be fetched and cached if not already present.
+func (c *IndicoClient) FetchAbstractsData(ctx context.Context, ids []string) (map[string]any, error) {
 	if len(ids) == 0 {
 		return nil, fmt.Errorf("no ids provided")
+	}
+
+	// Ensure we have a CSRF token
+	if c.csrfToken == "" {
+		// Fetch the abstracts list page to get the CSRF token
+		_, err := c.GetAbstractIDsAndCSRFFromList(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get CSRF token: %w", err)
+		}
 	}
 
 	u, err := url.Parse(c.BaseURL)
@@ -294,7 +301,7 @@ func (c *IndicoClient) FetchAbstractsData(ctx context.Context, ids []string, csr
 	u.Path = joinPaths(u.Path, path)
 
 	v := url.Values{}
-	v.Set("csrf_token", csrfToken)
+	v.Set("csrf_token", c.csrfToken)
 	for _, id := range ids {
 		v.Add("abstract_id", id)
 	}
@@ -378,10 +385,19 @@ func (c *IndicoClient) ListAbstracts(ctx context.Context) (string, error) {
 // GetAbstractIDsAndCSRFFromList fetches the abstracts list page using the
 // provided token and returns the parsed abstract ids and csrf token. It is a
 // higher-level helper that combines ListAbstracts + parsing.
-func (c *IndicoClient) GetAbstractIDsAndCSRFFromList(ctx context.Context) ([]string, string, error) {
+// The CSRF token is also cached internally for subsequent requests.
+func (c *IndicoClient) GetAbstractIDsAndCSRFFromList(ctx context.Context) ([]string, error) {
 	htmlBody, err := c.ListAbstracts(ctx)
 	if err != nil {
-		return nil, "", fmt.Errorf("fetch list html: %w", err)
+		return nil, fmt.Errorf("fetch list html: %w", err)
 	}
-	return c.ExtractAbstractIDsAndCSRFFromHTML(htmlBody)
+	ids, csrf, err := c.ExtractAbstractIDsAndCSRFFromHTML(htmlBody)
+	if err != nil {
+		return nil, err
+	}
+	// Cache the CSRF token for future requests
+	if csrf != "" {
+		c.csrfToken = csrf
+	}
+	return ids, nil
 }

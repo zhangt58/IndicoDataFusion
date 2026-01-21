@@ -2,7 +2,15 @@
   import AbstractCardItem from './AbstractCardItem.svelte';
   import { VirtualList } from 'svelte-virtuallists';
 
-  let { abstractData = [] } = $props();
+  let { abstractData = $bindable([]) } = $props();
+
+  // Handle refresh from AbstractCardItem - update the array in place
+  function handleItemRefresh(index, refreshedAbstract) {
+    // Update the array in place to maintain reactivity
+    abstractData[index] = refreshedAbstract;
+    // Trigger reactivity by reassigning the array
+    abstractData = [...abstractData];
+  }
 </script>
 
 {#if abstractData && abstractData.length > 0}
@@ -11,7 +19,10 @@
     <VirtualList items={abstractData}>
       {#snippet vl_slot({ index, item })}
         <div class="mb-4">
-          <AbstractCardItem abstract={item} />
+          <AbstractCardItem
+            bind:abstract={abstractData[index]}
+            onRefresh={(refreshed) => handleItemRefresh(index, refreshed)}
+          />
         </div>
       {/snippet}
     </VirtualList>
