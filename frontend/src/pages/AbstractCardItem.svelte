@@ -1,11 +1,13 @@
 <script>
+  import { RefreshAbstractByID } from '../../wailsjs/go/main/App';
   import TypeBadge from './TypeBadge.svelte';
   import TrackBadge from './TrackBadge.svelte';
   import AffiliationDialog from '../components/AffiliationDialog.svelte';
   import AffiliationBadge from '../components/AffiliationBadge.svelte';
   import AbstractReviewsDialog from '../components/AbstractReviewsDialog.svelte';
 
-  let { abstract = {} } = $props();
+  // Accept parent callback so parent can update abstractData
+  let { abstract = $bindable({}), onRefresh = null } = $props();
 
   // Dialog state
   let showAffiliationDialog = $state(false);
@@ -17,6 +19,9 @@
   // copied-state for copy button
   let showCopied = $state(false);
 
+  // refresh state
+  let isRefreshing = $state(false);
+
   // Handle affiliation click
   function handleAffiliationClick(affiliation) {
     selectedAffiliation = affiliation;
@@ -26,6 +31,27 @@
   // Handle reviews click
   function handleReviewsClick() {
     showReviewsDialog = true;
+  }
+
+  // Handle refresh
+  async function handleRefresh() {
+    if (isRefreshing || !abstract.id) return;
+
+    isRefreshing = true;
+
+    try {
+      const refreshed = await RefreshAbstractByID(abstract.id);
+      // Update the bindable prop directly - this will propagate up through AbstractCardView to AbstractPage
+      abstract = refreshed;
+      // Also notify parent via callback if provided (for backwards compatibility)
+      if (typeof onRefresh === 'function') {
+        onRefresh(refreshed);
+      }
+    } catch (err) {
+      alert('Failed to refresh abstract: ' + (err && err.message ? err.message : String(err)));
+    } finally {
+      isRefreshing = false;
+    }
   }
 
   // Use precomputed aggregated ratings from backend
@@ -61,16 +87,30 @@
         {#if abstract.friendly_id}(#{abstract.friendly_id}){/if}
       </p>
     </div>
-    <span
-      class="ml-4 px-3 py-1 rounded-full text-xs font-semibold
-      {abstract.state === 'accepted'
-        ? 'bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200'
-        : abstract.state === 'rejected'
-          ? 'bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200'
-          : 'bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200'}"
-    >
-      {abstract.state}
-    </span>
+    <div class="ml-4 flex items-center gap-2">
+      <button
+        type="button"
+        onclick={handleRefresh}
+        disabled={isRefreshing}
+        class="px-2 py-1 text-xs rounded transition-colors duration-150
+          {isRefreshing
+          ? 'bg-gray-300 dark:bg-gray-600 text-gray-500 dark:text-gray-400 cursor-not-allowed'
+          : 'bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-200 hover:bg-blue-200 dark:hover:bg-blue-800'}"
+        title="Refresh abstract data"
+      >
+        {isRefreshing ? '↻ Refreshing...' : '↻ Refresh'}
+      </button>
+      <span
+        class="px-3 py-1 rounded-full text-xs font-semibold
+        {abstract.state === 'accepted'
+          ? 'bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200'
+          : abstract.state === 'rejected'
+            ? 'bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200'
+            : 'bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200'}"
+      >
+        {abstract.state}
+      </span>
+    </div>
   </div>
 
   <!-- Content -->

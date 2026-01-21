@@ -3,11 +3,17 @@
   import { CloseOutline } from 'flowbite-svelte-icons';
   import AbstractCardItem from './AbstractCardItem.svelte';
 
-  let { open = $bindable(false), abstract = null } = $props();
+  let { open = $bindable(false), abstract = $bindable(null) } = $props();
 
   // Close dialog
   function closeDialog() {
     open = false;
+  }
+
+  // Handle refresh from AbstractCardItem - ensure the bindable abstract is updated
+  function handleRefresh(refreshedAbstract) {
+    // Update the bindable prop to trigger reactivity up the chain
+    abstract = refreshedAbstract;
   }
 </script>
 
@@ -23,6 +29,6 @@
     </button>
   </div>
   {#if abstract}
-    <AbstractCardItem {abstract} />
+    <AbstractCardItem bind:abstract onRefresh={handleRefresh} />
   {/if}
 </Modal>

@@ -15,6 +15,8 @@
   // Abstract dialog state
   let showAbstractDialog = $state(false);
   let selectedAbstract = $state(null);
+  let selectedAbstractId = $state(null);
+  let lastSyncedAbstract = $state(null); // Track last synced version to prevent infinite loops
 
   // Track dialog state
   let showTrackDialog = $state(false);
@@ -89,19 +91,55 @@
     }, []),
   );
 
-  // Find abstract by ID
+  // Find abstract by ID (database ID)
   function findAbstractById(id) {
     // Use strict string comparison to avoid type coercion warnings
     const sid = String(id);
-    return abstractData.find((a) => String(a.friendly_id || a.id) === sid);
+    return abstractData.find((a) => String(a.id) === sid);
   }
 
   // Open abstract details by id (used by title button)
   function openAbstract(id) {
     const sid = String(id);
+    selectedAbstractId = sid;
     selectedAbstract = findAbstractById(sid);
-    if (selectedAbstract) showAbstractDialog = true;
+    lastSyncedAbstract = selectedAbstract; // Initialize with the original
+    if (selectedAbstract) {
+      showAbstractDialog = true;
+    } else {
+      console.warn('[AbstractTableView] Abstract not found for ID:', id);
+    }
   }
+
+  // Sync changes from dialog back to abstractData array
+  // This effect runs when selectedAbstract changes (e.g., after refresh in dialog)
+  $effect(() => {
+    // Guard: skip if no abstract selected or dialog closed
+    if (!selectedAbstract || !selectedAbstractId) {
+      lastSyncedAbstract = null;
+      return;
+    }
+
+    // Prevent infinite loop: only sync if the abstract actually changed
+    // (not just the array reference)
+    if (lastSyncedAbstract === selectedAbstract) {
+      return;
+    }
+
+    const index = abstractData.findIndex(
+      (a) => String(a.id) === String(selectedAbstractId)
+    );
+
+    if (index !== -1) {
+      // Update the array element and trigger reactivity
+      abstractData[index] = selectedAbstract;
+      abstractData = [...abstractData];
+      // Track this version to prevent re-syncing on next effect run
+      lastSyncedAbstract = selectedAbstract;
+    } else {
+      console.warn('[AbstractTableView] Could not find abstract in array to update:', selectedAbstractId);
+    }
+  });
 
   // Open track dialog from TrackFull data (may be JSON string or array)
   function openTrack(trackFull) {
@@ -166,7 +204,6 @@
       const newSet = new Set(refreshingIds);
       newSet.delete(abstractId);
       refreshingIds = newSet;
-      console.log('Refresh complete for abstract ID:', abstractId);
     }
   }
 
@@ -377,7 +414,7 @@
         {:else if col.id === 'Title'}
           <TitleLink
             as="button"
-            onclick={() => openAbstract(item.ID)}
+            onclick={() => openAbstract(item.DatabaseID)}
             data-id={item.ID}
             data-title={item.Title}>{item.Title}</TitleLink
           >
@@ -485,7 +522,7 @@
 </div>
 
 <!-- Abstract Detail Dialog -->
-<AbstractDetailsDialog bind:open={showAbstractDialog} abstract={selectedAbstract} />
+<AbstractDetailsDialog bind:open={showAbstractDialog} bind:abstract={selectedAbstract} />
 
 <!-- Track Details Dialog -->
 <TrackDetailsDialog
