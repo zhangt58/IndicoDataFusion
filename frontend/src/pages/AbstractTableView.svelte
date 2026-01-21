@@ -468,11 +468,12 @@
               handleRowRefresh(item.DatabaseID);
             }}
             disabled={isRefreshing}
-            class="refresh-button"
-            class:refreshing={isRefreshing}
+            aria-label={isRefreshing ? `Refreshing abstract ${item.ID}` : `Refresh abstract ${item.ID}`}
             title="Refresh this abstract"
+            class="px-2 py-1 text-base rounded-md bg-sky-100 text-sky-800 dark:bg-sky-800 dark:text-sky-100 border-0 cursor-pointer transition-all duration-150 ease-in-out hover:bg-sky-200 dark:hover:bg-sky-700 disabled:bg-gray-200 dark:disabled:bg-gray-700 disabled:text-gray-400 dark:disabled:text-gray-400 disabled:cursor-not-allowed"
+            class:animate-spin={isRefreshing}
           >
-            {isRefreshing ? '↻' : '↻'}
+            ↻
           </button>
         {:else}
           {item[col.id]}
@@ -565,41 +566,4 @@
   .authors-cell {
     cursor: help;
   }
-
-  /* Refresh button styling */
-  .refresh-button {
-    padding: 0.25rem 0.5rem;
-    font-size: 1rem;
-    border-radius: 0.25rem;
-    background-color: #dbeafe;
-    color: #1e40af;
-    border: none;
-    cursor: pointer;
-    transition: all 0.15s ease-in-out;
-  }
-
-  .refresh-button:hover:not(:disabled) {
-    background-color: #bfdbfe;
-  }
-
-  .refresh-button:disabled {
-    background-color: #e5e7eb;
-    color: #9ca3af;
-    cursor: not-allowed;
-  }
-
-  .refresh-button.refreshing {
-    animation: spin 1s linear infinite;
-  }
-
-  @keyframes spin {
-    from {
-      transform: rotate(0deg);
-    }
-    to {
-      transform: rotate(360deg);
-    }
-  }
-
-  /* Other table/badge helpers moved to shared CSS */
 </style>
