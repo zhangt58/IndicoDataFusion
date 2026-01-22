@@ -138,7 +138,7 @@
       </p>
       <div class="flex gap-2 flex-wrap">
         {#each abstract.reviewed_for_tracks as track}
-          <TrackBadge text={getTrackLabel(track)} type="reviewed" />
+          <TrackBadge text={track.title ?? track.code} type="reviewed" />
         {/each}
       </div>
     </div>
@@ -151,7 +151,7 @@
       </p>
       <div class="flex gap-2 flex-wrap">
         {#each abstract.submitted_for_tracks as track}
-          <TrackBadge text={getTrackLabel(track)} type="reviewed" />
+          <TrackBadge text={track.title ?? track.code} type="reviewed" />
         {/each}
       </div>
     </div>
@@ -160,7 +160,7 @@
   {#if abstract.accepted_track}
     <div class="mb-3">
       <p class="text-xs font-semibold text-gray-600 dark:text-gray-400">Accepted track:</p>
-      <TrackBadge text={getTrackLabel(abstract.accepted_track)} type="accepted" />
+      <TrackBadge text={abstract.accepted_track.title ?? abstract.accepted_track.code} type="accepted" />
     </div>
   {/if}
 
