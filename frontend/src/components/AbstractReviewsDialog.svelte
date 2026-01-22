@@ -7,6 +7,7 @@
     ChevronRightOutline,
   } from 'flowbite-svelte-icons';
   import AbstractReview from '../components/AbstractReview.svelte';
+  import { onMount, onDestroy } from 'svelte';
 
   let {
     open = $bindable(false),
@@ -27,6 +28,29 @@
   function goToNext() {
     if (hasNext) currentIndex++;
   }
+
+  // Keyboard navigation for the dialog
+  function isTypingElement(el) {
+    if (!el) return false;
+    const tag = el.tagName;
+    return tag === 'INPUT' || tag === 'TEXTAREA' || el.isContentEditable;
+  }
+
+  function handleKeydown(e) {
+    if (e.altKey || e.ctrlKey || e.metaKey) return;
+    const active = document.activeElement;
+    if (isTypingElement(active)) return;
+
+    const key = e.key;
+    if (key === 'ArrowLeft' || key === 'k') {
+      goToPrevious();
+    } else if (key === 'ArrowRight' || key === 'j') {
+      goToNext();
+    }
+  }
+
+  onMount(() => window.addEventListener('keydown', handleKeydown));
+  onDestroy(() => window.removeEventListener('keydown', handleKeydown));
 
   function closeDialog() {
     open = false;
@@ -51,7 +75,7 @@
 </script>
 
 <Modal bind:open size="lg" dismissable={false}>
-  <div class="flex justify-between items-start mb-4">
+  <div class="flex justify-between items-start mb-2">
     <div class="flex items-center gap-2 flex-1 min-w-0">
       <MessagesOutline class="w-6 h-6 text-blue-600 dark:text-blue-400 shrink-0" />
       <div class="flex-1 min-w-0">
@@ -74,7 +98,7 @@
 
   {#if reviews && reviews.length > 0}
     <div
-      class="bg-gray-50 dark:bg-gray-700 rounded-lg p-3 mb-4 grid grid-cols-2 md:grid-cols-5 gap-2"
+      class="bg-gray-50 dark:bg-gray-700 rounded-lg p-3 mb-2 grid grid-cols-2 md:grid-cols-5 gap-2"
     >
       <div class="text-center">
         <p class="text-xs text-gray-600 dark:text-gray-400">Total</p>
@@ -99,7 +123,7 @@
     </div>
 
     <div
-      class="flex justify-between items-center mb-4 pb-3 border-b border-gray-200 dark:border-gray-700"
+      class="flex justify-between items-center mb-2 pb-2 border-b border-gray-200 dark:border-gray-700"
     >
       <button
         type="button"
@@ -124,7 +148,7 @@
       </button>
     </div>
 
-    <div class="max-h-[60vh] overflow-y-auto pr-2">
+    <div class="max-h-[60vh] overflow-y-auto">
       <AbstractReview review={currentReview} {onAffiliationClick} />
     </div>
 
