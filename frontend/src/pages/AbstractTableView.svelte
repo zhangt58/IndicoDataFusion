@@ -220,10 +220,11 @@
   let tableItems = $derived(getTableItems(abstractData));
 
   // columnFilters derived from tableItems (for DataTableControls/DataTableFilters)
-  function getUniqueValuesWithCounts(items, header) {
+  function getUniqueValuesWithCounts(items, key) {
+    // Use the table item property key (column id) to extract unique values
     const counts = {};
     (items || []).forEach((it) => {
-      const val = it && it[header];
+      const val = it && it[key];
       if (Array.isArray(val)) {
         val.forEach((v) => {
           const s = String(v ?? '');
@@ -238,10 +239,11 @@
     return { uniqueValues, counts };
   }
 
+  // Build columnFilters keyed by column id so DataTableFilters maps to the table item fields
   let columnFilters = $derived(
     columns.map((c) => {
-      const { uniqueValues, counts } = getUniqueValuesWithCounts(tableItems || [], c.title);
-      return { key: c.title, label: c.title, uniqueValues, counts };
+      const { uniqueValues, counts } = getUniqueValuesWithCounts(tableItems || [], c.id);
+      return { key: c.id, label: c.title, uniqueValues, counts };
     }),
   );
 
@@ -275,8 +277,9 @@
       }
       if (!searchQuery) return true;
       const q = searchQuery.toLowerCase();
-      return visibleKeys.some((k) =>
-        String(item[k] ?? '')
+      // Search across actual table item fields (use column ids)
+      return mappedColumns.some((col) =>
+        String(item[col.id] ?? '')
           .toLowerCase()
           .includes(q),
       );
