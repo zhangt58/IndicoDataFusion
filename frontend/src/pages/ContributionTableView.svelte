@@ -470,10 +470,8 @@
           {#if item.Session}
             <SessionBadge
               text={item.Session}
-              as="button"
-              className="session-link"
               onclick={() => openSession(item.Session)}
-              {...{ 'data-session': item.Session }}
+              data-session={item.Session}
             />
           {/if}
         {:else if col.id === 'Track'}
@@ -504,19 +502,8 @@
 {/snippet}
 
 <style>
-  /* Component-specific styling for ContributionTableView */
-
   /* Speakers cell with tooltip (scoped) */
   .speakers-cell {
     cursor: help;
   }
-
-  /* Make session-badge adopt pointer when parent marks it interactive */
-  .session-link .session-badge,
-  .session-badge.session-link,
-  .session-badge.interactive {
-    cursor: pointer;
-  }
-
-  /* Small badge sizing that complements vtable badges if used (moved to shared CSS) */
 </style>
