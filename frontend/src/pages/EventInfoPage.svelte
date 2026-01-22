@@ -94,7 +94,10 @@
 </script>
 
 {#if loading}
-  <div class="p-6 text-center">Loading event information...</div>
+  <div class="flex items-center justify-center py-12">
+    <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-400"></div>
+    <span class="ml-3 text-2xl text-gray-600 dark:text-gray-400">Loading...</span>
+  </div>
 {:else if error}
   <LoadErrorHint {error} message={errorString} title="Failed to load event information" />
 {:else if eventInfo}
@@ -218,20 +221,3 @@
 {:else}
   <div class="p-6 text-center text-gray-500">No event information available.</div>
 {/if}
-
-<style>
-  /* Style for HTML content from description */
-  :global(.prose a) {
-    color: #4f46e5;
-    text-decoration: underline;
-  }
-  :global(.prose a:hover) {
-    color: #4338ca;
-  }
-  :global(.dark .prose a) {
-    color: #818cf8;
-  }
-  :global(.dark .prose a:hover) {
-    color: #a5b4fc;
-  }
-</style>

@@ -180,7 +180,7 @@
   );
 </script>
 
-<Modal bind:open size="lg" dismissable={false} class="session-dialog">
+<Modal bind:open size="lg" dismissable={false}>
   <div class="flex justify-between items-center mb-4">
     <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Session Details</h3>
     <button
@@ -325,7 +325,3 @@
     </div>
   {/if}
 </Modal>
-
-<style>
-  /* small styles to match other dialogs */
-</style>

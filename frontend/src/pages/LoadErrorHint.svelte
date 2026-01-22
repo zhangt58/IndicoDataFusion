@@ -42,19 +42,3 @@
     </div>
   </div>
 </div>
-
-<style>
-  /* keep styling minimal and tailwind-friendly; fallback styles for non-tailwind environments */
-  .bg-yellow-50 {
-    background-color: #fffbeb;
-  }
-  .border-yellow-200 {
-    border-color: #fde68a;
-  }
-  .text-yellow-800 {
-    color: #92400e;
-  }
-  .rounded-md {
-    border-radius: 0.375rem;
-  }
-</style>

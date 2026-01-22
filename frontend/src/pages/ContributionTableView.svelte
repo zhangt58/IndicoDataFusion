@@ -5,7 +5,7 @@
   import SessionBadge from './SessionBadge.svelte';
   import TrackBadge from './TrackBadge.svelte';
   import TypeBadge from './TypeBadge.svelte';
-  import TitleLink from '../components/TitleLink.svelte';
+  import TitleLink from '../components/TitleButton.svelte';
   import TrackDetailsDialog from './TrackDetailsDialog.svelte';
   import SessionDetailsDialog from './SessionDetailsDialog.svelte';
 
@@ -129,57 +129,6 @@
     } catch (err) {
       console.error('Failed to open track dialog:', err);
       selectedTracks = [];
-    }
-  }
-
-  // Handle clicks on the table (keeps existing delegation behavior)
-  function handleTableClick(event) {
-    const target = event.target;
-
-    // Handle title link click
-    if (target.classList.contains('title-link')) {
-      event.preventDefault();
-      const contributionId = target.dataset.id;
-      if (!contributionId) {
-        console.warn('No contribution ID found in data-id attribute');
-        return;
-      }
-      selectedContribution = findContributionById(contributionId);
-      if (selectedContribution) {
-        showContributionDialog = true;
-      }
-    }
-
-    // Handle track badge click (support clicks on inner elements too)
-    if (
-      target.classList.contains('track-link') ||
-      (target.closest && target.closest('.track-link'))
-    ) {
-      event.preventDefault();
-      const el = target.classList.contains('track-link') ? target : target.closest('.track-link');
-      const data =
-        el && el.dataset && el.dataset.tracks
-          ? el.dataset.tracks
-          : el && el.getAttribute && el.getAttribute('data-tracks');
-      // openTrack will handle JSON or plain string
-      openTrack(data || el.textContent || '');
-    }
-
-    // Handle session badge click (support clicks on inner elements too)
-    if (
-      target.classList.contains('session-link') ||
-      (target.closest && target.closest('.session-link'))
-    ) {
-      event.preventDefault();
-      const el = target.classList.contains('session-link')
-        ? target
-        : target.closest('.session-link');
-      const data =
-        el && el.dataset && el.dataset.session
-          ? el.dataset.session
-          : el && el.getAttribute && el.getAttribute('data-session');
-      // openSession will handle string or array/object
-      openSession(data || el.textContent || '');
     }
   }
 
@@ -403,10 +352,7 @@
     />
   </div>
 
-  <section
-    class="flex-1 overflow-auto flex flex-col max-h-screen min-h-0"
-    onclick={handleTableClick}
-  >
+  <section class="flex-1 overflow-auto flex flex-col max-h-screen min-h-0">
     <DataTable
       items={visibleItems}
       {visibleKeys}
@@ -448,7 +394,6 @@
       } catch (e) {}
     }}
     tabindex="0"
-    class="cursor-pointer"
     class:selected-row={selected && String(selected.ID) === String(item.ID)}
     aria-selected={selected && String(selected.ID) === String(item.ID)}
   >
@@ -470,10 +415,8 @@
           {#if item.Session}
             <SessionBadge
               text={item.Session}
-              as="button"
-              className="session-link"
               onclick={() => openSession(item.Session)}
-              {...{ 'data-session': item.Session }}
+              data-session={item.Session}
             />
           {/if}
         {:else if col.id === 'Track'}
@@ -482,12 +425,12 @@
               text={item.Track}
               className="track-link"
               onclick={() => openTrack(item.Track)}
-              {...{ 'data-tracks': item.Track }}
+              data-tracks={item.Track}
             />
           {/if}
         {:else if col.id === 'Speakers'}
           {#if item.Speakers}
-            <span class="speakers-cell" title={item.SpeakersTooltip}>{item.Speakers}</span>
+            <span class="cursor-help" title={item.SpeakersTooltip}>{item.Speakers}</span>
           {/if}
         {:else if col.id === 'Affiliations'}
           {#if item.SpeakersAffiliations}
@@ -502,21 +445,3 @@
     {/each}
   </tr>
 {/snippet}
-
-<style>
-  /* Component-specific styling for ContributionTableView */
-
-  /* Speakers cell with tooltip (scoped) */
-  .speakers-cell {
-    cursor: help;
-  }
-
-  /* Make session-badge adopt pointer when parent marks it interactive */
-  .session-link .session-badge,
-  .session-badge.session-link,
-  .session-badge.interactive {
-    cursor: pointer;
-  }
-
-  /* Small badge sizing that complements vtable badges if used (moved to shared CSS) */
-</style>

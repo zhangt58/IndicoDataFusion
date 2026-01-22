@@ -6,8 +6,9 @@
   import TrackDetailsDialog from './TrackDetailsDialog.svelte';
   import AffiliationDialog from '../components/AffiliationDialog.svelte';
   import AffiliationBadge from '../components/AffiliationBadge.svelte';
-  import TitleLink from '../components/TitleLink.svelte';
+  import TitleButton from '../components/TitleButton.svelte';
   import TrackBadge from './TrackBadge.svelte';
+  import StateBadge from './StateBadge.svelte';
   import { getTableItems } from './AbstractTableItem.js';
 
   let { abstractData = $bindable([]) } = $props();
@@ -126,9 +127,7 @@
       return;
     }
 
-    const index = abstractData.findIndex(
-      (a) => String(a.id) === String(selectedAbstractId)
-    );
+    const index = abstractData.findIndex((a) => String(a.id) === String(selectedAbstractId));
 
     if (index !== -1) {
       // Update the array element and trigger reactivity
@@ -137,7 +136,10 @@
       // Track this version to prevent re-syncing on next effect run
       lastSyncedAbstract = selectedAbstract;
     } else {
-      console.warn('[AbstractTableView] Could not find abstract in array to update:', selectedAbstractId);
+      console.warn(
+        '[AbstractTableView] Could not find abstract in array to update:',
+        selectedAbstractId,
+      );
     }
   });
 
@@ -403,7 +405,6 @@
       } catch (e) {}
     }}
     tabindex="0"
-    class="cursor-pointer"
     class:selected-row={selected && String(selected.ID) === String(item.ID)}
     aria-selected={selected && String(selected.ID) === String(item.ID)}
   >
@@ -412,21 +413,14 @@
         {#if col.id === 'ID'}
           {item.ID}
         {:else if col.id === 'Title'}
-          <TitleLink
-            as="button"
+          <TitleButton
             onclick={() => openAbstract(item.DatabaseID)}
             data-id={item.ID}
-            data-title={item.Title}>{item.Title}</TitleLink
+            data-title={item.Title}>{item.Title}</TitleButton
           >
         {:else if col.id === 'State'}
           {#if item.State}
-            <span
-              class={item.State.toLowerCase() === 'accepted'
-                ? 'state-badge state-accepted'
-                : item.State.toLowerCase() === 'rejected'
-                  ? 'state-badge state-rejected'
-                  : 'state-badge state-other'}>{item.State}</span
-            >
+            <StateBadge state={item.State} />
           {/if}
         {:else if col.id === 'Affiliation'}
           {#if item.Affiliation && item.AffiliationFull}
@@ -444,11 +438,9 @@
           {#if item.Track}
             <TrackBadge
               text={item.Track}
-              as="button"
-              className={(item.TrackType === 'accepted' ? 'track-accepted' : 'track-reviewed') +
-                ' track-link'}
+              type={item.TrackType}
               onclick={() => openTrack(item.TrackFull)}
-              {...{ 'data-tracks': item.TrackFull }}
+              data-tracks={item.TrackFull}
             />
           {/if}
         {:else if col.id === 'Type'}
@@ -457,7 +449,7 @@
           {/if}
         {:else if col.id === 'Authors'}
           {#if item.Authors}
-            <span class="authors-cell" title={item.AuthorsTooltip}>{item.Authors}</span>
+            <span class="cursor-help" title={item.AuthorsTooltip}>{item.Authors}</span>
           {/if}
         {:else if col.id === 'Refresh'}
           {@const isRefreshing = refreshingIds.has(item.DatabaseID)}
@@ -468,11 +460,14 @@
               handleRowRefresh(item.DatabaseID);
             }}
             disabled={isRefreshing}
-            class="refresh-button"
-            class:refreshing={isRefreshing}
+            aria-label={isRefreshing
+              ? `Refreshing abstract ${item.ID}`
+              : `Refresh abstract ${item.ID}`}
             title="Refresh this abstract"
+            class="px-2 py-1 text-base rounded-md bg-sky-100 text-sky-800 dark:bg-sky-800 dark:text-sky-100 border-0 cursor-pointer transition-all duration-150 ease-in-out hover:bg-sky-200 dark:hover:bg-sky-700 disabled:bg-gray-200 dark:disabled:bg-gray-700 disabled:text-gray-400 dark:disabled:text-gray-400 disabled:cursor-not-allowed"
+            class:animate-spin={isRefreshing}
           >
-            {isRefreshing ? '↻' : '↻'}
+            ↻
           </button>
         {:else}
           {item[col.id]}
@@ -533,73 +528,3 @@
 
 <!-- Affiliation Details Dialog -->
 <AffiliationDialog bind:open={showAffiliationDialog} affiliation={selectedAffiliation} />
-
-<style>
-  /* Component-specific styling for AbstractTableView */
-
-  /* State badge styling - specific to AbstractTableView (scoped) */
-  .state-badge {
-    font-size: 0.75rem;
-    padding: 0.25rem 0.5rem;
-    border-radius: 0.25rem;
-    font-weight: 500;
-  }
-
-  /* State variants (scoped to this component) */
-  .state-accepted {
-    background-color: #dcfce7;
-    color: #166534;
-  }
-
-  .state-rejected {
-    background-color: #fee2e2;
-    color: #991b1b;
-  }
-
-  .state-other {
-    background-color: #fef3c7;
-    color: #92400e;
-  }
-
-  /* Authors cell with tooltip (scoped) */
-  .authors-cell {
-    cursor: help;
-  }
-
-  /* Refresh button styling */
-  .refresh-button {
-    padding: 0.25rem 0.5rem;
-    font-size: 1rem;
-    border-radius: 0.25rem;
-    background-color: #dbeafe;
-    color: #1e40af;
-    border: none;
-    cursor: pointer;
-    transition: all 0.15s ease-in-out;
-  }
-
-  .refresh-button:hover:not(:disabled) {
-    background-color: #bfdbfe;
-  }
-
-  .refresh-button:disabled {
-    background-color: #e5e7eb;
-    color: #9ca3af;
-    cursor: not-allowed;
-  }
-
-  .refresh-button.refreshing {
-    animation: spin 1s linear infinite;
-  }
-
-  @keyframes spin {
-    from {
-      transform: rotate(0deg);
-    }
-    to {
-      transform: rotate(360deg);
-    }
-  }
-
-  /* Other table/badge helpers moved to shared CSS */
-</style>

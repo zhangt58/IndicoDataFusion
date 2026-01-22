@@ -17,7 +17,7 @@
   }
 </script>
 
-<Modal bind:open size="xl" dismissable={false} class="abstract-dialog">
+<Modal bind:open size="xl" dismissable={false}>
   <div class="flex justify-between items-center mb-4">
     <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Abstract Details</h3>
     <button

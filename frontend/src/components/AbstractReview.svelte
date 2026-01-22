@@ -90,11 +90,11 @@
 
 {#if review}
   <div
-    class="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4 space-y-3"
+    class="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-2 space-y-1"
   >
     <!-- Header: Reviewer and Action -->
-    <div class="flex justify-between items-start gap-3">
-      <div class="flex items-start gap-3 flex-1">
+    <div class="flex justify-between items-start gap-2">
+      <div class="flex items-start gap-2 flex-1">
         <UserCircleOutline class="w-8 h-8 text-gray-500 dark:text-gray-400 shrink-0 mt-1" />
         <div class="flex-1 min-w-0">
           <p class="text-sm font-semibold text-gray-800 dark:text-white">
@@ -115,7 +115,7 @@
 
       <!-- Proposed Action Badge -->
       {#if actionStyle && ActionIcon}
-        <div class="flex items-center gap-2 px-3 py-1 rounded-full border {actionStyle.class}">
+        <div class="flex items-center gap-2 px-2 py-1 rounded-lg border {actionStyle.class}">
           <ActionIcon class="w-4 h-4" />
           <span class="text-xs font-semibold">{actionStyle.label}</span>
         </div>
@@ -125,11 +125,11 @@
     <!-- Track -->
     <div class="flex items-center gap-2 text-xs">
       <span class="text-gray-600 dark:text-gray-400 font-semibold">Track:</span>
-      <TrackBadge text={review.track.title} className="track-reviewed" />
+      <TrackBadge text={review.track.title} type="reviewed" />
     </div>
 
     <!-- Timestamps -->
-    <div class="flex items-center gap-4 text-xs text-gray-500 dark:text-gray-400">
+    <div class="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
       <div class="flex items-center gap-1">
         <CalendarMonthOutline class="w-4 h-4" />
         <span>Created: {formatDate(review.created_dt)}</span>
@@ -144,12 +144,12 @@
 
     <!-- Comment -->
     {#if review.comment && review.comment.trim()}
-      <div class="bg-gray-50 dark:bg-gray-700 rounded p-3">
-        <div class="flex items-center gap-2 mb-2">
+      <div class="bg-gray-50 dark:bg-gray-700 rounded p-2">
+        <div class="flex items-center gap-1 mb-1">
           <MessagesOutline class="w-4 h-4 text-gray-500 dark:text-gray-400" />
           <span class="text-xs font-semibold text-gray-700 dark:text-gray-300">Comment</span>
         </div>
-        <p class="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap">
+        <p class="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap wrap-break-word">
           {review.comment}
         </p>
       </div>
@@ -157,14 +157,14 @@
 
     <!-- Ratings -->
     {#if review.ratings && review.ratings.length > 0}
-      <div class="bg-gray-50 dark:bg-gray-700 rounded p-3">
-        <div class="flex items-center gap-2 mb-2">
+      <div class="bg-gray-50 dark:bg-gray-700 rounded p-2">
+        <div class="flex items-center gap-1 mb-1">
           <StarOutline class="w-4 h-4 text-yellow-500" />
           <span class="text-xs font-semibold text-gray-700 dark:text-gray-300">Ratings</span>
         </div>
-        <div class="space-y-2">
+        <div class="space-y-1">
           {#each review.ratings as rating}
-            <div class="flex items-start justify-between text-sm gap-2">
+            <div class="flex items-start justify-between text-sm gap-1">
               <div class="flex-1 min-w-0">
                 {#if rating.question_details}
                   <div class="text-gray-700 dark:text-gray-300 font-medium">
@@ -203,7 +203,7 @@
         <p class="text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1">Proposed Tracks:</p>
         <div class="flex gap-2 flex-wrap">
           {#each review.proposed_tracks as track}
-            <TrackBadge text={track.title} className="track-proposed" />
+            <TrackBadge text={track.title} type="proposed" />
           {/each}
         </div>
       </div>
@@ -212,7 +212,7 @@
     <!-- Proposed Related Abstract (for mark_as_duplicate action) -->
     {#if review.proposed_related_abstract}
       <div
-        class="bg-orange-50 dark:bg-orange-900/20 rounded p-3 border border-orange-200 dark:border-orange-800"
+        class="bg-orange-50 dark:bg-orange-900/20 rounded p-2 border border-orange-200 dark:border-orange-800"
       >
         <p class="text-xs font-semibold text-orange-800 dark:text-orange-300 mb-1">Duplicate of:</p>
         <p class="text-sm text-gray-700 dark:text-gray-300">
@@ -234,11 +234,3 @@
     No review data available
   </div>
 {/if}
-
-<style>
-  /* Ensure long text wraps properly */
-  .whitespace-pre-wrap {
-    white-space: pre-wrap;
-    word-wrap: break-word;
-  }
-</style>

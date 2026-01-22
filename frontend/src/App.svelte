@@ -1,5 +1,6 @@
 <script>
   import { onMount, onDestroy } from 'svelte';
+  import { fly, fade } from 'svelte/transition';
   import {
     AlignJustifyOutline,
     BookOpenSolid,
@@ -8,7 +9,6 @@
     HomeSolid,
   } from 'flowbite-svelte-icons';
   import './app.css';
-  import './table-helpers.css';
   import { goto } from './router/index.js';
   import LocalRouter from './router/Router.svelte';
   import AbstractPage from './pages/AbstractPage.svelte';
@@ -92,7 +92,10 @@
 <div class="flex min-h-screen pt-12 overflow-hidden h-full pb-10">
   {#if isSidebarOpen}
     <!-- horizontal quick buttons left of the toggle -->
-    <div class="fixed top-12 right-4 z-40 flex items-center gap-2 animate-slide-in">
+    <div
+      class="fixed top-12 right-4 z-40 flex items-center gap-2"
+      in:fly={{ x: 20, duration: 300 }}
+    >
       <!-- z-40 so titlebar (z-50) remains on top -->
       <button
         onclick={() => quickGoto('/')}
@@ -152,7 +155,7 @@
       </button>
     </div>
   {:else}
-    <div class="fixed top-12 right-4 z-40 flex items-center gap-2 animate-fade-in">
+    <div class="fixed top-12 right-4 z-40 flex items-center gap-2" in:fade={{ duration: 200 }}>
       <button
         onclick={toggleSidebar}
         class="pointer-events-auto bg-white/60 dark:bg-gray-800/60 border border-gray-200/70 dark:border-gray-700/60 rounded px-3 py-2 shadow-md backdrop-blur-sm hover:bg-white/70 transition-all duration-200 hover:scale-110 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
@@ -177,37 +180,3 @@
 
 <!-- Status Bar (bottom) -->
 <StatusBar />
-
-<style>
-  /* Animation for sliding in from right */
-  @keyframes slide-in {
-    from {
-      opacity: 0;
-      transform: translateX(20px);
-    }
-    to {
-      opacity: 1;
-      transform: translateX(0);
-    }
-  }
-
-  /* Animation for fading in */
-  @keyframes fade-in {
-    from {
-      opacity: 0;
-      transform: scale(0.95);
-    }
-    to {
-      opacity: 1;
-      transform: scale(1);
-    }
-  }
-
-  .animate-slide-in {
-    animation: slide-in 0.3s ease-out;
-  }
-
-  .animate-fade-in {
-    animation: fade-in 0.2s ease-out;
-  }
-</style>

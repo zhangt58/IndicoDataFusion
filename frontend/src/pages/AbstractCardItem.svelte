@@ -2,6 +2,7 @@
   import { RefreshAbstractByID } from '../../wailsjs/go/main/App';
   import TypeBadge from './TypeBadge.svelte';
   import TrackBadge from './TrackBadge.svelte';
+  import StateBadge from './StateBadge.svelte';
   import AffiliationDialog from '../components/AffiliationDialog.svelte';
   import AffiliationBadge from '../components/AffiliationBadge.svelte';
   import AbstractReviewsDialog from '../components/AbstractReviewsDialog.svelte';
@@ -100,16 +101,7 @@
       >
         {isRefreshing ? '↻ Refreshing...' : '↻ Refresh'}
       </button>
-      <span
-        class="px-3 py-1 rounded-full text-xs font-semibold
-        {abstract.state === 'accepted'
-          ? 'bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200'
-          : abstract.state === 'rejected'
-            ? 'bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200'
-            : 'bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200'}"
-      >
-        {abstract.state}
-      </span>
+      <StateBadge state={abstract.state} className="font-semibold" />
     </div>
   </div>
 
@@ -146,7 +138,7 @@
       </p>
       <div class="flex gap-2 flex-wrap">
         {#each abstract.reviewed_for_tracks as track}
-          <TrackBadge text={track.title} className="track-reviewed" />
+          <TrackBadge text={track.title} type="reviewed" />
         {/each}
       </div>
     </div>
@@ -155,7 +147,7 @@
   {#if abstract.accepted_track}
     <div class="mb-3">
       <p class="text-xs font-semibold text-gray-600 dark:text-gray-400">Accepted track:</p>
-      <TrackBadge text={abstract.accepted_track.title} className="track-accepted" />
+      <TrackBadge text={abstract.accepted_track.title} type="accepted" />
     </div>
   {/if}
 

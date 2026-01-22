@@ -124,8 +124,6 @@
     // Show a visible slider when there are many labels; always enable inside zoom (mouse wheel / drag)
     const showSlider = (labels || []).length > 20;
     const sliderEnd = Math.min(100, Math.round((20 / Math.max(1, (labels || []).length)) * 100));
-    // Total used by tooltip percentage calculation
-    const total = (series || []).reduce((a, b) => a + (b || 0), 0);
 
     // Determine label rotation and provide enough bottom padding so slider sits below labels
     const labelRotate = (labels || []).length > 10 ? 45 : 0;
