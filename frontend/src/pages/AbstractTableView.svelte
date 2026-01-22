@@ -42,7 +42,7 @@
   let activeFilters = $state({});
 
   // Columns definition (id matches keys in tableItems)
-  const columns = [
+  const origColumns = [
     { id: 'ID', title: 'ID', stretch: 1 },
     { id: 'Title', title: 'Title', stretch: 6 },
     { id: 'State', title: 'State', stretch: 2 },
@@ -50,7 +50,7 @@
     { id: 'Affiliation', title: 'Affiliation', stretch: 3 },
     { id: 'Track', title: 'Track', stretch: 2 },
     { id: 'Type', title: 'Type', stretch: 1 },
-    { id: 'Score', title: 'Score', stretch: 1 },
+    { id: 'Score', title: 'Score', stretch: 1, 'hide': true },
     { id: 'Submitted', title: 'Submitted', stretch: 2 },
     { id: 'Authors', title: 'Authors', stretch: 2 },
     { id: 'FirstPriority', title: 'First Priority', stretch: 1 },
@@ -64,6 +64,9 @@
     { id: 'ReviewedForTracks', title: 'Reviewed Tracks', stretch: 2 },
     { id: 'SubmittedForTracks', title: 'Submitted Tracks', stretch: 2 },
   ];
+
+  // Derive columns from `allColumns`, skipping entries with `hide: true`
+  const columns = origColumns.filter((c) => !c.hide);
 
   // Map of visible column keys in the data objects (header titles)
   const visibleKeys = columns.map((c) => c.title);
@@ -288,8 +291,13 @@
 
   // Sorting helper (handles ID numeric, Score numeric, Submitted timestamp, Track numeric extraction, and priority columns)
   function compare(a, b, key) {
-    const va = a[key];
-    const vb = b[key];
+    // `key` is the column title provided by the DataTable header.
+    // Map the title to the actual table-item property id so we read the correct values.
+    const originalKey = key;
+    const col = columns.find((c) => c.title === originalKey);
+    const idKey = col ? col.id : originalKey;
+    const va = a[idKey];
+    const vb = b[idKey];
 
     // Special-case ID: numeric sort using IDNumber
     if (key === 'ID') {
@@ -301,26 +309,16 @@
       return na - nb;
     }
 
-    // numeric sort for Score
-    if (key === 'Score') {
-      const na = Number(va === '' ? NaN : va);
-      const nb = Number(vb === '' ? NaN : vb);
-      if (isNaN(na) && isNaN(nb)) return 0;
-      if (isNaN(na)) return -1;
-      if (isNaN(nb)) return 1;
-      return na - nb;
-    }
+    // numeric sort for Score, First Priority and Second Priority
+    if (originalKey === 'Score' || originalKey === 'First Priority' || originalKey === 'Second Priority') {
+      // read values via mapped idKey (table item properties)
+      const aVal = a[idKey];
+      const bVal = b[idKey];
 
-    // numeric sort for First Priority and Second Priority
-    if (key === 'First Priority' || key === 'Second Priority') {
-      let na, nb;
-      if (key === 'First Priority') {
-        na = Number(a.FirstPriority);
-        nb = Number(b.FirstPriority);
-      } else {
-        na = Number(a.SecondPriority);
-        nb = Number(b.SecondPriority);
-      }
+      // Score treats empty string as missing/NaN; priorities are plain numbers
+      const na = Number(aVal === '' ? NaN : aVal);
+      const nb = Number(bVal === '' ? NaN : bVal);
+
       if (isNaN(na) && isNaN(nb)) return 0;
       if (isNaN(na)) return -1;
       if (isNaN(nb)) return 1;
@@ -328,7 +326,7 @@
     }
 
     // Special-case Submitted: sort by SubmittedMillis timestamp
-    if (key === 'Submitted') {
+    if (originalKey === 'Submitted') {
       const ta = a.SubmittedMillis != null ? Number(a.SubmittedMillis) : NaN;
       const tb = b.SubmittedMillis != null ? Number(b.SubmittedMillis) : NaN;
       if (isNaN(ta) && isNaN(tb)) return 0;
@@ -338,7 +336,7 @@
     }
 
     // Special-case Track: extract number from strings like "MC10" or "MC10: description"
-    if (key === 'Track') {
+    if (originalKey === 'Track' || originalKey === 'Accepted Track' || originalKey === 'Reviewed Track' || originalKey === 'Submitted Track') {
       const extractTrackNumber = (str) => {
         if (!str) return NaN;
         const match = String(str).match(/\d+/);
