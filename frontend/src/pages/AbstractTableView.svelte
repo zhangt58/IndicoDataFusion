@@ -8,6 +8,7 @@
   import AffiliationBadge from '../components/AffiliationBadge.svelte';
   import TitleButton from '../components/TitleButton.svelte';
   import TrackBadge from './TrackBadge.svelte';
+  import StateBadge from './StateBadge.svelte';
   import { getTableItems } from './AbstractTableItem.js';
 
   let { abstractData = $bindable([]) } = $props();
@@ -403,7 +404,6 @@
       } catch (e) {}
     }}
     tabindex="0"
-    class="cursor-pointer"
     class:selected-row={selected && String(selected.ID) === String(item.ID)}
     aria-selected={selected && String(selected.ID) === String(item.ID)}
   >
@@ -419,12 +419,7 @@
           >
         {:else if col.id === 'State'}
           {#if item.State}
-            <span
-              class="state-badge"
-              class:state-accepted={item.State && item.State.toLowerCase() === 'accepted'}
-              class:state-rejected={item.State && item.State.toLowerCase() === 'rejected'}
-              class:state-other={item.State && item.State.toLowerCase() !== 'accepted' && item.State.toLowerCase() !== 'rejected'}
-            >{item.State}</span>
+            <StateBadge state={item.State} />
           {/if}
         {:else if col.id === 'Affiliation'}
           {#if item.Affiliation && item.AffiliationFull}
@@ -453,7 +448,7 @@
           {/if}
         {:else if col.id === 'Authors'}
           {#if item.Authors}
-            <span class="authors-cell" title={item.AuthorsTooltip}>{item.Authors}</span>
+            <span class="cursor-help" title={item.AuthorsTooltip}>{item.Authors}</span>
           {/if}
         {:else if col.id === 'Refresh'}
           {@const isRefreshing = refreshingIds.has(item.DatabaseID)}
@@ -530,36 +525,3 @@
 
 <!-- Affiliation Details Dialog -->
 <AffiliationDialog bind:open={showAffiliationDialog} affiliation={selectedAffiliation} />
-
-<style>
-  /* Component-specific styling for AbstractTableView */
-
-  /* State badge styling - specific to AbstractTableView (scoped) */
-  .state-badge {
-    font-size: 0.75rem;
-    padding: 0.25rem 0.5rem;
-    border-radius: 0.25rem;
-    font-weight: 500;
-  }
-
-  /* State variants (scoped to this component) */
-  .state-accepted {
-    background-color: #dcfce7;
-    color: #166534;
-  }
-
-  .state-rejected {
-    background-color: #fee2e2;
-    color: #991b1b;
-  }
-
-  .state-other {
-    background-color: #fef3c7;
-    color: #92400e;
-  }
-
-  /* Authors cell with tooltip (scoped) */
-  .authors-cell {
-    cursor: help;
-  }
-</style>
