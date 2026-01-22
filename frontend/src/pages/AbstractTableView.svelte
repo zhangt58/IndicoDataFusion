@@ -127,9 +127,7 @@
       return;
     }
 
-    const index = abstractData.findIndex(
-      (a) => String(a.id) === String(selectedAbstractId)
-    );
+    const index = abstractData.findIndex((a) => String(a.id) === String(selectedAbstractId));
 
     if (index !== -1) {
       // Update the array element and trigger reactivity
@@ -138,7 +136,10 @@
       // Track this version to prevent re-syncing on next effect run
       lastSyncedAbstract = selectedAbstract;
     } else {
-      console.warn('[AbstractTableView] Could not find abstract in array to update:', selectedAbstractId);
+      console.warn(
+        '[AbstractTableView] Could not find abstract in array to update:',
+        selectedAbstractId,
+      );
     }
   });
 
@@ -459,7 +460,9 @@
               handleRowRefresh(item.DatabaseID);
             }}
             disabled={isRefreshing}
-            aria-label={isRefreshing ? `Refreshing abstract ${item.ID}` : `Refresh abstract ${item.ID}`}
+            aria-label={isRefreshing
+              ? `Refreshing abstract ${item.ID}`
+              : `Refresh abstract ${item.ID}`}
             title="Refresh this abstract"
             class="px-2 py-1 text-base rounded-md bg-sky-100 text-sky-800 dark:bg-sky-800 dark:text-sky-100 border-0 cursor-pointer transition-all duration-150 ease-in-out hover:bg-sky-200 dark:hover:bg-sky-700 disabled:bg-gray-200 dark:disabled:bg-gray-700 disabled:text-gray-400 dark:disabled:text-gray-400 disabled:cursor-not-allowed"
             class:animate-spin={isRefreshing}

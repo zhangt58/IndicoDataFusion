@@ -51,7 +51,8 @@
   }
 </script>
 
-<div class="select-none fixed top-0 left-0 right-0 rounded-t-xl flex items-center justify-between h-10 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 shadow-md dark:shadow-black/40"
+<div
+  class="select-none fixed top-0 left-0 right-0 rounded-t-xl flex items-center justify-between h-10 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 shadow-md dark:shadow-black/40"
   style="--wails-draggable: drag; z-index: 9999;"
   role="button"
   tabindex="0"

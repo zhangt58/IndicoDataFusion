@@ -92,7 +92,10 @@
 <div class="flex min-h-screen pt-12 overflow-hidden h-full pb-10">
   {#if isSidebarOpen}
     <!-- horizontal quick buttons left of the toggle -->
-    <div class="fixed top-12 right-4 z-40 flex items-center gap-2" in:fly={{ x: 20, duration: 300 }}>
+    <div
+      class="fixed top-12 right-4 z-40 flex items-center gap-2"
+      in:fly={{ x: 20, duration: 300 }}
+    >
       <!-- z-40 so titlebar (z-50) remains on top -->
       <button
         onclick={() => quickGoto('/')}

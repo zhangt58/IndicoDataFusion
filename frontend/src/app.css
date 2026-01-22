@@ -107,8 +107,16 @@
 
   /* Global rule for ECharts container font-family (migrated from component-level <style>) */
   .echarts-container {
-    font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial,
-      "Noto Sans", sans-serif;
+    font-family:
+      Inter,
+      system-ui,
+      -apple-system,
+      'Segoe UI',
+      Roboto,
+      'Helvetica Neue',
+      Arial,
+      'Noto Sans',
+      sans-serif;
   }
 
   /* Prose link colors migrated from component-local styles. Use Tailwind utilities via @apply
