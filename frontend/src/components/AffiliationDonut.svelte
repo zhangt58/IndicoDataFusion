@@ -232,19 +232,3 @@
 {:else}
   <div class="text-sm text-gray-500 text-center py-8">No data available</div>
 {/if}
-
-<style>
-  :global(.echarts-container) {
-    font-family:
-      Inter,
-      system-ui,
-      -apple-system,
-      'Segoe UI',
-      Roboto,
-      'Helvetica Neue',
-      Arial,
-      'Noto Sans',
-      sans-serif;
-    /* height is controlled via the `height` prop on the element */
-  }
-</style>

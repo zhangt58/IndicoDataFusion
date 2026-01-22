@@ -82,7 +82,3 @@
     </div>
   </div>
 {/if}
-
-<style>
-  /* keep 2-space indentation for frontend files */
-</style>

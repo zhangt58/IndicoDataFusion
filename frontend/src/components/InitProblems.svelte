@@ -60,7 +60,7 @@
         {#each problems as p}
           <li class="flex items-start justify-between gap-2">
             <div class="flex-1">
-              <div class="text-xs break-words">{p}</div>
+              <div class="text-xs wrap-break-word">{p}</div>
             </div>
           </li>
         {/each}
@@ -80,7 +80,3 @@
     </div>
   </div>
 {/if}
-
-<style>
-  /* keep 2-space indentation style consistent */
-</style>

@@ -36,7 +36,7 @@
   }
 </script>
 
-<Modal bind:open size="md" dismissable={false} class="affiliation-dialog">
+<Modal bind:open size="md" dismissable={false} class="max-w-xl mx-auto">
   <div class="flex justify-between items-start mb-4">
     <div class="flex items-center gap-2">
       <BuildingOutline class="w-6 h-6 text-blue-600 dark:text-blue-400" />
@@ -114,9 +114,3 @@
     </div>
   {/if}
 </Modal>
-
-<style>
-  :global(.affiliation-dialog) {
-    max-width: 500px;
-  }
-</style>

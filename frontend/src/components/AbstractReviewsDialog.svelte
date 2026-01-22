@@ -50,7 +50,7 @@
   });
 </script>
 
-<Modal bind:open size="xl" dismissable={false} class="reviews-dialog">
+<Modal bind:open size="lg" dismissable={false}>
   <div class="flex justify-between items-start mb-4">
     <div class="flex items-center gap-2 flex-1 min-w-0">
       <MessagesOutline class="w-6 h-6 text-blue-600 dark:text-blue-400 shrink-0" />

@@ -6,7 +6,6 @@
     ...rest
   } = $props();
 
-  // Compute classes as a derived value (Svelte 5 Rune API) so it's reactive and allowed in runes mode
   const classes = $derived(() =>
     'inline-flex items-start justify-start text-left px-2 py-1 rounded-sm text-xs hover:cursor-pointer ' +
     (type === 'accepted'

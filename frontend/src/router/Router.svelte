@@ -98,7 +98,3 @@
 {:else}
   <div>Loading application runtime…</div>
 {/if}
-
-<style>
-  /* minimal styles for loading fallback */
-</style>

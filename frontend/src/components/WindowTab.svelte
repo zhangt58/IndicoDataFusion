@@ -83,7 +83,7 @@
     <div class="flex sm:justify-end">
       <button
         type="button"
-        class="px-4 py-2 h-[42px] sm:h-[42px] rounded bg-indigo-600 text-white hover:bg-indigo-700 dark:bg-indigo-500 dark:hover:bg-indigo-600 focus:outline-none focus:ring-2 focus:ring-indigo-400"
+        class="px-4 py-2 h-10 rounded bg-indigo-600 text-white hover:bg-indigo-700 dark:bg-indigo-500 dark:hover:bg-indigo-600 focus:outline-none focus:ring-2 focus:ring-indigo-400"
         onclick={applyWindowSize}>Apply</button
       >
     </div>

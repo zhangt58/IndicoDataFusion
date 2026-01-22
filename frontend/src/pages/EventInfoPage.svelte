@@ -221,20 +221,3 @@
 {:else}
   <div class="p-6 text-center text-gray-500">No event information available.</div>
 {/if}
-
-<style>
-  /* Style for HTML content from description */
-  :global(.prose a) {
-    color: #4f46e5;
-    text-decoration: underline;
-  }
-  :global(.prose a:hover) {
-    color: #4338ca;
-  }
-  :global(.dark .prose a) {
-    color: #818cf8;
-  }
-  :global(.dark .prose a:hover) {
-    color: #a5b4fc;
-  }
-</style>

@@ -728,14 +728,3 @@
   onCreate={handleCreateIndico}
   onCancel={cancelCreateIndico}
 />
-
-<style>
-  :global(input::placeholder),
-  :global(textarea::placeholder) {
-    color: rgba(107, 114, 128, 0.6); /* gray-500 @ 60% */
-  }
-  :global(.dark input::placeholder),
-  :global(.dark textarea::placeholder) {
-    color: rgba(148, 163, 184, 0.55); /* slate-300-ish for dark mode */
-  }
-</style>

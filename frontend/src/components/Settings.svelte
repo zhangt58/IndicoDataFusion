@@ -58,7 +58,7 @@
   });
 </script>
 
-<Modal bind:open size="lg" dismissable={true} class="settings-dialog">
+<Modal bind:open size="lg" dismissable={true} class="max-w-2xl mx-auto">
   <div
     class="flex justify-between items-center mb-4 border-b border-gray-200 dark:border-gray-700 pb-4"
   >
@@ -135,9 +135,3 @@
     {/if}
   </div>
 </Modal>
-
-<style>
-  :global(.settings-dialog) {
-    max-width: 600px;
-  }
-</style>
