@@ -9,7 +9,7 @@
   import TitleButton from '../components/TitleButton.svelte';
   import TrackBadge from './TrackBadge.svelte';
   import StateBadge from './StateBadge.svelte';
-  import { getTableItems } from './AbstractTableItem.js';
+  import { getTableItems, getShortTrackName } from './AbstractTableItem.js';
 
   let { abstractData = $bindable([]) } = $props();
 
@@ -56,6 +56,13 @@
     { id: 'FirstPriority', title: 'First Priority', stretch: 1 },
     { id: 'SecondPriority', title: 'Second Priority', stretch: 1 },
     { id: 'Refresh', title: 'Refresh', stretch: 1 },
+
+    // New columns
+    { id: 'AcceptedTrack', title: 'Accepted Track', stretch: 2 },
+    { id: 'AcceptedContribType', title: 'Accepted Type', stretch: 2 },
+    { id: 'SubmittedContribType', title: 'Submitted Type', stretch: 2 },
+    { id: 'ReviewedForTracks', title: 'Reviewed Tracks', stretch: 2 },
+    { id: 'SubmittedForTracks', title: 'Submitted Tracks', stretch: 2 },
   ];
 
   // Map of visible column keys in the data objects (header titles)
@@ -442,6 +449,34 @@
               onclick={() => openTrack(item.TrackFull)}
               data-tracks={item.TrackFull}
             />
+          {/if}
+        {:else if col.id === 'AcceptedTrack'}
+          {#if item.AcceptedTrack}
+            <TrackBadge text={getShortTrackName(item.AcceptedTrack)} type="accepted" onclick={() => openTrack({ title: item.AcceptedTrack, type: 'accepted' })} />
+          {/if}
+        {:else if col.id === 'AcceptedContribType'}
+          {#if item.AcceptedContribType}
+            <TypeBadge text={item.AcceptedContribType} />
+          {/if}
+        {:else if col.id === 'SubmittedContribType'}
+          {#if item.SubmittedContribType}
+            <TypeBadge text={item.SubmittedContribType} />
+          {/if}
+        {:else if col.id === 'ReviewedForTracks'}
+          {#if item.ReviewedForTracks && item.ReviewedForTracks.length > 0}
+            <div class="flex gap-1 flex-wrap">
+              {#each item.ReviewedForTracks as rt}
+                <TrackBadge text={getShortTrackName(rt)} type="reviewed" onclick={() => openTrack({ title: rt, type: 'reviewed' })} />
+              {/each}
+            </div>
+          {/if}
+        {:else if col.id === 'SubmittedForTracks'}
+          {#if item.SubmittedForTracks && item.SubmittedForTracks.length > 0}
+            <div class="flex gap-1 flex-wrap">
+              {#each item.SubmittedForTracks as st}
+                <TrackBadge text={getShortTrackName(st)} type="reviewed" onclick={() => openTrack({ title: st, type: 'reviewed' })} />
+              {/each}
+            </div>
           {/if}
         {:else if col.id === 'Type'}
           {#if item.Type}

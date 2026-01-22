@@ -23,6 +23,18 @@ export function getShortTrackName(trackTitle) {
   return colonIndex > 0 ? trackTitle.substring(0, colonIndex).trim() : trackTitle;
 }
 
+/*
+ * Get a display label for a track: prefer non-empty code, otherwise title
+ * @param {Object} track - track object with optional `code` and `title`
+ * @returns {string} label to display
+ */
+export function getTrackLabel(track) {
+  if (!track) return '';
+  const code = track.code;
+  if (typeof code === 'string' && code.trim() !== '') return code;
+  return track.title ?? '';
+}
+
 /**
  * Get all track titles from an abstract (both accepted and reviewed)
  * @param {Object} abstract - The abstract data object
@@ -33,7 +45,7 @@ export function getAllTracks(abstract) {
 
   if (abstract.accepted_track) {
     tracks.push({
-      title: abstract.accepted_track.title,
+      title: getTrackLabel(abstract.accepted_track),
       type: 'accepted',
     });
   }
@@ -41,9 +53,10 @@ export function getAllTracks(abstract) {
   if (abstract.reviewed_for_tracks && abstract.reviewed_for_tracks.length > 0) {
     abstract.reviewed_for_tracks.forEach((track) => {
       // Don't add duplicates
-      if (!tracks.some((t) => t.title === track.title)) {
+      const trackLabel = getTrackLabel(track);
+      if (!tracks.some((t) => t.title === trackLabel)) {
         tracks.push({
-          title: track.title,
+          title: trackLabel,
           type: 'reviewed',
         });
       }
@@ -100,8 +113,14 @@ export function getAllAuthorsTooltip(persons) {
  * @returns {Object} Table row data
  */
 export function transformAbstractToTableItem(abstract) {
-  const trackTitle =
-    abstract.accepted_track?.title || abstract.reviewed_for_tracks?.[0]?.title || '';
+  // Prefer non-empty track.code if available, otherwise fall back to title
+  let trackTitle = '';
+  if (abstract.accepted_track) {
+    trackTitle = getTrackLabel(abstract.accepted_track);
+  } else if (abstract.reviewed_for_tracks && abstract.reviewed_for_tracks.length > 0) {
+    const t0 = abstract.reviewed_for_tracks[0];
+    trackTitle = getTrackLabel(t0);
+  }
   const allTracks = getAllTracks(abstract);
 
   // compute numeric ID if possible
@@ -131,6 +150,10 @@ export function transformAbstractToTableItem(abstract) {
     }
   }
 
+  // Prepare reviewed/submitted track title arrays (prefer non-empty code)
+  const reviewedTrackTitles = (abstract.reviewed_for_tracks || []).map((t) => getTrackLabel(t));
+  const submittedTrackTitles = (abstract.submitted_for_tracks || []).map((t) => getTrackLabel(t));
+
   return {
     ID: rawId,
     IDNumber: isNaN(idNum) ? null : idNum,
@@ -144,6 +167,13 @@ export function transformAbstractToTableItem(abstract) {
     TrackFull: JSON.stringify(allTracks), // Store all tracks as JSON for the dialog
     TrackType: abstract.accepted_track ? 'accepted' : 'reviewed',
     Type: abstract.accepted_contrib_type?.name || '',
+    // New explicit fields requested (prefer non-empty code when available)
+    AcceptedTrack: abstract.accepted_track ? getTrackLabel(abstract.accepted_track) : '',
+    AcceptedContribType: abstract.accepted_contrib_type?.name || '',
+    SubmittedContribType: abstract.submitted_contrib_type?.name || '',
+    ReviewedForTracks: reviewedTrackTitles,
+    SubmittedForTracks: submittedTrackTitles,
+
     Score: abstract.score ?? '',
     Submitted: formatTimestamp(abstract.submitted_dt),
     SubmittedISO: submittedISO,

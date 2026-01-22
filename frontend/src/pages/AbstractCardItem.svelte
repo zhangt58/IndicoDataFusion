@@ -6,8 +6,8 @@
   import AffiliationDialog from '../components/AffiliationDialog.svelte';
   import AffiliationBadge from '../components/AffiliationBadge.svelte';
   import AbstractReviewsDialog from '../components/AbstractReviewsDialog.svelte';
+  import { getTrackLabel } from './AbstractTableItem.js';
 
-  // Accept parent callback so parent can update abstractData
   let { abstract = $bindable({}), onRefresh = null } = $props();
 
   // Dialog state
@@ -138,7 +138,20 @@
       </p>
       <div class="flex gap-2 flex-wrap">
         {#each abstract.reviewed_for_tracks as track}
-          <TrackBadge text={track.title} type="reviewed" />
+          <TrackBadge text={getTrackLabel(track)} type="reviewed" />
+        {/each}
+      </div>
+    </div>
+  {/if}
+
+  {#if abstract.submitted_for_tracks && abstract.submitted_for_tracks.length > 0}
+    <div class="mb-3">
+      <p class="text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1">
+        Submitted for tracks:
+      </p>
+      <div class="flex gap-2 flex-wrap">
+        {#each abstract.submitted_for_tracks as track}
+          <TrackBadge text={getTrackLabel(track)} type="reviewed" />
         {/each}
       </div>
     </div>
@@ -147,7 +160,7 @@
   {#if abstract.accepted_track}
     <div class="mb-3">
       <p class="text-xs font-semibold text-gray-600 dark:text-gray-400">Accepted track:</p>
-      <TrackBadge text={abstract.accepted_track.title} type="accepted" />
+      <TrackBadge text={getTrackLabel(abstract.accepted_track)} type="accepted" />
     </div>
   {/if}
 
@@ -156,6 +169,13 @@
     <div class="mb-3">
       <p class="text-xs font-semibold text-gray-600 dark:text-gray-400">Type:</p>
       <TypeBadge text={abstract.accepted_contrib_type.name} />
+    </div>
+  {/if}
+
+  {#if abstract.submitted_contrib_type}
+    <div class="mb-3">
+      <p class="text-xs font-semibold text-gray-600 dark:text-gray-400">Submitted type:</p>
+      <TypeBadge text={abstract.submitted_contrib_type.name} />
     </div>
   {/if}
 
