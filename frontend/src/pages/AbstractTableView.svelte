@@ -442,11 +442,9 @@
           {#if item.Track}
             <TrackBadge
               text={item.Track}
-              as="button"
-              className={(item.TrackType === 'accepted' ? 'track-accepted' : 'track-reviewed') +
-                ' track-link'}
+              type={item.TrackType}
               onclick={() => openTrack(item.TrackFull)}
-              {...{ 'data-tracks': item.TrackFull }}
+              data-tracks={item.TrackFull}
             />
           {/if}
         {:else if col.id === 'Type'}

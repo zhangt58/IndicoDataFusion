@@ -1,40 +1,32 @@
 <script>
-  let { text = '', as = 'button', className = '', ...rest } = $props();
+  let {
+    text = '',
+    type = '',
+    className = '',
+    ...rest
+  } = $props();
+
+  // Compute classes as a derived value (Svelte 5 Rune API) so it's reactive and allowed in runes mode
+  const classes = $derived(() =>
+    'inline-flex items-start justify-start text-left px-2 py-1 rounded-sm text-xs hover:cursor-pointer ' +
+    (type === 'accepted'
+      ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-100'
+      : type === 'reviewed'
+      ? 'bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-200'
+      : type === 'proposed'
+      ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-100'
+      : 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200') +
+    (className ? ' ' + className : '')
+  );
+
 </script>
 
-{#if as === 'button'}
-  <button class={'track-badge ' + className} {...rest}>{text}</button>
-{:else}
-  <span class={'track-badge ' + className} {...rest}>{text}</span>
-{/if}
+<button
+  type="button"
+  {...rest}
+  class={classes()}
+>
+  {text}
+</button>
 
-<style>
-  .track-badge {
-    /*display: inline-flex !important;*/
-    display: inline-block;
-    align-items: flex-start !important; /* vertical alignment inside the button */
-    justify-content: flex-start !important; /* horizontal alignment */
-    text-align: left !important; /* ensure multi-line text is left-aligned */
-    padding: 0.125rem 0.5rem;
-    border-radius: 0.25rem;
-    font-size: 0.75rem;
-    background-color: #dcfce7 !important;
-    color: #166534 !important;
-  }
 
-  /* Variant styles when parent passes variant classes (e.g. track-accepted or track-reviewed) */
-  .track-badge.track-accepted {
-    background-color: #dcfce7 !important;
-    color: #166534 !important;
-  }
-
-  .track-badge.track-reviewed {
-    background-color: #f3e8ff !important;
-    color: #6b21a8 !important;
-  }
-
-  :global(.dark) .track-badge {
-    background-color: #14532d !important;
-    color: #bbf7d0 !important;
-  }
-</style>

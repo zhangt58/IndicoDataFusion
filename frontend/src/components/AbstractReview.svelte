@@ -125,7 +125,7 @@
     <!-- Track -->
     <div class="flex items-center gap-2 text-xs">
       <span class="text-gray-600 dark:text-gray-400 font-semibold">Track:</span>
-      <TrackBadge text={review.track.title} className="track-reviewed" />
+      <TrackBadge text={review.track.title} type="reviewed" />
     </div>
 
     <!-- Timestamps -->
@@ -203,7 +203,7 @@
         <p class="text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1">Proposed Tracks:</p>
         <div class="flex gap-2 flex-wrap">
           {#each review.proposed_tracks as track}
-            <TrackBadge text={track.title} className="track-proposed" />
+            <TrackBadge text={track.title} type="proposed" />
           {/each}
         </div>
       </div>

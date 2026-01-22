@@ -482,7 +482,7 @@
               text={item.Track}
               className="track-link"
               onclick={() => openTrack(item.Track)}
-              {...{ 'data-tracks': item.Track }}
+              data-tracks={item.Track}
             />
           {/if}
         {:else if col.id === 'Speakers'}

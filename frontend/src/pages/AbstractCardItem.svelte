@@ -146,7 +146,7 @@
       </p>
       <div class="flex gap-2 flex-wrap">
         {#each abstract.reviewed_for_tracks as track}
-          <TrackBadge text={track.title} className="track-reviewed" />
+          <TrackBadge text={track.title} type="reviewed" />
         {/each}
       </div>
     </div>
@@ -155,7 +155,7 @@
   {#if abstract.accepted_track}
     <div class="mb-3">
       <p class="text-xs font-semibold text-gray-600 dark:text-gray-400">Accepted track:</p>
-      <TrackBadge text={abstract.accepted_track.title} className="track-accepted" />
+      <TrackBadge text={abstract.accepted_track.title} type="accepted" />
     </div>
   {/if}
 
