@@ -38,25 +38,32 @@ export function getTrackLabel(track) {
 /**
  * Get all track titles from an abstract (both accepted and reviewed)
  * @param {Object} abstract - The abstract data object
- * @returns {Array} Array of track objects with title and type
+ * @returns {Array} Array of track objects with label, id, code, title and type
  */
 export function getAllTracks(abstract) {
   const tracks = [];
 
   if (abstract.accepted_track) {
+    const t = abstract.accepted_track;
     tracks.push({
-      title: getTrackLabel(abstract.accepted_track),
+      label: getTrackLabel(t),
+      id: t.id ?? null,
+      code: t.code ?? '',
+      title: t.title ?? '',
       type: 'accepted',
     });
   }
 
   if (abstract.reviewed_for_tracks && abstract.reviewed_for_tracks.length > 0) {
     abstract.reviewed_for_tracks.forEach((track) => {
-      // Don't add duplicates
+      // Don't add duplicates (compare by label)
       const trackLabel = getTrackLabel(track);
-      if (!tracks.some((t) => t.title === trackLabel)) {
+      if (!tracks.some((t) => t.label === trackLabel)) {
         tracks.push({
-          title: trackLabel,
+          label: trackLabel,
+          id: track.id ?? null,
+          code: track.code ?? '',
+          title: track.title ?? '',
           type: 'reviewed',
         });
       }

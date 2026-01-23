@@ -87,19 +87,41 @@
 
   // Collect all unique tracks from all abstracts
   let allAvailableTracks = $derived(
-    abstractData.reduce((acc, abstract) => {
-      if (abstract.accepted_track && !acc.some((t) => t.title === abstract.accepted_track.title)) {
-        acc.push({ title: abstract.accepted_track.title, type: 'accepted' });
-      }
-      if (abstract.reviewed_for_tracks) {
-        abstract.reviewed_for_tracks.forEach((track) => {
-          if (!acc.some((t) => t.title === track.title)) {
-            acc.push({ title: track.title, type: 'reviewed' });
+    (() => {
+      const acc = [];
+      const seenIds = new Set();
+      const seenKeys = new Set(); // fallback when no id available
+
+      (abstractData || []).forEach((abstract) => {
+        const addTrack = (t, type) => {
+          if (!t) return;
+          const id = t.id ?? null;
+          const code = t.code ?? '';
+          const rawTitle = t.title ?? '';
+          const title = String(rawTitle).trim() !== '' ? rawTitle : code;
+
+          // Use id if present, otherwise use composite key of code+title to dedupe
+          const key = id != null ? `id:${id}` : `code:${code}::title:${title}`;
+
+          if (id != null) {
+            if (seenIds.has(id)) return;
+            seenIds.add(id);
+          } else {
+            if (seenKeys.has(key)) return;
+            seenKeys.add(key);
           }
-        });
-      }
+
+          acc.push({ id: id, title: title, code: code, type: type ?? 'reviewed' });
+        };
+
+        if (abstract.accepted_track) addTrack(abstract.accepted_track, 'accepted');
+        if (abstract.reviewed_for_tracks) {
+          abstract.reviewed_for_tracks.forEach((track) => addTrack(track, 'reviewed'));
+        }
+      });
+
       return acc;
-    }, []),
+    })(),
   );
 
   // Find abstract by ID (database ID)
