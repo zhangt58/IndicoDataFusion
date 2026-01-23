@@ -192,6 +192,91 @@ func (c *IndicoClient) GetReviewTracks(ctx context.Context) (*ReviewTracks, erro
 	return &ReviewTracks{Tracks: tracks}, nil
 }
 
+// GetReviewAbstractIDs fetches the review-track page for the given reviewTrackID
+// and returns the list of abstract IDs found in table rows with class
+// "abstract-row" which include a `data-friendly-id` attribute.
+func (c *IndicoClient) GetReviewAbstractIDs(ctx context.Context, reviewTrackID int) ([]int, error) {
+	u, err := url.Parse(c.BaseURL)
+	if err != nil {
+		return nil, err
+	}
+	path := fmt.Sprintf("/event/%d/abstracts/reviewing/%d", c.EventID, reviewTrackID)
+	u.Path = joinPaths(u.Path, path)
+
+	ctxReq, cancel := context.WithTimeout(ctx, c.Timeout)
+	defer cancel()
+
+	req, err := http.NewRequestWithContext(ctxReq, http.MethodGet, u.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	// Accept HTML
+	req.Header.Set("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8")
+	if c.APIToken != "" {
+		req.Header.Set("Authorization", "Bearer "+c.APIToken)
+	}
+
+	resp, err := c.Client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = resp.Body.Close() }()
+
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		b, _ := io.ReadAll(io.LimitReader(resp.Body, 8*1024))
+		return nil, fmt.Errorf("api error: status %d: %s", resp.StatusCode, string(b))
+	}
+
+	b, err := io.ReadAll(io.LimitReader(resp.Body, 10*1024*1024))
+	if err != nil {
+		return nil, fmt.Errorf("read body: %w", err)
+	}
+
+	doc, err := xhtml.Parse(strings.NewReader(string(b)))
+	if err != nil {
+		return nil, fmt.Errorf("parse html: %w", err)
+	}
+
+	// helper: get attribute value by name (case-insensitive)
+	getAttr := func(attrs []xhtml.Attribute, name string) string {
+		for _, a := range attrs {
+			if strings.EqualFold(a.Key, name) {
+				return a.Val
+			}
+		}
+		return ""
+	}
+
+	var ids []int
+	var walk func(*xhtml.Node)
+	walk = func(n *xhtml.Node) {
+		if n.Type == xhtml.ElementNode && strings.EqualFold(n.Data, "tr") {
+			// check class contains "abstract-row"
+			cls := getAttr(n.Attr, "class")
+			if cls != "" {
+				for _, tok := range strings.Fields(cls) {
+					if tok == "abstract-row" {
+						idStr := getAttr(n.Attr, "data-friendly-id")
+						if idStr != "" {
+							if id, err := strconv.Atoi(idStr); err == nil {
+								ids = append(ids, id)
+							}
+						}
+						break
+					}
+				}
+			}
+		}
+		for c := n.FirstChild; c != nil; c = c.NextSibling {
+			walk(c)
+		}
+	}
+	walk(doc)
+
+	return ids, nil
+}
+
 // AggRatings aggregates ratings from a single review by question ID.
 func (r *Review) AggRatings() map[int]float64 {
 	agg := make(map[int]float64)

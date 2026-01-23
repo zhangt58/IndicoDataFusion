@@ -5,6 +5,7 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -16,7 +17,7 @@ type mockClient struct {
 	err  error
 }
 
-func (m *mockClient) Do(req *http.Request) (*http.Response, error) {
+func (m *mockClient) Do(_ *http.Request) (*http.Response, error) {
 	return m.resp, m.err
 }
 
@@ -348,4 +349,89 @@ func TestAbstractDataPrecomputedFields(t *testing.T) {
 	}
 
 	t.Logf("✅ FirstPriority: %.0f, SecondPriority: %.0f", abstract.FirstPriority, abstract.SecondPriority)
+}
+
+func TestGetReviewAbstractIDs_ParsesFixture(t *testing.T) {
+	fixturePath := "review-abstracts.html"
+	b, err := os.ReadFile(fixturePath)
+	if err != nil {
+		t.Fatalf("read fixture: %v", err)
+	}
+
+	resp := &http.Response{
+		StatusCode: 200,
+		Body:       io.NopCloser(strings.NewReader(string(b))),
+		Header:     make(http.Header),
+	}
+
+	mc := &mockClient{resp: resp}
+	c := &IndicoClient{
+		BaseURL: "https://indico.jacow.org",
+		EventID: 37,
+		Client:  mc,
+		Timeout: 5 * time.Second,
+	}
+
+	ids, err := c.GetReviewAbstractIDs(context.Background(), 0)
+	if err != nil {
+		t.Fatalf("GetReviewAbstractIDs returned error: %v", err)
+	}
+
+	expected := []int{50, 76, 83, 103, 120, 154, 184, 195, 213, 219, 256, 266}
+	if !slices.Equal(ids, expected) {
+		t.Fatalf("expected ids %v, got %v", expected, ids)
+	}
+}
+
+func TestGetReviewAbstractIDs_EmptyPage(t *testing.T) {
+	html := "<html><head></head><body><table><tbody></tbody></table></body></html>"
+	resp := &http.Response{
+		StatusCode: 200,
+		Body:       io.NopCloser(strings.NewReader(html)),
+		Header:     make(http.Header),
+	}
+	mc := &mockClient{resp: resp}
+	c := &IndicoClient{
+		BaseURL: "https://indico.jacow.org",
+		EventID: 37,
+		Client:  mc,
+		Timeout: 5 * time.Second,
+	}
+
+	ids, err := c.GetReviewAbstractIDs(context.Background(), 1)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(ids) != 0 {
+		t.Fatalf("expected empty ids slice, got %v", ids)
+	}
+}
+
+func TestGetReviewAbstractIDs_MalformedIDs(t *testing.T) {
+	html := `<!doctype html><html><body><table><tbody>` +
+		`<tr class="abstract-row" data-friendly-id="not-a-number"><td></td></tr>` +
+		`<tr class="abstract-row" data-friendly-id="123"><td></td></tr>` +
+		`</tbody></table></body></html>`
+	resp := &http.Response{
+		StatusCode: 200,
+		Body:       io.NopCloser(strings.NewReader(html)),
+		Header:     make(http.Header),
+	}
+	mc := &mockClient{resp: resp}
+	c := &IndicoClient{
+		BaseURL: "https://indico.jacow.org",
+		EventID: 37,
+		Client:  mc,
+		Timeout: 5 * time.Second,
+	}
+
+	ids, err := c.GetReviewAbstractIDs(context.Background(), 2)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	expected := []int{123}
+	if !slices.Equal(ids, expected) {
+		t.Fatalf("expected ids %v, got %v", expected, ids)
+	}
 }
