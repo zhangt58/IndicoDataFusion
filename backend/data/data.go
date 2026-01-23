@@ -762,6 +762,35 @@ func (h *DataSourceHandler) GetContributionsByTrack(ctx context.Context, track s
 	return filtered, nil
 }
 
+// GetReviewTracks returns the list of review tracks for the configured data source.
+// In API mode this queries the Indico client; in test mode it returns data from a test file if configured.
+func (h *DataSourceHandler) GetReviewTracks(ctx context.Context) (*indico.ReviewTracks, error) {
+	if h.isTestMode {
+		// No test fixture currently configured for review tracks; return empty set to keep behavior predictable
+		return &indico.ReviewTracks{Tracks: []indico.ReviewTrack{}}, nil
+	}
+
+	if h.client == nil {
+		return nil, fmt.Errorf("indico client not initialized")
+	}
+
+	return h.client.GetReviewTracks(ctx)
+}
+
+// GetReviewAbstractIDs returns the list of abstract IDs for a given review track ID.
+// In API mode this queries the Indico client; in test mode it returns an empty list.
+func (h *DataSourceHandler) GetReviewAbstractIDs(ctx context.Context, reviewTrackID int) ([]int, error) {
+	if h.isTestMode {
+		return []int{}, nil
+	}
+
+	if h.client == nil {
+		return nil, fmt.Errorf("indico client not initialized")
+	}
+
+	return h.client.GetReviewAbstractIDs(ctx, reviewTrackID)
+}
+
 // RefreshCache invalidates and refreshes a specific cache entry
 func (h *DataSourceHandler) RefreshCache(ctx context.Context, key string) error {
 	if h.cache == nil {

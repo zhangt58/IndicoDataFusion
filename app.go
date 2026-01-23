@@ -148,6 +148,22 @@ func (a *App) GetContributionsByTrack(track string) ([]indico.ContributionData, 
 	return a.handler.GetContributionsByTrack(a.ctx, track)
 }
 
+// GetReviewTracks returns the review tracks assigned to the current user/data source.
+func (a *App) GetReviewTracks() (*indico.ReviewTracks, error) {
+	if a.handler == nil {
+		return nil, errors.Errorf("data handler not initialized")
+	}
+	return a.handler.GetReviewTracks(a.ctx)
+}
+
+// GetReviewAbstractIDs returns the list of abstract IDs under a specific review track.
+func (a *App) GetReviewAbstractIDs(reviewTrackID int) ([]int, error) {
+	if a.handler == nil {
+		return nil, errors.Errorf("data handler not initialized")
+	}
+	return a.handler.GetReviewAbstractIDs(a.ctx, reviewTrackID)
+}
+
 // AppInfo holds application metadata
 type AppInfo struct {
 	Name        string `json:"name"`
