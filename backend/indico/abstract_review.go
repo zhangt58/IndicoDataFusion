@@ -194,7 +194,7 @@ func (c *IndicoClient) GetReviewTracks(ctx context.Context) (*ReviewTracks, erro
 }
 
 // GetReviewAbstractIDs fetches the review-track page for the given reviewTrackID
-// and returns the list of abstract IDs found in table rows with class
+// and returns the list of abstract IDs (friendly_id) found in table rows with class
 // "abstract-row" which include a `data-friendly-id` attribute.
 // this method returns the list of the abstracts under an assigned review track per user.
 func (c *IndicoClient) GetReviewAbstractIDs(ctx context.Context, reviewTrackID int) ([]int, error) {

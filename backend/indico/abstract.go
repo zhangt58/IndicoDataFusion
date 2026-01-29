@@ -97,6 +97,9 @@ type AbstractData struct {
 	MergedInto        *int          `json:"merged_into"`
 	Files             []interface{} `json:"files"` // generic for now
 
+	// if this abstract to be reviewed by the current user
+	IsMyReview bool `json:"is_my_review"`
+
 	// Aggregated Ratings (computed fields for frontend convenience)
 	FirstPriority  float64 `json:"first_priority"`
 	SecondPriority float64 `json:"second_priority"`
