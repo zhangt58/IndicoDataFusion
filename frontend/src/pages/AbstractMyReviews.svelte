@@ -114,8 +114,8 @@
   $effect(() => {
     if (open && buttonElement) {
       const rect = buttonElement.getBoundingClientRect();
-      posX = rect.right + 50;
-      posY = rect.top - 10;
+      posX = rect.right + 20;
+      posY = rect.top - 2;
     }
   });
 </script>
@@ -123,7 +123,7 @@
 {#if open}
   <div
     bind:this={panelElement}
-    class="fixed bg-sky-200/90 dark:bg-sky-900/90 backdrop-blur-sm shadow-lg rounded-md z-1000 border border-sky-400 dark:border-sky-700 max-w-md {isDragging
+    class="fixed bg-sky-200/20 dark:bg-sky-900/20 backdrop-blur-xs shadow-md rounded-md z-1000 border border-sky-400 dark:border-sky-700 max-w-md {isDragging
       ? 'cursor-move'
       : ''}"
     style="left: {posX}px; top: {posY}px;"
