@@ -7,6 +7,7 @@ import (
 	"os"
 	"slices"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 )
@@ -19,6 +20,31 @@ type mockClient struct {
 
 func (m *mockClient) Do(_ *http.Request) (*http.Response, error) {
 	return m.resp, m.err
+}
+
+// multiMockClient allows different responses based on the request URL
+type multiMockClient struct {
+	responses map[string]*http.Response
+	callCount int
+	mu        sync.Mutex
+}
+
+func (m *multiMockClient) Do(req *http.Request) (*http.Response, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.callCount++
+
+	// Match based on URL path
+	if resp, ok := m.responses[req.URL.Path]; ok {
+		// Return a copy of the response to avoid issues with concurrent reads
+		return resp, nil
+	}
+	// Default response for unknown paths
+	return &http.Response{
+		StatusCode: 404,
+		Body:       io.NopCloser(strings.NewReader("not found")),
+		Header:     make(http.Header),
+	}, nil
 }
 
 func TestGetReviewTracks_ParsesFixture(t *testing.T) {
@@ -434,4 +460,78 @@ func TestGetReviewAbstractIDs_MalformedIDs(t *testing.T) {
 	if !slices.Equal(ids, expected) {
 		t.Fatalf("expected ids %v, got %v", expected, ids)
 	}
+}
+
+// TestGetReviewTracks_ConcurrentAbstractCounts validates that abstract counts
+// are fetched concurrently for multiple tracks
+func TestGetReviewTracks_ConcurrentAbstractCounts(t *testing.T) {
+	// Read fixtures
+	trackListHTML, err := os.ReadFile("review-track-list.html")
+	if err != nil {
+		t.Fatalf("read track list fixture: %v", err)
+	}
+
+	abstractsHTML, err := os.ReadFile("review-abstracts.html")
+	if err != nil {
+		t.Fatalf("read abstracts fixture: %v", err)
+	}
+
+	// Setup multi-mock client with different responses for different URLs
+	mmc := &multiMockClient{
+		responses: map[string]*http.Response{
+			"/event/37/abstracts/reviewing/statistics": {
+				StatusCode: 200,
+				Body:       io.NopCloser(strings.NewReader(string(trackListHTML))),
+				Header:     make(http.Header),
+			},
+			"/event/37/abstracts/reviewing/88": {
+				StatusCode: 200,
+				Body:       io.NopCloser(strings.NewReader(string(abstractsHTML))),
+				Header:     make(http.Header),
+			},
+			"/event/37/abstracts/reviewing/99": {
+				StatusCode: 200,
+				Body:       io.NopCloser(strings.NewReader(string(abstractsHTML))),
+				Header:     make(http.Header),
+			},
+		},
+	}
+
+	c := &IndicoClient{
+		BaseURL: "https://indico.jacow.org",
+		EventID: 37,
+		Client:  mmc,
+		Timeout: 5 * time.Second,
+	}
+
+	tracks, err := c.GetReviewTracks(context.Background())
+	if err != nil {
+		t.Fatalf("GetReviewTracks returned error: %v", err)
+	}
+
+	// Verify we got the expected tracks
+	if len(tracks.Tracks) != 3 {
+		t.Fatalf("expected 3 tracks, got %d", len(tracks.Tracks))
+	}
+
+	// Track with no TrackID should have 0 count
+	if tracks.Tracks[0].AbstractCount != 0 {
+		t.Errorf("track 0 (no TrackID): expected count 0, got %d", tracks.Tracks[0].AbstractCount)
+	}
+
+	// Tracks with TrackIDs should have counts populated (both using same fixture, so same count)
+	expectedCount := 12 // from review-abstracts.html fixture
+	if tracks.Tracks[1].AbstractCount != expectedCount {
+		t.Errorf("track 1 (TrackID 88): expected count %d, got %d", expectedCount, tracks.Tracks[1].AbstractCount)
+	}
+	if tracks.Tracks[2].AbstractCount != expectedCount {
+		t.Errorf("track 2 (TrackID 99): expected count %d, got %d", expectedCount, tracks.Tracks[2].AbstractCount)
+	}
+
+	// Verify all three HTTP requests were made (1 for tracks, 2 for abstract counts)
+	if mmc.callCount != 3 {
+		t.Errorf("expected 3 HTTP calls, got %d", mmc.callCount)
+	}
+
+	t.Logf("✅ Concurrent abstract count fetching works correctly")
 }

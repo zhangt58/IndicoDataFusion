@@ -8,6 +8,7 @@ import (
 	"net/url"
 	"strconv"
 	"strings"
+	"sync"
 
 	xhtml "golang.org/x/net/html"
 )
@@ -191,19 +192,25 @@ func (c *IndicoClient) GetReviewTracks(ctx context.Context) (*ReviewTracks, erro
 		}
 	}
 
-	// Populate AbstractCount for each track by calling GetReviewAbstractIDs
+	// Populate AbstractCount for each track concurrently to avoid N+1 query problem
+	var wg sync.WaitGroup
 	for i := range tracks {
 		if tracks[i].TrackID > 0 {
-			ids, err := c.GetReviewAbstractIDs(ctx, tracks[i].TrackID)
-			if err != nil {
-				// Log error but continue - don't fail the whole request
-				// Set count to 0 on error
-				tracks[i].AbstractCount = 0
-			} else {
-				tracks[i].AbstractCount = len(ids)
-			}
+			wg.Add(1)
+			go func(index int, trackID int) {
+				defer wg.Done()
+				ids, err := c.GetReviewAbstractIDs(ctx, trackID)
+				if err != nil {
+					// Log error but continue - don't fail the whole request
+					// Set count to 0 on error
+					tracks[index].AbstractCount = 0
+				} else {
+					tracks[index].AbstractCount = len(ids)
+				}
+			}(i, tracks[i].TrackID)
 		}
 	}
+	wg.Wait()
 
 	return &ReviewTracks{Tracks: tracks}, nil
 }
