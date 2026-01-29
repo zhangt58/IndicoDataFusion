@@ -24,7 +24,7 @@
   let isTestMode = $state(false);
   let cacheExpired = $state(false);
   let showReviewPanel = $state(false);
-  let reviewTrackFilter = $state(null);
+  let selectedReviewTrackID = $state(null);
   let reviewButton = $state(null);
 
   async function loadData() {
@@ -53,12 +53,12 @@
   );
 
   // Handle track filter from review panel
-  function handleFilterTrack(trackName) {
+  function handleFilterTrackByID(trackID) {
     // Switch to table view for better filtering visualization
     viewMode = 'table';
-    // Set the track filter which will be passed to AbstractTableView
-    reviewTrackFilter = trackName;
-    console.log('Filtering abstracts by review track:', trackName);
+    // Set and pass the selected review track ID to AbstractTableView
+    selectedReviewTrackID = trackID;
+    console.log('Filtering abstracts by review track of ID:', selectedReviewTrackID);
   }
 
   onMount(async () => {
@@ -190,7 +190,7 @@
   <!-- Review Panel -->
   <AbstractMyReviews
     bind:open={showReviewPanel}
-    onFilterTrack={handleFilterTrack}
+    onFilterTrackByID={handleFilterTrackByID}
     buttonElement={reviewButton}
   />
 
@@ -201,7 +201,7 @@
     {#if viewMode === 'table'}
       <AbstractTableView
         bind:abstractData
-        reviewTrackFilter={reviewTrackFilter}
+        selectedReviewTrackID={selectedReviewTrackID}
       />
     {:else if viewMode === 'chart'}
       {#if abstractData && abstractData.length > 0}

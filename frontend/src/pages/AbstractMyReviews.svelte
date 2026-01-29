@@ -8,14 +8,16 @@
 
   let {
     open = $bindable(false),
-    onFilterTrack = null,
+    onFilterTrackByID = null,
+    // Reference to the button element that opened the panel
     buttonElement = null,
   } = $props();
 
   let loading = $state(false);
   let reviewTracks = $state([]);
   let error = $state(null);
-  let selectedTrackName = $state(null);
+  // store the selected review track id
+  let selectedTrackID = $state(null);
   let collapsed = $state(false);
 
   // Dragging state
@@ -26,17 +28,6 @@
   let posY = $state(0);
   let panelElement = $state(null);
 
-  // Extract track code or short name from full name
-  function getTrackCode(trackName) {
-    // Try to extract code before colon (e.g., "MC1: Description" -> "MC1")
-    const match = trackName.match(/^([^:]+):/);
-    if (match) {
-      return match[1].trim();
-    }
-    // Otherwise return the full name
-    return trackName;
-  }
-
   // Fetch review tracks
   async function fetchReviewData() {
     loading = true;
@@ -45,6 +36,7 @@
       const tracksData = await GetReviewTracks();
       // Backend already filters tracks with <a> defined
       reviewTracks = tracksData?.tracks || [];
+      console.log('Fetched review tracks:', reviewTracks);
     } catch (err) {
       console.error('Failed to fetch review data:', err);
       error = err;
@@ -54,11 +46,22 @@
     }
   }
 
-  // Handle track filter click
+  // Handle track filter click - toggle track selection
   function handleTrackClick(track) {
-    selectedTrackName = getTrackCode(track.name);
-    if (onFilterTrack) {
-      onFilterTrack(selectedTrackName);
+    const trackId = track.track_id ?? null;
+
+    // Toggle: if already selected, deselect (set to null), otherwise select
+    if (selectedTrackID === trackId) {
+      selectedTrackID = null;
+      console.log('Deselected review track, filter reset');
+    } else {
+      selectedTrackID = trackId;
+      console.log('Selected review track ID:', selectedTrackID);
+    }
+
+    // Always call the callback to update the parent (AbstractPage)
+    if (onFilterTrackByID) {
+      onFilterTrackByID(selectedTrackID);
     }
   }
 
@@ -123,9 +126,8 @@
 {#if open}
   <div
     bind:this={panelElement}
-    class="fixed bg-sky-200/20 dark:bg-sky-900/20 backdrop-blur-xs shadow-md rounded-md z-1000 border border-sky-400 dark:border-sky-700 max-w-md {isDragging
-      ? 'cursor-move'
-      : ''}"
+    class="fixed bg-sky-200/20 dark:bg-sky-900/20 backdrop-blur-xs shadow-md rounded-md z-1000 border border-sky-400 dark:border-sky-700 max-w-md"
+    class:cursor-move={isDragging}
     style="left: {posX}px; top: {posY}px;"
   >
     {#if collapsed}
@@ -193,17 +195,25 @@
           </div>
           <div class="flex flex-wrap gap-1">
             {#each reviewTracks as track}
-              {@const trackCode = getTrackCode(track.name)}
-              <button
-                onclick={() => handleTrackClick(track)}
-                class="px-2 py-1 text-xs rounded transition-colors {selectedTrackName === trackCode
-                  ? 'bg-blue-500 text-white'
-                  : 'bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 hover:bg-gray-300 dark:hover:bg-gray-600'}"
-                title={track.name}
-              >
-                {trackCode}
-              </button>
-            {/each}
+              {#if track.link }
+                <button
+                  onclick={() => handleTrackClick(track)}
+                  class="px-2 py-1 text-xs rounded transition-colors {selectedTrackID === track.track_id
+                    ? 'bg-blue-500 text-white'
+                    : 'bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 hover:bg-gray-300 dark:hover:bg-gray-600'}"
+                  title={track.name}
+                >
+                  {track.name}
+                </button>
+              {:else}
+                <span
+                  class="px-2 py-1 text-xs rounded bg-gray-300 dark:bg-gray-600 text-gray-500 dark:text-gray-400 cursor-not-allowed"
+                  title={track.name}
+                >
+                  {track.name}
+                </span>
+              {/if}
+             {/each}
           </div>
         {:else if !loading}
           <div class="text-xs text-gray-500 dark:text-gray-400">
