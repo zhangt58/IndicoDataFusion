@@ -164,6 +164,7 @@ export function transformAbstractToTableItem(abstract) {
   return {
     ID: rawId,
     IDNumber: isNaN(idNum) ? null : idNum,
+    FriendlyID: abstract.friendly_id,
     DatabaseID: abstract.id, // Always the actual database ID for API calls
     Title: abstract.title || '',
     State: abstract.state || '',
@@ -189,6 +190,7 @@ export function transformAbstractToTableItem(abstract) {
     AuthorsTooltip: getAllAuthorsTooltip(abstract.persons), // All authors for tooltip
     FirstPriority: abstract.first_priority ?? 0,
     SecondPriority: abstract.second_priority ?? 0,
+    IsMyReview: (abstract.is_my_review === true) ? 'Yes' : 'No',
   };
 }
 

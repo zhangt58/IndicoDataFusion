@@ -1,6 +1,7 @@
 <script>
   import { RefreshAbstractByID } from '../../wailsjs/go/main/App';
   import { DataTable, DataTableControls } from '@zhangt58/svelte-vtable';
+  import { ClipboardListOutline } from 'flowbite-svelte-icons';
   import TypeBadge from './TypeBadge.svelte';
   import AbstractDetailsDialog from './AbstractDetailsDialog.svelte';
   import TrackDetailsDialog from './TrackDetailsDialog.svelte';
@@ -11,7 +12,7 @@
   import StateBadge from './StateBadge.svelte';
   import { getTableItems, getShortTrackName } from './AbstractTableItem.js';
 
-  let { abstractData = $bindable([]) } = $props();
+  let { abstractData = $bindable([]), reviewTrackFilter = null } = $props();
 
   // Abstract dialog state
   let showAbstractDialog = $state(false);
@@ -53,6 +54,7 @@
     { id: 'Score', title: 'Score', stretch: 1, 'hide': true },
     { id: 'Submitted', title: 'Submitted', stretch: 2 },
     { id: 'Authors', title: 'Authors', stretch: 2 },
+    { id: 'IsMyReview', title: 'IsMyReview', stretch: 1 },
     { id: 'FirstPriority', title: 'First Priority', stretch: 1 },
     { id: 'SecondPriority', title: 'Second Priority', stretch: 1 },
     { id: 'Refresh', title: 'Refresh', stretch: 1 },
@@ -442,6 +444,14 @@
       <td class={col.nowrap ? 'nowrap' : ''}>
         {#if col.id === 'ID'}
           {item.ID}
+        {:else if col.id === 'IsMyReview'}
+          {#if item.IsMyReview === 'Yes'}
+            <span
+              class="px-2 py-1 text-purple-700 dark:text-purple-200 font-medium flex items-center gap-0.5"
+              title="This abstract is on your review track">
+            <ClipboardListOutline class="w-3 h-3" />Yes
+            </span>
+          {/if}
         {:else if col.id === 'Title'}
           <TitleButton
             onclick={() => openAbstract(item.DatabaseID)}
@@ -575,7 +585,11 @@
 </div>
 
 <!-- Abstract Detail Dialog -->
-<AbstractDetailsDialog bind:open={showAbstractDialog} bind:abstract={selectedAbstract} />
+<AbstractDetailsDialog
+  bind:open={showAbstractDialog}
+  bind:abstract={selectedAbstract}
+  isMyReview={selectedAbstract?.is_my_review || false}
+/>
 
 <!-- Track Details Dialog -->
 <TrackDetailsDialog

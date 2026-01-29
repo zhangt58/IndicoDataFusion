@@ -1,5 +1,6 @@
 <script>
   import { RefreshAbstractByID } from '../../wailsjs/go/main/App';
+  import { ClipboardListOutline } from 'flowbite-svelte-icons';
   import TypeBadge from './TypeBadge.svelte';
   import TrackBadge from './TrackBadge.svelte';
   import StateBadge from './StateBadge.svelte';
@@ -8,7 +9,11 @@
   import AbstractReviewsDialog from '../components/AbstractReviewsDialog.svelte';
   import { getTrackLabel } from './AbstractTableItem.js';
 
-  let { abstract = $bindable({}), onRefresh = null } = $props();
+  let {
+    abstract = $bindable({}),
+    onRefresh = null,
+    isMyReview = false
+  } = $props();
 
   // Dialog state
   let showAffiliationDialog = $state(false);
@@ -89,6 +94,15 @@
       </p>
     </div>
     <div class="ml-4 flex items-center gap-2">
+      {#if isMyReview}
+        <span
+          class="px-2 py-1 text-xs rounded bg-purple-100 dark:bg-purple-900 text-purple-700 dark:text-purple-200 font-semibold flex items-center gap-1"
+          title="This abstract is on your review track"
+        >
+          <ClipboardListOutline class="w-3 h-3" />
+          My Review
+        </span>
+      {/if}
       <button
         type="button"
         onclick={handleRefresh}

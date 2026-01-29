@@ -22,6 +22,7 @@
           <AbstractCardItem
             bind:abstract={abstractData[index]}
             onRefresh={(refreshed) => handleItemRefresh(index, refreshed)}
+            isMyReview={abstractData[index].is_my_review || false}
           />
         </div>
       {/snippet}
