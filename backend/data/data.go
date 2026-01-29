@@ -470,6 +470,14 @@ func (h *DataSourceHandler) getAbstractsFromAPI(ctx context.Context) ([]indico.A
 		response.Abstracts[i].SecondPriority = response.Abstracts[i].GetAggregatedRatingByTitle("Second priority")
 	}
 
+	myReviewIDsSet := getReviewIDsSet(h, ctx)
+	if myReviewIDsSet != nil {
+		// Mark abstracts that are in my review list
+		for i := range response.Abstracts {
+			response.Abstracts[i].IsMyReview = myReviewIDsSet[response.Abstracts[i].FriendlyID]
+		}
+	}
+
 	return response.Abstracts, nil
 }
 
@@ -605,6 +613,36 @@ func (h *DataSourceHandler) GetAbstractByID(ctx context.Context, id int) (*indic
 	return nil, fmt.Errorf("abstract with ID %d not found", id)
 }
 
+// getReviewIDsSet returns a map of abstract friendly IDs that are on my review list or not.
+func getReviewIDsSet(h *DataSourceHandler, ctx context.Context) map[int]bool {
+
+	// Fetch review tracks and mark abstracts that are on my review list
+	reviewTracks, err := h.client.GetReviewTracks(ctx)
+	if err != nil {
+		log.Printf("Warning: failed to fetch review tracks for refresh: %v", err)
+		return nil
+	}
+
+	if reviewTracks != nil && len(reviewTracks.Tracks) > 0 {
+		myReviewIDsSet := make(map[int]bool)
+		for _, track := range reviewTracks.Tracks {
+			if track.Link == "" {
+				continue
+			}
+			abstractIDs, err := h.client.GetReviewAbstractIDs(ctx, track.TrackID)
+			if err != nil {
+				log.Printf("Warning: failed to get abstract IDs for track %d: %v", track.TrackID, err)
+				continue
+			}
+			for _, aid := range abstractIDs {
+				myReviewIDsSet[aid] = true
+			}
+		}
+		return myReviewIDsSet
+	}
+	return nil
+}
+
 // RefreshAbstractByID fetches fresh data for a single abstract from the API.
 // This bypasses the cache and always fetches from the live API.
 func (h *DataSourceHandler) RefreshAbstractByID(ctx context.Context, id int) (*indico.AbstractData, error) {
@@ -668,6 +706,11 @@ func (h *DataSourceHandler) RefreshAbstractByID(ctx context.Context, id int) (*i
 	// Compute aggregated ratings for frontend
 	abstract.FirstPriority = abstract.GetAggregatedRatingByTitle("First priority")
 	abstract.SecondPriority = abstract.GetAggregatedRatingByTitle("Second priority")
+
+	myReviewIDsSet := getReviewIDsSet(h, ctx)
+	if myReviewIDsSet != nil {
+		abstract.IsMyReview = myReviewIDsSet[abstract.FriendlyID]
+	}
 
 	// Update the cache if available
 	if h.cache != nil {
@@ -760,6 +803,35 @@ func (h *DataSourceHandler) GetContributionsByTrack(ctx context.Context, track s
 	}
 
 	return filtered, nil
+}
+
+// GetReviewTracks returns the list of review tracks for the configured data source.
+// In API mode this queries the Indico client; in test mode it returns data from a test file if configured.
+func (h *DataSourceHandler) GetReviewTracks(ctx context.Context) (*indico.ReviewTracks, error) {
+	if h.isTestMode {
+		// No test fixture currently configured for review tracks; return empty set to keep behavior predictable
+		return &indico.ReviewTracks{Tracks: []indico.ReviewTrack{}}, nil
+	}
+
+	if h.client == nil {
+		return nil, fmt.Errorf("indico client not initialized")
+	}
+
+	return h.client.GetReviewTracks(ctx)
+}
+
+// GetReviewAbstractIDs returns the list of abstract IDs (friendly_id) for a given review track ID.
+// In API mode this queries the Indico client; in test mode it returns an empty list.
+func (h *DataSourceHandler) GetReviewAbstractIDs(ctx context.Context, reviewTrackID int) ([]int, error) {
+	if h.isTestMode {
+		return []int{}, nil
+	}
+
+	if h.client == nil {
+		return nil, fmt.Errorf("indico client not initialized")
+	}
+
+	return h.client.GetReviewAbstractIDs(ctx, reviewTrackID)
 }
 
 // RefreshCache invalidates and refreshes a specific cache entry

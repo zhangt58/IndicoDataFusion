@@ -359,7 +359,7 @@
       {sortKey}
       {sortDir}
       sortCallback={(k) => setSort(k)}
-      className="datatable-table w-full mt-0.5 mb-2 overflow-auto min-h-0"
+      className="w-full mt-0.5 mb-4 overflow-auto min-h-0"
       {colWidths}
       virtualize={false}
       {rowSnippet}

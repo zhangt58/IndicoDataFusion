@@ -5,6 +5,7 @@
     CreditCardOutline,
     RefreshOutline,
     ChartOutline,
+    ClipboardListOutline,
   } from 'flowbite-svelte-icons';
   import { GetAbstracts, IsTestMode, GetCacheStats } from '../../wailsjs/go/main/App';
   import { EventsOn, EventsOff } from '../../wailsjs/runtime/runtime';
@@ -13,6 +14,7 @@
   import AbstractTableView from './AbstractTableView.svelte';
   import AbstractChartView from './AbstractChartView.svelte';
   import LoadErrorHint from './LoadErrorHint.svelte';
+  import AbstractMyReviews from './AbstractMyReviews.svelte';
 
   let loading = $state(false);
   let refreshing = $state(false);
@@ -21,6 +23,9 @@
   let viewMode = $state('card');
   let isTestMode = $state(false);
   let cacheExpired = $state(false);
+  let showReviewPanel = $state(false);
+  let selectedReviewTrackID = $state(null);
+  let reviewButton = $state(null);
 
   async function loadData() {
     loading = true;
@@ -46,6 +51,14 @@
       error = err;
     },
   );
+
+  // Handle track filter from review panel
+  function handleFilterTrackByID(trackID) {
+    // Switch to table view for better filtering visualization
+    viewMode = 'table';
+    // Set and pass the selected review track ID to AbstractTableView
+    selectedReviewTrackID = trackID;
+  }
 
   onMount(async () => {
     try {
@@ -159,15 +172,36 @@
       >
         <ChartOutline class="shrink-0 h-6 w-6" />
       </button>
+      <button
+        bind:this={reviewButton}
+        onclick={() => (showReviewPanel = !showReviewPanel)}
+        class="p-1.5 rounded transition-colors {showReviewPanel
+          ? 'bg-sky-400'
+          : 'hover:bg-sky-100'}"
+        title="My Reviews"
+        aria-label="My Reviews"
+      >
+        <ClipboardListOutline class="shrink-0 h-6 w-6" />
+      </button>
     </div>
   </div>
+
+  <!-- Review Panel -->
+  <AbstractMyReviews
+    bind:open={showReviewPanel}
+    onFilterTrackByID={handleFilterTrackByID}
+    buttonElement={reviewButton}
+  />
 
   <div
     class="max-w-full overflow-x-auto overflow-y-hidden rounded-md
               mt-8 mb-4 h-[calc(100vh-9rem)]"
   >
     {#if viewMode === 'table'}
-      <AbstractTableView bind:abstractData />
+      <AbstractTableView
+        bind:abstractData
+        selectedReviewTrackID={selectedReviewTrackID}
+      />
     {:else if viewMode === 'chart'}
       {#if abstractData && abstractData.length > 0}
         <AbstractChartView {abstractData} />

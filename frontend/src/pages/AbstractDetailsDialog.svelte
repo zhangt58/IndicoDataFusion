@@ -3,7 +3,11 @@
   import { CloseOutline } from 'flowbite-svelte-icons';
   import AbstractCardItem from './AbstractCardItem.svelte';
 
-  let { open = $bindable(false), abstract = $bindable(null) } = $props();
+  let {
+    open = $bindable(false),
+    abstract = $bindable(null),
+    isMyReview = false
+  } = $props();
 
   // Close dialog
   function closeDialog() {
@@ -29,6 +33,6 @@
     </button>
   </div>
   {#if abstract}
-    <AbstractCardItem bind:abstract onRefresh={handleRefresh} />
+    <AbstractCardItem bind:abstract onRefresh={handleRefresh} isMyReview={isMyReview} />
   {/if}
 </Modal>
