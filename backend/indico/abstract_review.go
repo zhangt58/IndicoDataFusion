@@ -14,9 +14,10 @@ import (
 
 // ReviewTrack represents a single review track with a display name, link and numeric id.
 type ReviewTrack struct {
-	Name    string `json:"name"`
-	Link    string `json:"link"`
-	TrackID int    `json:"track_id"`
+	Name          string `json:"name"`
+	Link          string `json:"link"`
+	TrackID       int    `json:"track_id"`
+	AbstractCount int    `json:"abstract_count"`
 }
 
 // ReviewTracks is a container for multiple ReviewTrack entries.
@@ -187,6 +188,20 @@ func (c *IndicoClient) GetReviewTracks(ctx context.Context) (*ReviewTracks, erro
 				}
 			}
 			tracks = append(tracks, ReviewTrack{Name: name, Link: link, TrackID: trackID})
+		}
+	}
+
+	// Populate AbstractCount for each track by calling GetReviewAbstractIDs
+	for i := range tracks {
+		if tracks[i].TrackID > 0 {
+			ids, err := c.GetReviewAbstractIDs(ctx, tracks[i].TrackID)
+			if err != nil {
+				// Log error but continue - don't fail the whole request
+				// Set count to 0 on error
+				tracks[i].AbstractCount = 0
+			} else {
+				tracks[i].AbstractCount = len(ids)
+			}
 		}
 	}
 
