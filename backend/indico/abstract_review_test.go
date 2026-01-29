@@ -24,9 +24,9 @@ func (m *mockClient) Do(_ *http.Request) (*http.Response, error) {
 
 // multiMockClient allows different responses based on the request URL
 type multiMockClient struct {
-	responses map[string]*http.Response
-	callCount int
-	mu        sync.Mutex
+	responseData map[string]string // Store response content as strings
+	callCount    int
+	mu           sync.Mutex
 }
 
 func (m *multiMockClient) Do(req *http.Request) (*http.Response, error) {
@@ -34,10 +34,13 @@ func (m *multiMockClient) Do(req *http.Request) (*http.Response, error) {
 	defer m.mu.Unlock()
 	m.callCount++
 
-	// Match based on URL path
-	if resp, ok := m.responses[req.URL.Path]; ok {
-		// Return a copy of the response to avoid issues with concurrent reads
-		return resp, nil
+	// Match based on URL path and return a fresh response each time
+	if content, ok := m.responseData[req.URL.Path]; ok {
+		return &http.Response{
+			StatusCode: 200,
+			Body:       io.NopCloser(strings.NewReader(content)),
+			Header:     make(http.Header),
+		}, nil
 	}
 	// Default response for unknown paths
 	return &http.Response{
@@ -478,22 +481,10 @@ func TestGetReviewTracks_ConcurrentAbstractCounts(t *testing.T) {
 
 	// Setup multi-mock client with different responses for different URLs
 	mmc := &multiMockClient{
-		responses: map[string]*http.Response{
-			"/event/37/abstracts/reviewing/statistics": {
-				StatusCode: 200,
-				Body:       io.NopCloser(strings.NewReader(string(trackListHTML))),
-				Header:     make(http.Header),
-			},
-			"/event/37/abstracts/reviewing/88": {
-				StatusCode: 200,
-				Body:       io.NopCloser(strings.NewReader(string(abstractsHTML))),
-				Header:     make(http.Header),
-			},
-			"/event/37/abstracts/reviewing/99": {
-				StatusCode: 200,
-				Body:       io.NopCloser(strings.NewReader(string(abstractsHTML))),
-				Header:     make(http.Header),
-			},
+		responseData: map[string]string{
+			"/event/37/abstracts/reviewing/statistics": string(trackListHTML),
+			"/event/37/abstracts/reviewing/88":         string(abstractsHTML),
+			"/event/37/abstracts/reviewing/99":         string(abstractsHTML),
 		},
 	}
 
