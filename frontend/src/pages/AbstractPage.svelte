@@ -58,7 +58,6 @@
     viewMode = 'table';
     // Set and pass the selected review track ID to AbstractTableView
     selectedReviewTrackID = trackID;
-    console.log('Filtering abstracts by review track of ID:', selectedReviewTrackID);
   }
 
   onMount(async () => {

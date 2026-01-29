@@ -28,6 +28,17 @@
   let posY = $state(0);
   let panelElement = $state(null);
 
+  // count tracks with links
+  let validTrackCount = $derived.by(() => {
+    let total = 0;
+    for (const track of reviewTracks) {
+      if (track.link) {
+        total += 1;
+      }
+    }
+    return total;
+  });
+
   // Fetch review tracks
   async function fetchReviewData() {
     loading = true;
@@ -36,9 +47,7 @@
       const tracksData = await GetReviewTracks();
       // Backend already filters tracks with <a> defined
       reviewTracks = tracksData?.tracks || [];
-      console.log('Fetched review tracks:', reviewTracks);
     } catch (err) {
-      console.error('Failed to fetch review data:', err);
       error = err;
       reviewTracks = [];
     } finally {
@@ -53,10 +62,8 @@
     // Toggle: if already selected, deselect (set to null), otherwise select
     if (selectedTrackID === trackId) {
       selectedTrackID = null;
-      console.log('Deselected review track, filter reset');
     } else {
       selectedTrackID = trackId;
-      console.log('Selected review track ID:', selectedTrackID);
     }
 
     // Always call the callback to update the parent (AbstractPage)
@@ -176,7 +183,7 @@
           <button
             onclick={fetchReviewData}
             disabled={loading}
-            class="px-3 py-1.5 bg-blue-500 hover:bg-blue-600 disabled:bg-blue-300 text-white rounded text-sm font-medium transition-colors flex items-center gap-2"
+            class="px-3 py-1.5 bg-blue-500 hover:bg-blue-600 disabled:bg-blue-300 text-white rounded text-xs font-medium transition-colors flex items-center gap-1"
           >
             <FilterOutline class="w-4 h-4" />
             {loading ? 'Fetching...' : 'Fetch My Reviews'}
@@ -190,30 +197,37 @@
         {/if}
 
         {#if reviewTracks.length > 0}
-          <div class="text-xs text-gray-600 dark:text-gray-400 mb-1">
-            {reviewTracks.length} track(s) assigned:
+          <div class="font-medium text-xs text-gray-600 dark:text-gray-400 mb-1">
+            {validTrackCount} track(s) assigned:
           </div>
-          <div class="flex flex-wrap gap-1">
+          <div class="flex flex-wrap gap-2">
             {#each reviewTracks as track}
               {#if track.link }
                 <button
                   onclick={() => handleTrackClick(track)}
-                  class="px-2 py-1 text-xs rounded transition-colors {selectedTrackID === track.track_id
+                  class="relative px-2 py-1 text-xs rounded transition-colors {selectedTrackID === track.track_id
                     ? 'bg-blue-500 text-white'
                     : 'bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 hover:bg-gray-300 dark:hover:bg-gray-600'}"
                   title={track.name}
                 >
+                  {#if track.abstract_count > 0}
+                    <span
+                      class="absolute -top-2 -left-2.5 flex items-center justify-center min-w-4 h-4 px-1 bg-red-500 text-white text-[0.65rem] font-medium rounded-md border border-white dark:border-gray-800"
+                    >
+                      {track.abstract_count}
+                    </span>
+                  {/if}
                   {track.name}
                 </button>
               {:else}
                 <span
-                  class="px-2 py-1 text-xs rounded bg-gray-300 dark:bg-gray-600 text-gray-500 dark:text-gray-400 cursor-not-allowed"
+                  class="relative px-2 py-1 text-xs rounded bg-gray-300 dark:bg-gray-600 text-gray-500 dark:text-gray-400 cursor-not-allowed"
                   title={track.name}
                 >
                   {track.name}
                 </span>
               {/if}
-             {/each}
+            {/each}
           </div>
         {:else if !loading}
           <div class="text-xs text-gray-500 dark:text-gray-400">
