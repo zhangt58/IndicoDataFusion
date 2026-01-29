@@ -10,7 +10,7 @@
   import TitleButton from '../components/TitleButton.svelte';
   import TrackBadge from './TrackBadge.svelte';
   import StateBadge from './StateBadge.svelte';
-  import { getTableItems, getShortTrackName, abstractHasTrackID, getAllTracks } from './AbstractTableItem.js';
+  import { getTableItems, getShortTrackName, getTrackLabelByID, getAllTracks } from './AbstractTableItem.js';
 
   let {
     abstractData = $bindable([]),
@@ -267,8 +267,9 @@
       if (selectedReviewTrackID !== null && selectedReviewTrackID !== undefined) {
         // Find the original abstract by DatabaseID
         const abstract = abstractData.find((a) => String(a.id) === String(item.DatabaseID));
-        if (abstract && !abstractHasTrackID(abstract, selectedReviewTrackID)) {
-          return false;
+        if (abstract) {
+          const selectedReviewTrackLabel = getTrackLabelByID(abstract, selectedReviewTrackID);
+          return item.ReviewedForTracks.includes(selectedReviewTrackLabel);
         }
       }
 
