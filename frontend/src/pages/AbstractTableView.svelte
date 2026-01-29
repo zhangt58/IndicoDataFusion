@@ -49,8 +49,6 @@
     { id: 'State', title: 'State', stretch: 2 },
     { id: 'Submitter', title: 'Submitter', stretch: 3 },
     { id: 'Affiliation', title: 'Affiliation', stretch: 3 },
-    { id: 'Track', title: 'Track', stretch: 2 },
-    { id: 'Type', title: 'Type', stretch: 1 },
     { id: 'Score', title: 'Score', stretch: 1, 'hide': true },
     { id: 'Submitted', title: 'Submitted', stretch: 2 },
     { id: 'Authors', title: 'Authors', stretch: 2 },
@@ -360,7 +358,7 @@
     }
 
     // Special-case Track: extract number from strings like "MC10" or "MC10: description"
-    if (originalKey === 'Track' || originalKey === 'Accepted Track' || originalKey === 'Reviewed Track' || originalKey === 'Submitted Track') {
+    if (originalKey === 'Accepted Track' || originalKey === 'Reviewed Track' || originalKey === 'Submitted Track') {
       const extractTrackNumber = (str) => {
         if (!str) return NaN;
         const match = String(str).match(/\d+/);
@@ -474,15 +472,6 @@
           {:else if item.Affiliation}
             {item.Affiliation}
           {/if}
-        {:else if col.id === 'Track'}
-          {#if item.Track}
-            <TrackBadge
-              text={item.Track}
-              type={item.TrackType}
-              onclick={() => openTrack(item.TrackFull)}
-              data-tracks={item.TrackFull}
-            />
-          {/if}
         {:else if col.id === 'AcceptedTrack'}
           {#if item.AcceptedTrack}
             <TrackBadge text={getShortTrackName(item.AcceptedTrack)} type="accepted" onclick={() => openTrack({ title: item.AcceptedTrack, type: 'accepted' })} />
@@ -510,10 +499,6 @@
                 <TrackBadge text={getShortTrackName(st)} type="reviewed" onclick={() => openTrack({ title: st, type: 'reviewed' })} />
               {/each}
             </div>
-          {/if}
-        {:else if col.id === 'Type'}
-          {#if item.Type}
-            <TypeBadge text={item.Type} />
           {/if}
         {:else if col.id === 'Authors'}
           {#if item.Authors}

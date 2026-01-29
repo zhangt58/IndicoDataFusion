@@ -120,14 +120,6 @@ export function getAllAuthorsTooltip(persons) {
  * @returns {Object} Table row data
  */
 export function transformAbstractToTableItem(abstract) {
-  // Prefer non-empty track.code if available, otherwise fall back to title
-  let trackTitle = '';
-  if (abstract.accepted_track) {
-    trackTitle = getTrackLabel(abstract.accepted_track);
-  } else if (abstract.reviewed_for_tracks && abstract.reviewed_for_tracks.length > 0) {
-    const t0 = abstract.reviewed_for_tracks[0];
-    trackTitle = getTrackLabel(t0);
-  }
   const allTracks = getAllTracks(abstract);
 
   // compute numeric ID if possible
@@ -171,10 +163,8 @@ export function transformAbstractToTableItem(abstract) {
     Submitter: abstract.submitter?.full_name || '',
     Affiliation: affiliationDisplay,
     AffiliationFull: affiliationData ? JSON.stringify(affiliationData) : '',
-    Track: getShortTrackName(trackTitle),
     TrackFull: JSON.stringify(allTracks), // Store all tracks as JSON for the dialog
     TrackType: abstract.accepted_track ? 'accepted' : 'reviewed',
-    Type: abstract.accepted_contrib_type?.name || '',
     // New explicit fields requested (prefer non-empty code when available)
     AcceptedTrack: abstract.accepted_track ? getTrackLabel(abstract.accepted_track) : '',
     AcceptedContribType: abstract.accepted_contrib_type?.name || '',
