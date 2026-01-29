@@ -705,7 +705,7 @@ func (h *DataSourceHandler) RefreshAbstractByID(ctx context.Context, id int) (*i
 	abstract.SecondPriority = abstract.GetAggregatedRatingByTitle("Second priority")
 
 	myReviewIDsSet := getReviewIDsSet(h, ctx)
-	if myReviewIDsSet == nil {
+	if myReviewIDsSet != nil {
 		abstract.IsMyReview = myReviewIDsSet[abstract.FriendlyID]
 	}
 
