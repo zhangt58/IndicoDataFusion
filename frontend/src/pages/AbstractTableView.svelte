@@ -10,9 +10,12 @@
   import TitleButton from '../components/TitleButton.svelte';
   import TrackBadge from './TrackBadge.svelte';
   import StateBadge from './StateBadge.svelte';
-  import { getTableItems, getShortTrackName } from './AbstractTableItem.js';
+  import { getTableItems, getShortTrackName, abstractHasTrackID, getAllTracks } from './AbstractTableItem.js';
 
-  let { abstractData = $bindable([]), reviewTrackFilter = null } = $props();
+  let {
+    abstractData = $bindable([]),
+    selectedReviewTrackID = null,
+  } = $props();
 
   // Abstract dialog state
   let showAbstractDialog = $state(false);
@@ -85,44 +88,8 @@
     return acc;
   }, {});
 
-  // Collect all unique tracks from all abstracts
-  let allAvailableTracks = $derived(
-    (() => {
-      const acc = [];
-      const seenIds = new Set();
-      const seenKeys = new Set(); // fallback when no id available
-
-      (abstractData || []).forEach((abstract) => {
-        const addTrack = (t, type) => {
-          if (!t) return;
-          const id = t.id ?? null;
-          const code = t.code ?? '';
-          const rawTitle = t.title ?? '';
-          const title = String(rawTitle).trim() !== '' ? rawTitle : code;
-
-          // Use id if present, otherwise use composite key of code+title to dedupe
-          const key = id != null ? `id:${id}` : `code:${code}::title:${title}`;
-
-          if (id != null) {
-            if (seenIds.has(id)) return;
-            seenIds.add(id);
-          } else {
-            if (seenKeys.has(key)) return;
-            seenKeys.add(key);
-          }
-
-          acc.push({ id: id, title: title, code: code, type: type ?? 'reviewed' });
-        };
-
-        if (abstract.accepted_track) addTrack(abstract.accepted_track, 'accepted');
-        if (abstract.reviewed_for_tracks) {
-          abstract.reviewed_for_tracks.forEach((track) => addTrack(track, 'reviewed'));
-        }
-      });
-
-      return acc;
-    })(),
-  );
+  // Collect all unique tracks from all abstracts using getAllTracks (handles arrays)
+  let allAvailableTracks = $derived(getAllTracks(abstractData));
 
   // Find abstract by ID (database ID)
   function findAbstractById(id) {
@@ -175,14 +142,13 @@
     }
   });
 
-  // Open track dialog from TrackFull data (may be JSON string or array)
-  function openTrack(trackFull) {
+  function openTrack(trackInfo) {
     try {
-      if (!trackFull) {
+      if (!trackInfo) {
         selectedTracks = [];
         return;
       }
-      const parsed = typeof trackFull === 'string' ? JSON.parse(trackFull) : trackFull;
+      const parsed = typeof trackInfo === 'string' ? JSON.parse(trackInfo) : trackInfo;
       selectedTracks = Array.isArray(parsed) ? parsed : [parsed];
       if (selectedTracks.length > 0) showTrackDialog = true;
     } catch (e) {
@@ -294,9 +260,18 @@
     return true;
   }
 
-  // Filtering (apply active column filters first, then search)
+  // Filtering (apply track ID filter first, then active column filters, then search)
   let filteredItems = $derived(
     tableItems.filter((item) => {
+      // Filter by selectedReviewTrackID if present
+      if (selectedReviewTrackID !== null && selectedReviewTrackID !== undefined) {
+        // Find the original abstract by DatabaseID
+        const abstract = abstractData.find((a) => String(a.id) === String(item.DatabaseID));
+        if (abstract && !abstractHasTrackID(abstract, selectedReviewTrackID)) {
+          return false;
+        }
+      }
+
       if (Object.keys(activeFilters).length > 0) {
         if (!matchesFilters(item, activeFilters)) return false;
       }
@@ -474,7 +449,11 @@
           {/if}
         {:else if col.id === 'AcceptedTrack'}
           {#if item.AcceptedTrack}
-            <TrackBadge text={getShortTrackName(item.AcceptedTrack)} type="accepted" onclick={() => openTrack({ title: item.AcceptedTrack, type: 'accepted' })} />
+            <TrackBadge
+              text={getShortTrackName(item.AcceptedTrack)}
+              type="accepted"
+              onclick={() => openTrack({ title: item.AcceptedTrack, type: 'accepted' })}
+            />
           {/if}
         {:else if col.id === 'AcceptedContribType'}
           {#if item.AcceptedContribType}
@@ -488,7 +467,11 @@
           {#if item.ReviewedForTracks && item.ReviewedForTracks.length > 0}
             <div class="flex gap-1 flex-wrap">
               {#each item.ReviewedForTracks as rt}
-                <TrackBadge text={getShortTrackName(rt)} type="reviewed" onclick={() => openTrack({ title: rt, type: 'reviewed' })} />
+                <TrackBadge
+                  text={getShortTrackName(rt)}
+                  type="reviewed"
+                  onclick={() => openTrack({ title: rt, type: 'reviewed' })}
+                />
               {/each}
             </div>
           {/if}
@@ -496,7 +479,11 @@
           {#if item.SubmittedForTracks && item.SubmittedForTracks.length > 0}
             <div class="flex gap-1 flex-wrap">
               {#each item.SubmittedForTracks as st}
-                <TrackBadge text={getShortTrackName(st)} type="reviewed" onclick={() => openTrack({ title: st, type: 'reviewed' })} />
+                <TrackBadge
+                  text={getShortTrackName(st)}
+                  type="reviewed"
+                  onclick={() => openTrack({ title: st, type: 'reviewed' })}
+                />
               {/each}
             </div>
           {/if}

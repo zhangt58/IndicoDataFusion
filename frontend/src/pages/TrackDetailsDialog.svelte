@@ -10,7 +10,7 @@
     open = false;
   }
 
-  // Helper: get a safe display title for a track (accepts objects with `title` or `label`, or plain strings)
+  // Helper: get a safe display title for a track, preferring long name 'title' over 'label'
   function getDisplayTitle(track) {
     if (!track) return '';
     if (typeof track === 'string') return track;

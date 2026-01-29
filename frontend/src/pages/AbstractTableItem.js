@@ -36,11 +36,38 @@ export function getTrackLabel(track) {
 }
 
 /**
- * Get all track titles from an abstract (both accepted and reviewed)
- * @param {Object} abstract - The abstract data object
+ * Get all tracks from abstract(s) - handles both single abstract and array of abstracts
+ * When passed an array, returns unique tracks across all abstracts
+ * @param {Object|Array} abstractOrArray - Single abstract object or array of abstracts
  * @returns {Array} Array of track objects with label, id, code, title and type
  */
-export function getAllTracks(abstract) {
+export function getAllTracks(abstractOrArray) {
+  // Handle array of abstracts - return unique tracks across all
+  if (Array.isArray(abstractOrArray)) {
+    const acc = [];
+    const seenIds = new Set();
+    const seenLabels = new Set();
+
+    abstractOrArray.forEach((abstract) => {
+      const tracks = getAllTracks(abstract); // Recursive call for single abstract
+      tracks.forEach((track) => {
+        // Deduplicate by ID (if present) or by label
+        if (track.id != null) {
+          if (seenIds.has(track.id)) return;
+          seenIds.add(track.id);
+        } else {
+          if (seenLabels.has(track.label)) return;
+          seenLabels.add(track.label);
+        }
+        acc.push(track);
+      });
+    });
+
+    return acc;
+  }
+
+  // Handle single abstract
+  const abstract = abstractOrArray;
   const tracks = [];
 
   if (abstract.accepted_track) {
@@ -71,6 +98,31 @@ export function getAllTracks(abstract) {
   }
 
   return tracks;
+}
+
+/**
+ * Get track label from track ID using the getAllTracks method
+ * @param {Object} abstract - The abstract data object
+ * @param {number|string} trackID - The track ID to search for
+ * @returns {string} The track label, or empty string if not found
+ */
+export function getTrackLabelByID(abstract, trackID) {
+  if (!trackID || !abstract) return '';
+  const allTracks = getAllTracks(abstract);
+  const track = allTracks.find((t) => t.id !== null && String(t.id) === String(trackID));
+  return track ? track.label : '';
+}
+
+/**
+ * Check if an abstract has a track with the given ID
+ * @param {Object} abstract - The abstract data object
+ * @param {number|string} trackID - The track ID to search for
+ * @returns {boolean} True if the abstract has this track
+ */
+export function abstractHasTrackID(abstract, trackID) {
+  if (!trackID || !abstract) return false;
+  const allTracks = getAllTracks(abstract);
+  return allTracks.some((t) => t.id !== null && String(t.id) === String(trackID));
 }
 
 /**
@@ -120,8 +172,6 @@ export function getAllAuthorsTooltip(persons) {
  * @returns {Object} Table row data
  */
 export function transformAbstractToTableItem(abstract) {
-  const allTracks = getAllTracks(abstract);
-
   // compute numeric ID if possible
   const rawId = abstract.friendly_id ?? abstract.id;
   const idNum = Number(rawId);
@@ -163,8 +213,6 @@ export function transformAbstractToTableItem(abstract) {
     Submitter: abstract.submitter?.full_name || '',
     Affiliation: affiliationDisplay,
     AffiliationFull: affiliationData ? JSON.stringify(affiliationData) : '',
-    TrackFull: JSON.stringify(allTracks), // Store all tracks as JSON for the dialog
-    TrackType: abstract.accepted_track ? 'accepted' : 'reviewed',
     // New explicit fields requested (prefer non-empty code when available)
     AcceptedTrack: abstract.accepted_track ? getTrackLabel(abstract.accepted_track) : '',
     AcceptedContribType: abstract.accepted_contrib_type?.name || '',
