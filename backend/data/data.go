@@ -626,6 +626,9 @@ func getReviewIDsSet(h *DataSourceHandler, ctx context.Context) map[int]bool {
 	if reviewTracks != nil && len(reviewTracks.Tracks) > 0 {
 		myReviewIDsSet := make(map[int]bool)
 		for _, track := range reviewTracks.Tracks {
+			if track.Link == "" {
+				continue
+			}
 			abstractIDs, err := h.client.GetReviewAbstractIDs(ctx, track.TrackID)
 			if err != nil {
 				log.Printf("Warning: failed to get abstract IDs for track %d: %v", track.TrackID, err)
