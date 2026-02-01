@@ -22,15 +22,31 @@ type ContributionParticipation struct {
 	Email       string `json:"email"`
 }
 
+// Attachment represents a file attachment
+type Attachment struct {
+	Type        string `json:"_type,omitempty"`
+	ID          int    `json:"id,omitempty"`
+	DownloadURL string `json:"download_url,omitempty"`
+	Title       string `json:"title,omitempty"`
+	Description string `json:"description,omitempty"`
+	ModifiedDT  string `json:"modified_dt,omitempty"`
+	AttachType  string `json:"type,omitempty"`
+	IsProtected bool   `json:"is_protected,omitempty"`
+	Filename    string `json:"filename,omitempty"`
+	ContentType string `json:"content_type,omitempty"`
+	Size        int64  `json:"size,omitempty"`
+	Checksum    string `json:"checksum,omitempty"`
+}
+
 // Folder represents a folder containing attachments
 type Folder struct {
-	Type          string        `json:"_type"`
-	ID            int           `json:"id"`
-	Title         *string       `json:"title"`
-	Description   string        `json:"description"`
-	Attachments   []interface{} `json:"attachments"` // Can be expanded if needed
-	DefaultFolder bool          `json:"default_folder"`
-	IsProtected   bool          `json:"is_protected"`
+	Type          string       `json:"_type"`
+	ID            int          `json:"id"`
+	Title         *string      `json:"title"`
+	Description   string       `json:"description"`
+	Attachments   []Attachment `json:"attachments"`
+	DefaultFolder bool         `json:"default_folder"`
+	IsProtected   bool         `json:"is_protected"`
 }
 
 // ContributionData represents contribution information from Indico
