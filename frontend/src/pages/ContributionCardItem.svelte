@@ -3,8 +3,10 @@
   import { formatDate } from '../utils/dateUtils.js';
   import TypeBadge from './TypeBadge.svelte';
   import SessionBadge from './SessionBadge.svelte';
+  import AttachmentGrid from '../components/AttachmentGrid.svelte';
 
   let { contribution = {} } = $props();
+
 </script>
 
 <div
@@ -192,19 +194,48 @@
   {/if}
 
   <!-- Materials and Folders -->
-  {#if (contribution.material && contribution.material.length > 0) || (contribution.folders && contribution.folders.length > 0)}
+  {#if contribution.folders && contribution.folders.length > 0}
     <div class="mb-3">
-      <p class="text-xs font-semibold text-gray-600 dark:text-gray-400">
-        {#if contribution.material && contribution.material.length > 0}
-          Materials: {contribution.material.length}
-        {/if}
-        {#if contribution.folders && contribution.folders.length > 0}
-          {#if contribution.material && contribution.material.length > 0}
-            |
+      {#each contribution.folders as folder}
+        <div class="mb-6 last:mb-0">
+          <div class="flex items-center gap-2 mb-3">
+            <svg
+              class="w-5 h-5 text-amber-600 dark:text-amber-400"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"
+              />
+            </svg>
+            <h3 class="text-base font-medium text-gray-700 dark:text-gray-300">
+              {folder.title || 'Attachments'}
+            </h3>
+            {#if folder.default_folder}
+              <span class="px-2 py-0.5 text-xs font-medium bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 rounded">
+                Default
+              </span>
+            {/if}
+            {#if folder.is_protected}
+              <span title="Protected">
+                <svg class="w-4 h-4 text-red-600 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                </svg>
+              </span>
+            {/if}
+          </div>
+
+          {#if folder.description}
+            <p class="text-sm text-gray-600 dark:text-gray-400 mb-2">{folder.description}</p>
           {/if}
-          Folders: {contribution.folders.length}
-        {/if}
-      </p>
+
+          <AttachmentGrid attachments={folder.attachments} dedupe={true} />
+        </div>
+      {/each}
     </div>
   {/if}
 
