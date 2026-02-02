@@ -195,10 +195,10 @@
 
   <!-- Materials and Folders -->
   {#if contribution.folders && contribution.folders.length > 0}
-    <div class="mb-3">
+    <div class="mb-2">
       {#each contribution.folders as folder}
-        <div class="mb-6 last:mb-0">
-          <div class="flex items-center gap-2 mb-3">
+        <div class="mb-1 last:mb-0">
+          <div class="flex items-center gap-2 mb-2">
             <svg
               class="w-5 h-5 text-amber-600 dark:text-amber-400"
               fill="none"
