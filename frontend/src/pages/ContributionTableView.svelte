@@ -8,6 +8,9 @@
   import TitleLink from '../components/TitleButton.svelte';
   import TrackDetailsDialog from './TrackDetailsDialog.svelte';
   import SessionDetailsDialog from './SessionDetailsDialog.svelte';
+  import { BrowserOpenURL } from '../../wailsjs/runtime';
+  import Icon from '@iconify/svelte';
+  import { getAttachmentIcon } from '../utils/attachmentIcons.js';
 
   let { contributionData = [] } = $props();
 
@@ -152,6 +155,7 @@
     { id: 'Room', title: 'Room', stretch: 1 },
     { id: 'Speakers', title: 'Speakers', stretch: 2 },
     { id: 'Affiliations', title: 'Affiliations', stretch: 3 },
+    { id: 'Attachments', title: 'Attachments', stretch: 2 },
   ];
 
   const visibleKeys = columns.map((c) => c.title);
@@ -437,6 +441,32 @@
             <span title={item.SpeakersTooltip}>
               {item.SpeakersAffiliations}
             </span>
+          {/if}
+        {:else if col.id === 'Attachments'}
+          {#if item.Attachments && item.Attachments.length > 0}
+            <div class="flex gap-1 items-center">
+              {#each item.Attachments.slice(0,3) as att}
+                {@const fileInfo = getAttachmentIcon(att)}
+                <button
+                  class="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700"
+                  title={att.title || att.filename}
+                  onclick={async (e) => {
+                    e.stopPropagation();
+                    if (!att.download_url) return;
+                    try {
+                      await BrowserOpenURL(att.download_url);
+                    } catch (err) {
+                      console.error('Open attachment failed', err);
+                    }
+                  }}
+                >
+                  <Icon icon={fileInfo.icon} class={`w-4 h-4 ${fileInfo.color}`} />
+                </button>
+              {/each}
+              {#if item.Attachments.length > 3}
+                <span class="text-xs text-gray-500">+{item.Attachments.length - 3}</span>
+              {/if}
+            </div>
           {/if}
         {:else}
           {item[col.id]}

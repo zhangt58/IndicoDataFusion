@@ -87,6 +87,29 @@ export function getAllAuthorsTooltip(primaryauthors, coauthors) {
 }
 
 /**
+ * Extract attachments from contribution.folders (flatten)
+ * Returns array of simplified attachment objects: { title, filename, download_url, content_type }
+ */
+function extractAttachments(contribution) {
+  const items = [];
+  if (!contribution || !contribution.folders) return items;
+
+  for (const folder of contribution.folders) {
+    if (!folder || !Array.isArray(folder.attachments)) continue;
+    for (const att of folder.attachments) {
+      items.push({
+        title: att.title || att.filename || '',
+        filename: att.filename || '',
+        download_url: att.download_url || att.url || att.downloadUrl || '',
+        content_type: att.content_type || att.contentType || '',
+      });
+    }
+  }
+
+  return items;
+}
+
+/**
  * Transform a single contribution into a table row object
  * @param {Object} contribution - The contribution data object
  * @returns {Object} Table row data
@@ -114,6 +137,9 @@ export function transformContributionToTableItem(contribution) {
     if (!isNaN(d.getTime())) startMillis = d.getTime();
   }
 
+  const attachments = extractAttachments(contribution);
+  const attachmentsTooltip = attachments.map((a) => a.title || a.filename || '').join('\n');
+
   return {
     ID: rawId,
     IDNumber: isNaN(idNum) ? null : idNum,
@@ -137,6 +163,10 @@ export function transformContributionToTableItem(contribution) {
     Authors: getPrimaryAuthorsDisplay(contribution.primaryauthors),
     AuthorsTooltip: getAllAuthorsTooltip(contribution.primaryauthors, contribution.coauthors),
     URL: contribution.url || '',
+    // Attachments: array of simplified attachment objects (may be empty)
+    Attachments: attachments,
+    AttachmentsCount: attachments.length,
+    AttachmentsTooltip: attachmentsTooltip,
   };
 }
 

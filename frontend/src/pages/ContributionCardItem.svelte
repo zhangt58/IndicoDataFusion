@@ -4,6 +4,7 @@
   import TypeBadge from './TypeBadge.svelte';
   import SessionBadge from './SessionBadge.svelte';
   import AttachmentGrid from '../components/AttachmentGrid.svelte';
+  import Icon from '@iconify/svelte';
 
   let { contribution = {} } = $props();
 
@@ -199,19 +200,7 @@
       {#each contribution.folders as folder}
         <div class="mb-1 last:mb-0">
           <div class="flex items-center gap-2 mb-2">
-            <svg
-              class="w-5 h-5 text-amber-600 dark:text-amber-400"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"
-              />
-            </svg>
+            <Icon icon="mdi:folder" class="w-5 h-5 text-amber-600 dark:text-amber-400" />
             <h3 class="text-base font-medium text-gray-700 dark:text-gray-300">
               {folder.title || 'Attachments'}
             </h3>
@@ -222,9 +211,7 @@
             {/if}
             {#if folder.is_protected}
               <span title="Protected">
-                <svg class="w-4 h-4 text-red-600 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                </svg>
+                <Icon icon="mdi:lock" class="w-4 h-4 text-red-600 dark:text-red-400" />
               </span>
             {/if}
           </div>
