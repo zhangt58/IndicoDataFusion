@@ -142,7 +142,7 @@
     <!-- Event Details Card -->
     <div
       class="bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 mb-1"
-      style={eventInfo.folders && eventInfo.folders.length > 0 ? 'max-height: 40vh; overflow-y: auto;' : ''}
+      style={eventInfo.folders && eventInfo.folders.length > 0 ? 'max-height: 40vh; overflow-y: auto;' : 'max-height: 65vh; overflow-y: auto;'}
     >
       <!-- Date and Location -->
       <div class="p-6 border-b border-gray-200 dark:border-gray-700">
@@ -228,7 +228,7 @@
         style="max-height: 35vh; overflow-y: auto;"
       >
         <div class="p-6">
-          <h2 class="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-4">
+          <h2 class="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-2">
             <svg
               class="inline-block w-5 h-5 mr-2 -mt-1"
               fill="none"
@@ -246,8 +246,9 @@
           </h2>
 
           {#each eventInfo.folders as folder}
+            {#if folder.attachments && folder.attachments.length > 0}
             <div class="mb-6 last:mb-0">
-              <div class="flex items-center gap-2 mb-3">
+              <div class="flex items-center gap-2 mb-2">
                 <svg
                   class="w-5 h-5 text-amber-600 dark:text-amber-400"
                   fill="none"
@@ -296,6 +297,7 @@
 
               <AttachmentGrid attachments={folder.attachments} dedupe={true} />
             </div>
+            {/if}
           {/each}
         </div>
       </div>
