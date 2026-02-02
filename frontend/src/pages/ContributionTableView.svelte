@@ -470,7 +470,7 @@
               {#each item.Attachments.slice(0,3) as att}
                 {@const fileInfo = getAttachmentIcon(att)}
                 <button
-                  class="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700"
+                  class="p-1 rounded-md hover:bg-gray-300 dark:hover:bg-gray-200 cursor-pointer shadow-md dark:shadow-white/30"
                   title={att.title || att.filename}
                   onclick={async (e) => {
                     e.stopPropagation();
@@ -482,7 +482,7 @@
                     }
                   }}
                 >
-                  <Icon icon={fileInfo.icon} class={`w-4 h-4 ${fileInfo.color}`} />
+                  <Icon icon={fileInfo.icon} class={`w-5 h-5 ${fileInfo.color}`} />
                 </button>
               {/each}
               {#if item.Attachments.length > 3}
