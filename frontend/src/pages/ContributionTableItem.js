@@ -159,6 +159,8 @@ export function transformContributionToTableItem(contribution) {
     Room: contribution.roomFullname || contribution.room || '',
     Speakers: getSpeakersDisplay(contribution.speakers),
     SpeakersAffiliations: getSpeakersAffiliations(contribution.speakers),
+    // Add an alias 'Affiliations' so table columns that refer to 'Affiliations' can access data
+    Affiliations: getSpeakersAffiliations(contribution.speakers),
     SpeakersTooltip: getSpeakersTooltip(contribution.speakers),
     Authors: getPrimaryAuthorsDisplay(contribution.primaryauthors),
     AuthorsTooltip: getAllAuthorsTooltip(contribution.primaryauthors, contribution.coauthors),
