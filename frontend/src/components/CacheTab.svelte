@@ -10,6 +10,7 @@
     IsTestMode,
   } from '../../wailsjs/go/main/App';
   import { Modal } from 'flowbite-svelte';
+  import Icon from '@iconify/svelte';
 
   let cacheStats = $state(null);
   /** @type {Record<string, any[]>} */
@@ -482,19 +483,7 @@
       <div
         class="bg-gray-50 dark:bg-gray-800 rounded-lg p-8 text-center border border-gray-200 dark:border-gray-700"
       >
-        <svg
-          class="w-16 h-16 mx-auto text-gray-400 dark:text-gray-500 mb-4"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-        >
-          <path
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            stroke-width="2"
-            d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"
-          />
-        </svg>
+        <Icon icon="mdi:database-off" class="w-16 h-16 mx-auto text-gray-400 dark:text-gray-500 mb-4" />
         <p class="text-gray-600 dark:text-gray-400 text-lg">No cached data available</p>
         <p class="text-gray-500 dark:text-gray-500 text-sm mt-2">
           Data will be cached when you fetch it from the API
@@ -513,14 +502,7 @@
           onclick={handleClearAll}
           class="w-full px-4 py-3 rounded-lg bg-red-600 text-white font-medium hover:bg-red-700 transition-colors flex items-center justify-center gap-2"
         >
-          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-            />
-          </svg>
+          <Icon icon="mdi:trash-can" class="w-5 h-5" />
           Clear All Cache
         </button>
       </div>
@@ -547,21 +529,7 @@
 <!-- Confirmation Modal for Clear Cache -->
 <Modal bind:open={showClearConfirm} size="sm" autoclose={false}>
   <div class="text-center">
-    <svg
-      class="mx-auto mb-4 text-gray-400 w-12 h-12 dark:text-gray-200"
-      aria-hidden="true"
-      xmlns="http://www.w3.org/2000/svg"
-      fill="none"
-      viewBox="0 0 20 20"
-    >
-      <path
-        stroke="currentColor"
-        stroke-linecap="round"
-        stroke-linejoin="round"
-        stroke-width="2"
-        d="M10 11V6m0 8h.01M19 10a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"
-      />
-    </svg>
+    <Icon icon="mdi:alert-circle" class="mx-auto mb-4 text-gray-400 w-12 h-12 dark:text-gray-200" aria-hidden="true" />
     <h3 class="mb-5 text-lg font-normal text-gray-500 dark:text-gray-400">
       Are you sure you want to clear all cached data? This will remove the cache file.
     </h3>

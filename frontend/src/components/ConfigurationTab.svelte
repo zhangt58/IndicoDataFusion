@@ -5,6 +5,7 @@
   import IndicoConfig from './IndicoConfig.svelte';
   import ApiTokens from './ApiTokens.svelte';
   import ConfirmDialog from './ConfirmDialog.svelte';
+  import Icon from '@iconify/svelte';
 
   let configData = $state(null);
   let loading = $state(true);
@@ -461,16 +462,7 @@
           <span class="text-sm text-gray-600 dark:text-gray-400"
             >{(configData?.apiTokens || []).length} tokens</span
           >
-          <svg
-            class="w-5 h-5 text-gray-500 dark:text-gray-400 transform transition-transform"
-            class:rotate-180={showAdvanced}
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"
-            ></path>
-          </svg>
+          <Icon icon="mdi:chevron-down" class={`w-5 h-5 text-gray-500 dark:text-gray-400 transform transition-transform ${showAdvanced ? 'rotate-180' : ''}`} />
         </div>
       </div>
       {#if showAdvanced}
@@ -494,20 +486,7 @@
               <h4 class="text-md font-semibold text-gray-900 dark:text-gray-100">
                 Cache Configuration
               </h4>
-              <svg
-                class="w-5 h-5 text-gray-500 dark:text-gray-400 transform transition-transform"
-                class:rotate-180={showCacheConfig}
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M19 9l-7 7-7-7"
-                ></path>
-              </svg>
+              <Icon icon="mdi:chevron-down" class={`w-5 h-5 text-gray-500 dark:text-gray-400 transform transition-transform ${showCacheConfig ? 'rotate-180' : ''}`} />
             </div>
 
             {#if showCacheConfig}
@@ -606,44 +585,11 @@
         >
           <div class="mt-0.5">
             {#if toastType === 'success'}
-              <svg
-                class="w-5 h-5 text-green-600"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-                ><path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M5 13l4 4L19 7"
-                /></svg
-              >
+              <Icon icon="mdi:check" class="w-5 h-5 text-green-600" />
             {:else if toastType === 'error'}
-              <svg
-                class="w-5 h-5 text-red-600"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-                ><path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M6 18L18 6M6 6l12 12"
-                /></svg
-              >
+              <Icon icon="mdi:close-circle" class="w-5 h-5 text-red-600" />
             {:else}
-              <svg
-                class="w-5 h-5 text-gray-600"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-                ><path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M13 16h-1v-4h-1m1-4h.01"
-                /></svg
-              >
+              <Icon icon="mdi:information" class="w-5 h-5 text-gray-600" />
             {/if}
           </div>
           <div class="text-sm leading-tight">

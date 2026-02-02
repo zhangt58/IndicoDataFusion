@@ -8,6 +8,7 @@
   } from '../../wailsjs/runtime/runtime.js';
   import { MinusOutline, CloseOutline } from 'flowbite-svelte-icons';
   import iconImage from '../assets/images/icon.png';
+  import Icon from '@iconify/svelte';
 
   let isMaximised = $state(false);
 
@@ -101,32 +102,9 @@
       type="button"
     >
       {#if isMaximised}
-        <!-- Restore icon: Double-overlap squares -->
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          class="w-4 h-4 text-gray-600 dark:text-gray-400 group-hover:text-gray-900 dark:group-hover:text-gray-100"
-          viewBox="0 0 24 24"
-          stroke="currentColor"
-          stroke-width="1.5"
-          style="fill: none;"
-        >
-          <!-- back square (offset) -->
-          <rect x="7" y="5" width="11" height="11" rx="1" ry="1" style="fill: none;" />
-          <!-- front square -->
-          <rect x="4" y="8" width="11" height="11" rx="1" ry="1" style="fill: none;" />
-        </svg>
+        <Icon icon="mdi:window-restore" class="w-4 h-4 text-gray-600 dark:text-gray-400 group-hover:text-gray-900 dark:group-hover:text-gray-100" />
       {:else}
-        <!-- Maximize icon: Single square -->
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          class="w-4 h-4 text-gray-600 dark:text-gray-400 group-hover:text-gray-900 dark:group-hover:text-gray-100"
-          viewBox="0 0 24 24"
-          stroke="currentColor"
-          stroke-width="1.5"
-          style="fill: none;"
-        >
-          <rect x="4" y="4" width="16" height="16" rx="1" ry="1" style="fill: none;" />
-        </svg>
+        <Icon icon="mdi:window-maximize" class="w-4 h-4 text-gray-600 dark:text-gray-400 group-hover:text-gray-900 dark:group-hover:text-gray-100" />
       {/if}
     </button>
 

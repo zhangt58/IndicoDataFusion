@@ -4,6 +4,7 @@
   import RevealDialog from './RevealDialog.svelte';
   import { Toast } from 'flowbite-svelte';
   import { tick } from 'svelte';
+  import Icon from '@iconify/svelte';
 
   let {
     apiTokens = [],
@@ -218,14 +219,7 @@
       {#if toastType === 'error'}
         <Toast color="red">
           {#snippet icon()}
-            <svg class="h-5 w-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"
-              ><path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M6 18L18 6M6 6l12 12"
-              /></svg
-            >
+            <Icon icon="mdi:close-circle" class="h-5 w-5 text-red-600" />
             <span class="sr-only">Error icon</span>
           {/snippet}
           <div class="flex items-center w-full">
@@ -235,14 +229,7 @@
       {:else if toastType === 'info'}
         <Toast color="blue">
           {#snippet icon()}
-            <svg class="h-5 w-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"
-              ><path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M13 16h-1v-4h-1m1-4h.01"
-              /></svg
-            >
+            <Icon icon="mdi:information" class="h-5 w-5 text-gray-600" />
             <span class="sr-only">Info icon</span>
           {/snippet}
           <div class="flex items-center w-full">
@@ -252,18 +239,7 @@
       {:else}
         <Toast color="green">
           {#snippet icon()}
-            <svg
-              class="h-5 w-5 text-green-600"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-              ><path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M5 13l4 4L19 7"
-              /></svg
-            >
+            <Icon icon="mdi:check" class="h-5 w-5 text-green-600" />
             <span class="sr-only">Success icon</span>
           {/snippet}
           <div class="flex items-center w-full">
