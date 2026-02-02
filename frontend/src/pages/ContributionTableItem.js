@@ -1,4 +1,5 @@
 import { formatDate } from '../utils/dateUtils.js';
+import { deduplicateAttachments } from '../utils/attachmentUtils.js';
 
 /**
  * Get speakers display text (first name, with ... if more exist)
@@ -89,24 +90,32 @@ export function getAllAuthorsTooltip(primaryauthors, coauthors) {
 /**
  * Extract attachments from contribution.folders (flatten)
  * Returns array of simplified attachment objects: { title, filename, download_url, content_type }
+ *
+ * This implementation delegates deduplication to the shared `deduplicateAttachments` helper
+ * (used by `AttachmentGrid`). We first flatten raw attachments, call the helper when dedupe is
+ * desired, and then map to the simplified shape expected by table consumers.
  */
 function extractAttachments(contribution) {
-  const items = [];
-  if (!contribution || !contribution.folders) return items;
+  const raw = [];
+  if (!contribution || !contribution.folders) return raw;
 
   for (const folder of contribution.folders) {
     if (!folder || !Array.isArray(folder.attachments)) continue;
     for (const att of folder.attachments) {
-      items.push({
-        title: att.title || att.filename || '',
-        filename: att.filename || '',
-        download_url: att.download_url || att.url || att.downloadUrl || '',
-        content_type: att.content_type || att.contentType || '',
-      });
+      raw.push(att);
     }
   }
 
-  return items;
+  // Use the shared dedupe helper to normalize duplicates by title/filename.
+  const deduped = deduplicateAttachments(raw);
+
+  // Map to simplified objects expected by the table components
+  return (deduped || []).map((att) => ({
+    title: att && (att.title || att.filename) ? (att.title || att.filename) : '',
+    filename: att && (att.filename || '') || '',
+    download_url: att && (att.download_url || att.url || att.downloadUrl || '') || '',
+    content_type: att && (att.content_type || att.contentType || '') || '',
+  }));
 }
 
 /**
