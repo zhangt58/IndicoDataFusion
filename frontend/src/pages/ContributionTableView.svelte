@@ -279,6 +279,20 @@
       return na - nb;
     }
 
+    // Special-case Attachments: sort by number of attachments (AttachmentsCount)
+    if (key === 'Attachments') {
+      const ca = a.AttachmentsCount != null ? Number(a.AttachmentsCount) : 0;
+      const cb = b.AttachmentsCount != null ? Number(b.AttachmentsCount) : 0;
+      if (ca < cb) return -1;
+      if (ca > cb) return 1;
+      // fallback to title string if counts equal
+      const sa = String(a.Title ?? '').toLowerCase();
+      const sb = String(b.Title ?? '').toLowerCase();
+      if (sa < sb) return -1;
+      if (sa > sb) return 1;
+      return 0;
+    }
+
     // fallback: string compare
     const sa = String(a[key] ?? '').toLowerCase();
     const sb = String(b[key] ?? '').toLowerCase();
