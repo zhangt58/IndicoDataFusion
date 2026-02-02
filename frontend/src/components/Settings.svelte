@@ -2,8 +2,7 @@
   import { onMount, onDestroy } from 'svelte';
   import { Modal } from 'flowbite-svelte';
   import { InfoCircleSolid, WindowSolid, CogOutline, DatabaseSolid } from 'flowbite-svelte-icons';
-  import { GetAppInfo } from '../../wailsjs/go/main/App';
-  import { BrowserOpenURL } from '../../wailsjs/runtime/runtime.js';
+  import { GetAppInfo, OpenSafeURL } from '../../wailsjs/go/main/App';
   import AboutTab from './AboutTab.svelte';
   import WindowTab from './WindowTab.svelte';
   import ConfigurationTab from './ConfigurationTab.svelte';
@@ -44,7 +43,7 @@
     const subject = encodeURIComponent(`${appInfo.name} ${appInfo.version} Issue Report`);
     const body = encodeURIComponent('Please describe the issue here...\n\n');
     const mailto = `mailto:${appInfo.authorEmail}?subject=${subject}&body=${body}`;
-    BrowserOpenURL(mailto);
+    OpenSafeURL(mailto);
   }
 
   onMount(async () => {

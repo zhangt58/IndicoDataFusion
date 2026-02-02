@@ -1,5 +1,5 @@
 <script>
-  import { BrowserOpenURL } from '../../wailsjs/runtime/runtime';
+  import { OpenSafeURL } from '../../wailsjs/go/main/App';
   import Icon from '@iconify/svelte';
   import { getAttachmentIcon } from '../utils/attachmentIcons.js';
   import { deduplicateAttachments } from '../utils/attachmentUtils.js';
@@ -9,9 +9,10 @@
   let { attachments = [], dedupe = false } = $props();
 
   async function openAttachmentLocal(url) {
+    console.log('Opening attachment URL:', url);
     if (!url) return;
     try {
-      await BrowserOpenURL(url);
+      await OpenSafeURL(url);
     } catch (e) {
       console.error('Failed to open attachment URL:', e);
     }

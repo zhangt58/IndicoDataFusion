@@ -1,5 +1,5 @@
 <script>
-  import { BrowserOpenURL } from '../../wailsjs/runtime';
+  import { OpenSafeURL } from '../../wailsjs/go/main/App';
   import { formatDate } from '../utils/dateUtils.js';
   import TypeBadge from './TypeBadge.svelte';
   import SessionBadge from './SessionBadge.svelte';
@@ -233,8 +233,9 @@
         href={contribution.url}
         onclick={async (e) => {
           e.preventDefault();
+          if (!contribution.url) return;
           try {
-            await BrowserOpenURL(contribution.url);
+            await OpenSafeURL(contribution.url);
           } catch (e) {
             console.error('BrowserOpenURL failed', e);
           }

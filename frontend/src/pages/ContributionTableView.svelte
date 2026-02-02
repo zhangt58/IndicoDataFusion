@@ -8,7 +8,7 @@
   import TitleLink from '../components/TitleButton.svelte';
   import TrackDetailsDialog from './TrackDetailsDialog.svelte';
   import SessionDetailsDialog from './SessionDetailsDialog.svelte';
-  import { BrowserOpenURL } from '../../wailsjs/runtime';
+  import { OpenSafeURL } from '../../wailsjs/go/main/App';
   import Icon from '@iconify/svelte';
   import { getAttachmentIcon } from '../utils/attachmentIcons.js';
 
@@ -476,7 +476,8 @@
                     e.stopPropagation();
                     if (!att.download_url) return;
                     try {
-                      await BrowserOpenURL(att.download_url);
+                      // Use encodeURI to avoid encoding :/ and then explicitly encode parentheses
+                      OpenSafeURL(att.download_url);
                     } catch (err) {
                       console.error('Open attachment failed', err);
                     }
