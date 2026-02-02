@@ -174,10 +174,10 @@
   let tableItems = $derived(getTableItems(contributionData));
 
   // columnFilters derived from tableItems
-  function getUniqueValuesWithCounts(items, header) {
+  function getUniqueValuesWithCounts(items, key) {
     const counts = {};
     (items || []).forEach((it) => {
-      const val = it && it[header];
+      const val = it && it[key];
       if (Array.isArray(val)) {
         val.forEach((v) => {
           const s = String(v ?? '');
@@ -194,8 +194,8 @@
 
   let columnFilters = $derived(
     columns.map((c) => {
-      const { uniqueValues, counts } = getUniqueValuesWithCounts(tableItems || [], c.title);
-      return { key: c.title, label: c.title, uniqueValues, counts };
+      const { uniqueValues, counts } = getUniqueValuesWithCounts(tableItems || [], c.id);
+      return { key: c.id, label: c.title, uniqueValues, counts };
     }),
   );
 
@@ -219,8 +219,8 @@
 
       if (!searchQuery) return true;
       const q = searchQuery.toLowerCase();
-      return visibleKeys.some((k) =>
-        String(item[k] ?? '')
+      return mappedColumns.some((col) =>
+        String(item[col.id] ?? '')
           .toLowerCase()
           .includes(q),
       );
@@ -290,6 +290,14 @@
       const sb = String(b.Title ?? '').toLowerCase();
       if (sa < sb) return -1;
       if (sa > sb) return 1;
+      return 0;
+    }
+
+    if (key === 'Affiliations') {
+      const fa = a.SpeakersAffiliations ? String(a.SpeakersAffiliations).toLowerCase() : '';
+      const fb = b.SpeakersAffiliations ? String(b.SpeakersAffiliations).toLowerCase() : '';
+      if (fa < fb) return -1;
+      if (fa > fb) return 1;
       return 0;
     }
 
