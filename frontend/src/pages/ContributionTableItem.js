@@ -1,4 +1,5 @@
 import { formatDate } from '../utils/dateUtils.js';
+import { deduplicateAttachments } from '../utils/attachmentUtils.js';
 
 /**
  * Get speakers display text (first name, with ... if more exist)
@@ -87,6 +88,37 @@ export function getAllAuthorsTooltip(primaryauthors, coauthors) {
 }
 
 /**
+ * Extract attachments from contribution.folders (flatten)
+ * Returns array of simplified attachment objects: { title, filename, download_url, content_type }
+ *
+ * This implementation delegates deduplication to the shared `deduplicateAttachments` helper
+ * (used by `AttachmentGrid`). We first flatten raw attachments, call the helper when dedupe is
+ * desired, and then map to the simplified shape expected by table consumers.
+ */
+function extractAttachments(contribution) {
+  const raw = [];
+  if (!contribution || !contribution.folders) return raw;
+
+  for (const folder of contribution.folders) {
+    if (!folder || !Array.isArray(folder.attachments)) continue;
+    for (const att of folder.attachments) {
+      raw.push(att);
+    }
+  }
+
+  // Use the shared dedupe helper to normalize duplicates by title/filename.
+  const deduped = deduplicateAttachments(raw);
+
+  // Map to simplified objects expected by the table components
+  return (deduped || []).map((att) => ({
+    title: att && (att.title || att.filename) ? (att.title || att.filename) : '',
+    filename: att && (att.filename || '') || '',
+    download_url: att && (att.download_url || att.url || att.downloadUrl || '') || '',
+    content_type: att && (att.content_type || att.contentType || '') || '',
+  }));
+}
+
+/**
  * Transform a single contribution into a table row object
  * @param {Object} contribution - The contribution data object
  * @returns {Object} Table row data
@@ -114,6 +146,9 @@ export function transformContributionToTableItem(contribution) {
     if (!isNaN(d.getTime())) startMillis = d.getTime();
   }
 
+  const attachments = extractAttachments(contribution);
+  const attachmentsTooltip = attachments.map((a) => a.title || a.filename || '').join('\n');
+
   return {
     ID: rawId,
     IDNumber: isNaN(idNum) ? null : idNum,
@@ -133,10 +168,16 @@ export function transformContributionToTableItem(contribution) {
     Room: contribution.roomFullname || contribution.room || '',
     Speakers: getSpeakersDisplay(contribution.speakers),
     SpeakersAffiliations: getSpeakersAffiliations(contribution.speakers),
+    // Add an alias 'Affiliations' so table columns that refer to 'Affiliations' can access data
+    Affiliations: getSpeakersAffiliations(contribution.speakers),
     SpeakersTooltip: getSpeakersTooltip(contribution.speakers),
     Authors: getPrimaryAuthorsDisplay(contribution.primaryauthors),
     AuthorsTooltip: getAllAuthorsTooltip(contribution.primaryauthors, contribution.coauthors),
     URL: contribution.url || '',
+    // Attachments: array of simplified attachment objects (may be empty)
+    Attachments: attachments,
+    AttachmentsCount: attachments.length,
+    AttachmentsTooltip: attachmentsTooltip,
   };
 }
 

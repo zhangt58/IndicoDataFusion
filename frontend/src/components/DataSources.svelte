@@ -1,4 +1,5 @@
 <script>
+  import Icon from '@iconify/svelte';
   let {
     configData = { dataSources: [] },
     expandedSources = {},
@@ -31,20 +32,7 @@
         aria-label="Add Indico Source"
         title="Add a new Indico data source"
       >
-        <svg
-          class="w-5 h-5"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-          aria-hidden="true"
-        >
-          <path
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            stroke-width="2"
-            d="M12 5v14M5 12h14"
-          />
-        </svg>
+        <Icon icon="mdi:plus" class="w-5 h-5" aria-hidden="true" />
       </button>
     </div>
   </div>
@@ -84,19 +72,7 @@
               >
             {/if}
             <!-- pencil icon to indicate editability -->
-            <svg
-              aria-hidden="true"
-              class="w-4 h-4 text-gray-400 ml-1"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-            >
-              <path d="M12 20h9" />
-              <path d="M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4 12.5-12.5z" />
-            </svg>
+            <Icon icon="mdi:pencil" class="w-4 h-4 text-gray-400 ml-1" aria-hidden="true" />
             <span
               class="px-2 py-0.5 text-xs rounded-full {dataSource.type === 'indico'
                 ? 'bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200'
@@ -127,24 +103,8 @@
               <!-- reuse icon payload (parent uses flowbite variant) -->
               🗑
             </button>
-            <svg
-              class="w-5 h-5 text-gray-500 dark:text-gray-400 transform transition-transform {expandedSources[
-                i
-              ]
-                ? 'rotate-180'
-                : ''}"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M19 9l-7 7-7-7"
-              ></path>
-            </svg>
-          </div>
+            <Icon icon="mdi:chevron-down" class={`w-5 h-5 text-gray-500 dark:text-gray-400 transform transition-transform ${expandedSources[i] ? 'rotate-180' : ''}`} />
+           </div>
         </div>
 
         <!-- Content -->

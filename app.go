@@ -10,12 +10,15 @@ import (
 	"context"
 	_ "embed"
 	"log"
+	"net/url"
 	"os"
+	"os/exec"
+	goruntime "runtime"
 	"strings"
 	"time"
 
 	"github.com/pkg/errors"
-	"github.com/wailsapp/wails/v2/pkg/runtime"
+	wailsruntime "github.com/wailsapp/wails/v2/pkg/runtime"
 )
 
 //go:embed config/sample.yml
@@ -68,9 +71,9 @@ func (a *App) startup(ctx context.Context, configPath string) {
 
 	// Notify frontend of the active data source name so UI (titlebar) can display it
 	if a.handler != nil {
-		runtime.EventsEmit(a.ctx, "app:datasource", a.DataSourceName)
+		wailsruntime.EventsEmit(a.ctx, "app:datasource", a.DataSourceName)
 		// Emit init problems so UI can show token-related issues
-		runtime.EventsEmit(a.ctx, "app:initproblems", a.GetInitProblems())
+		wailsruntime.EventsEmit(a.ctx, "app:initproblems", a.GetInitProblems())
 	}
 
 	a.registerCacheCallbacks()
@@ -234,9 +237,9 @@ func (a *App) ApplyConfigYAML(yamlContent string) error {
 
 	// Notify frontend of the active data source name after reload
 	if a.handler != nil {
-		runtime.EventsEmit(a.ctx, "app:datasource", a.DataSourceName)
+		wailsruntime.EventsEmit(a.ctx, "app:datasource", a.DataSourceName)
 		// Emit init problems so UI can show token-related issues
-		runtime.EventsEmit(a.ctx, "app:initproblems", a.GetInitProblems())
+		wailsruntime.EventsEmit(a.ctx, "app:initproblems", a.GetInitProblems())
 	}
 
 	a.registerCacheCallbacks()
@@ -288,9 +291,9 @@ func (a *App) ApplyStructuredConfigUI(configData *config.ConfigDataUI) error {
 
 	// Notify frontend of the active data source name after structured config reload
 	if a.handler != nil {
-		runtime.EventsEmit(a.ctx, "app:datasource", a.DataSourceName)
+		wailsruntime.EventsEmit(a.ctx, "app:datasource", a.DataSourceName)
 		// Emit init problems so UI can show token-related issues
-		runtime.EventsEmit(a.ctx, "app:initproblems", a.GetInitProblems())
+		wailsruntime.EventsEmit(a.ctx, "app:initproblems", a.GetInitProblems())
 	}
 
 	a.registerCacheCallbacks()
@@ -308,7 +311,7 @@ func (a *App) RefreshCache(key string) error {
 	}
 
 	// Emit event to notify frontend
-	runtime.EventsEmit(a.ctx, "cache:updated", map[string]interface{}{
+	wailsruntime.EventsEmit(a.ctx, "cache:updated", map[string]interface{}{
 		"key":              key,
 		"action":           "refreshed",
 		"data_source_name": a.DataSourceName,
@@ -328,7 +331,7 @@ func (a *App) DeleteCacheEntry(key string) error {
 	}
 
 	// Emit event to notify frontend
-	runtime.EventsEmit(a.ctx, "cache:updated", map[string]interface{}{
+	wailsruntime.EventsEmit(a.ctx, "cache:updated", map[string]interface{}{
 		"key":              key,
 		"action":           "deleted",
 		"data_source_name": a.DataSourceName,
@@ -348,7 +351,7 @@ func (a *App) ClearCache() error {
 	}
 
 	// Emit event to notify frontend
-	runtime.EventsEmit(a.ctx, "cache:updated", map[string]interface{}{
+	wailsruntime.EventsEmit(a.ctx, "cache:updated", map[string]interface{}{
 		"action":           "cleared",
 		"data_source_name": a.DataSourceName,
 	})
@@ -501,7 +504,7 @@ func (a *App) registerCacheCallbacks() {
 			dataSourceName = fullKey[:idx]
 			displayKey = fullKey[idx+1:]
 		}
-		runtime.EventsEmit(a.ctx, "cache:updated", map[string]interface{}{
+		wailsruntime.EventsEmit(a.ctx, "cache:updated", map[string]interface{}{
 			"key":              displayKey,
 			"action":           "expired",
 			"data_source_name": dataSourceName,
@@ -515,7 +518,7 @@ func (a *App) registerCacheCallbacks() {
 			dataSourceName = fullKey[:idx]
 			displayKey = fullKey[idx+1:]
 		}
-		runtime.EventsEmit(a.ctx, "cache:updated", map[string]interface{}{
+		wailsruntime.EventsEmit(a.ctx, "cache:updated", map[string]interface{}{
 			"key":              displayKey,
 			"action":           "evicted",
 			"data_source_name": dataSourceName,
@@ -529,4 +532,46 @@ func (a *App) GetInitProblems() []string {
 		return []string{}
 	}
 	return a.handler.GetInitProblems()
+}
+
+// OpenSafeURL validates and opens an external URL using the OS default browser.
+func (a *App) OpenSafeURL(rawURL string) error {
+	if rawURL == "" {
+		return errors.Errorf("empty url")
+	}
+
+	u, err := url.Parse(rawURL)
+	if err != nil {
+		return errors.Wrap(err, "invalid url")
+	}
+
+	u.RawQuery = u.Query().Encode()
+
+	// Use the system default application to open the URL.
+	// Cross-platform handling: Linux -> xdg-open, macOS -> open, Windows -> start via cmd.
+	s := u.String()
+	switch goruntime.GOOS {
+	case "linux":
+		if err := exec.Command("xdg-open", s).Start(); err != nil {
+			return errors.Wrap(err, "failed to open url with xdg-open")
+		}
+	case "darwin":
+		if err := exec.Command("open", s).Start(); err != nil {
+			return errors.Wrap(err, "failed to open url with open")
+		}
+	case "windows":
+		// Use cmd /c start which delegates to the default handler. Use 'rundll32' as fallback.
+		cmd := exec.Command("cmd", "/c", "start", "", s)
+		if err := cmd.Start(); err != nil {
+			// Try rundll32 as fallback
+			if err2 := exec.Command("rundll32", "url.dll,FileProtocolHandler", s).Start(); err2 != nil {
+				return errors.Wrap(err, "failed to open url on windows")
+			}
+		}
+	default:
+		// Fallback to Wails browser open if available
+		wailsruntime.BrowserOpenURL(a.ctx, s)
+	}
+
+	return nil
 }

@@ -8,6 +8,9 @@
   import TitleLink from '../components/TitleButton.svelte';
   import TrackDetailsDialog from './TrackDetailsDialog.svelte';
   import SessionDetailsDialog from './SessionDetailsDialog.svelte';
+  import { OpenSafeURL } from '../../wailsjs/go/main/App';
+  import Icon from '@iconify/svelte';
+  import { getAttachmentIcon } from '../utils/attachmentIcons.js';
 
   let { contributionData = [] } = $props();
 
@@ -152,6 +155,7 @@
     { id: 'Room', title: 'Room', stretch: 1 },
     { id: 'Speakers', title: 'Speakers', stretch: 2 },
     { id: 'Affiliations', title: 'Affiliations', stretch: 3 },
+    { id: 'Attachments', title: 'Attachments', stretch: 2 },
   ];
 
   const visibleKeys = columns.map((c) => c.title);
@@ -170,10 +174,10 @@
   let tableItems = $derived(getTableItems(contributionData));
 
   // columnFilters derived from tableItems
-  function getUniqueValuesWithCounts(items, header) {
+  function getUniqueValuesWithCounts(items, key) {
     const counts = {};
     (items || []).forEach((it) => {
-      const val = it && it[header];
+      const val = it && it[key];
       if (Array.isArray(val)) {
         val.forEach((v) => {
           const s = String(v ?? '');
@@ -190,8 +194,8 @@
 
   let columnFilters = $derived(
     columns.map((c) => {
-      const { uniqueValues, counts } = getUniqueValuesWithCounts(tableItems || [], c.title);
-      return { key: c.title, label: c.title, uniqueValues, counts };
+      const { uniqueValues, counts } = getUniqueValuesWithCounts(tableItems || [], c.id);
+      return { key: c.id, label: c.title, uniqueValues, counts };
     }),
   );
 
@@ -215,8 +219,8 @@
 
       if (!searchQuery) return true;
       const q = searchQuery.toLowerCase();
-      return visibleKeys.some((k) =>
-        String(item[k] ?? '')
+      return mappedColumns.some((col) =>
+        String(item[col.id] ?? '')
           .toLowerCase()
           .includes(q),
       );
@@ -273,6 +277,28 @@
       if (isNaN(na)) return -1;
       if (isNaN(nb)) return 1;
       return na - nb;
+    }
+
+    // Special-case Attachments: sort by number of attachments (AttachmentsCount)
+    if (key === 'Attachments') {
+      const ca = a.AttachmentsCount != null ? Number(a.AttachmentsCount) : 0;
+      const cb = b.AttachmentsCount != null ? Number(b.AttachmentsCount) : 0;
+      if (ca < cb) return -1;
+      if (ca > cb) return 1;
+      // fallback to title string if counts equal
+      const sa = String(a.Title ?? '').toLowerCase();
+      const sb = String(b.Title ?? '').toLowerCase();
+      if (sa < sb) return -1;
+      if (sa > sb) return 1;
+      return 0;
+    }
+
+    if (key === 'Affiliations') {
+      const fa = a.SpeakersAffiliations ? String(a.SpeakersAffiliations).toLowerCase() : '';
+      const fb = b.SpeakersAffiliations ? String(b.SpeakersAffiliations).toLowerCase() : '';
+      if (fa < fb) return -1;
+      if (fa > fb) return 1;
+      return 0;
     }
 
     // fallback: string compare
@@ -437,6 +463,33 @@
             <span title={item.SpeakersTooltip}>
               {item.SpeakersAffiliations}
             </span>
+          {/if}
+        {:else if col.id === 'Attachments'}
+          {#if item.Attachments && item.Attachments.length > 0}
+            <div class="flex gap-1 items-center">
+              {#each item.Attachments.slice(0,3) as att}
+                {@const fileInfo = getAttachmentIcon(att)}
+                <button
+                  class="p-1 rounded-md hover:bg-gray-300 dark:hover:bg-gray-200 cursor-pointer shadow-md dark:shadow-white/30"
+                  title={att.title || att.filename}
+                  onclick={async (e) => {
+                    e.stopPropagation();
+                    if (!att.download_url) return;
+                    try {
+                      // Use encodeURI to avoid encoding :/ and then explicitly encode parentheses
+                      OpenSafeURL(att.download_url);
+                    } catch (err) {
+                      console.error('Open attachment failed', err);
+                    }
+                  }}
+                >
+                  <Icon icon={fileInfo.icon} class={`w-5 h-5 ${fileInfo.color}`} />
+                </button>
+              {/each}
+              {#if item.Attachments.length > 3}
+                <span class="text-xs text-gray-500">+{item.Attachments.length - 3}</span>
+              {/if}
+            </div>
           {/if}
         {:else}
           {item[col.id]}

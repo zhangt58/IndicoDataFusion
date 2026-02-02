@@ -11,6 +11,7 @@
     "format:check": "prettier --check ."
   },
   "devDependencies": {
+    "@iconify/svelte": "^5.2.1",
     "@sveltejs/vite-plugin-svelte": "^6.2.1",
     "prettier": "^3.7.4",
     "prettier-plugin-svelte": "^3.4.1",

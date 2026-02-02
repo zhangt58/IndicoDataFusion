@@ -6,6 +6,8 @@
   import { createCachePage } from '../utils/cacheUtils.js';
   import { RefreshOutline } from 'flowbite-svelte-icons';
   import LoadErrorHint from './LoadErrorHint.svelte';
+  import AttachmentGrid from '../components/AttachmentGrid.svelte';
+  import Icon from '@iconify/svelte';
 
   let loading = $state(false);
   let refreshing = $state(false);
@@ -101,7 +103,7 @@
 {:else if error}
   <LoadErrorHint {error} message={errorString} title="Failed to load event information" />
 {:else if eventInfo}
-  <div class="max-w-4xl mx-auto mt-8">
+  <div class="max-w-full mx-auto mt-8">
     <!-- Event Header -->
     <div class="bg-linear-to-r from-indigo-500 to-purple-600 rounded-t-lg p-6 text-white">
       <div class="flex items-center justify-between mb-2">
@@ -140,7 +142,8 @@
 
     <!-- Event Details Card -->
     <div
-      class="bg-white dark:bg-gray-800 rounded-b-lg shadow-lg border border-gray-200 dark:border-gray-700"
+      class="bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 mb-1"
+      style={eventInfo.folders && eventInfo.folders.length > 0 ? 'max-height: 40vh; overflow-y: auto;' : 'max-height: 65vh; overflow-y: auto;'}
     >
       <!-- Date and Location -->
       <div class="p-6 border-b border-gray-200 dark:border-gray-700">
@@ -148,19 +151,7 @@
           <!-- Dates -->
           <div class="flex items-start gap-3">
             <div class="p-2 bg-indigo-100 dark:bg-indigo-900 rounded-lg">
-              <svg
-                class="w-6 h-6 text-indigo-600 dark:text-indigo-300"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
-                />
-              </svg>
+              <Icon icon="mdi:calendar-month" class="w-6 h-6 text-indigo-600 dark:text-indigo-300" />
             </div>
             <div>
               <p class="text-sm font-semibold text-gray-600 dark:text-gray-400">Date</p>
@@ -174,25 +165,7 @@
           <!-- Location -->
           <div class="flex items-start gap-3">
             <div class="p-2 bg-green-100 dark:bg-green-900 rounded-lg">
-              <svg
-                class="w-6 h-6 text-green-600 dark:text-green-300"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
-                />
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
-                />
-              </svg>
+              <Icon icon="mdi:map-marker" class="w-6 h-6 text-green-600 dark:text-green-300" />
             </div>
             <div>
               <p class="text-sm font-semibold text-gray-600 dark:text-gray-400">Location</p>
@@ -207,8 +180,8 @@
 
       <!-- Description -->
       {#if eventInfo.description}
-        <div class="p-6">
-          <h2 class="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-4">
+        <div class="p-6 border-b border-gray-200 dark:border-gray-700">
+          <h2 class="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-2">
             About the Event
           </h2>
           <div class="prose dark:prose-invert max-w-none text-gray-700 dark:text-gray-300">
@@ -216,7 +189,54 @@
           </div>
         </div>
       {/if}
+
     </div>
+
+    <!-- Materials & Attachments -->
+    {#if eventInfo.folders && eventInfo.folders.length > 0}
+      <div
+        class="bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700"
+        style="max-height: 35vh; overflow-y: auto;"
+      >
+        <div class="p-6">
+          <h2 class="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-2">
+            <Icon icon="mdi:paperclip" class="inline-block w-5 h-5 mr-2 -mt-1" />
+            Materials & Attachments
+          </h2>
+
+          {#each eventInfo.folders as folder}
+            {#if folder.attachments && folder.attachments.length > 0}
+            <div class="mb-6 last:mb-0">
+              <div class="flex items-center gap-2 mb-2">
+                <Icon icon="mdi:folder" class="w-5 h-5 text-amber-600 dark:text-amber-400" />
+                <h3 class="text-base font-medium text-gray-700 dark:text-gray-300">
+                  {folder.title || 'Attachments'}
+                </h3>
+                {#if folder.default_folder}
+                  <span
+                    class="px-2 py-0.5 text-xs font-medium bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 rounded"
+                  >
+                    Default
+                  </span>
+                {/if}
+                {#if folder.is_protected}
+                  <span title="Protected">
+                    <Icon icon="mdi:lock" class="w-4 h-4 text-red-600 dark:text-red-400" />
+                  </span>
+                {/if}
+              </div>
+
+              {#if folder.description}
+                <p class="text-sm text-gray-600 dark:text-gray-400 mb-2">{folder.description}</p>
+              {/if}
+
+              <AttachmentGrid attachments={folder.attachments} dedupe={true} />
+            </div>
+            {/if}
+          {/each}
+        </div>
+      </div>
+    {/if}
   </div>
 {:else}
   <div class="p-6 text-center text-gray-500">No event information available.</div>

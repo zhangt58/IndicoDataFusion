@@ -1,10 +1,13 @@
 <script>
-  import { BrowserOpenURL } from '../../wailsjs/runtime';
+  import { OpenSafeURL } from '../../wailsjs/go/main/App';
   import { formatDate } from '../utils/dateUtils.js';
   import TypeBadge from './TypeBadge.svelte';
   import SessionBadge from './SessionBadge.svelte';
+  import AttachmentGrid from '../components/AttachmentGrid.svelte';
+  import Icon from '@iconify/svelte';
 
   let { contribution = {} } = $props();
+
 </script>
 
 <div
@@ -192,19 +195,34 @@
   {/if}
 
   <!-- Materials and Folders -->
-  {#if (contribution.material && contribution.material.length > 0) || (contribution.folders && contribution.folders.length > 0)}
-    <div class="mb-3">
-      <p class="text-xs font-semibold text-gray-600 dark:text-gray-400">
-        {#if contribution.material && contribution.material.length > 0}
-          Materials: {contribution.material.length}
-        {/if}
-        {#if contribution.folders && contribution.folders.length > 0}
-          {#if contribution.material && contribution.material.length > 0}
-            |
+  {#if contribution.folders && contribution.folders.length > 0}
+    <div class="mb-2">
+      {#each contribution.folders as folder}
+        <div class="mb-1 last:mb-0">
+          <div class="flex items-center gap-2 mb-2">
+            <Icon icon="mdi:folder" class="w-5 h-5 text-amber-600 dark:text-amber-400" />
+            <h3 class="text-base font-medium text-gray-700 dark:text-gray-300">
+              {folder.title || 'Attachments'}
+            </h3>
+            {#if folder.default_folder}
+              <span class="px-2 py-0.5 text-xs font-medium bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 rounded">
+                Default
+              </span>
+            {/if}
+            {#if folder.is_protected}
+              <span title="Protected">
+                <Icon icon="mdi:lock" class="w-4 h-4 text-red-600 dark:text-red-400" />
+              </span>
+            {/if}
+          </div>
+
+          {#if folder.description}
+            <p class="text-sm text-gray-600 dark:text-gray-400 mb-2">{folder.description}</p>
           {/if}
-          Folders: {contribution.folders.length}
-        {/if}
-      </p>
+
+          <AttachmentGrid attachments={folder.attachments} dedupe={true} />
+        </div>
+      {/each}
     </div>
   {/if}
 
@@ -215,8 +233,9 @@
         href={contribution.url}
         onclick={async (e) => {
           e.preventDefault();
+          if (!contribution.url) return;
           try {
-            await BrowserOpenURL(contribution.url);
+            await OpenSafeURL(contribution.url);
           } catch (e) {
             console.error('BrowserOpenURL failed', e);
           }
