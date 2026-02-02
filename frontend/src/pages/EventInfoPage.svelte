@@ -7,6 +7,7 @@
   import { RefreshOutline } from 'flowbite-svelte-icons';
   import LoadErrorHint from './LoadErrorHint.svelte';
   import AttachmentGrid from '../components/AttachmentGrid.svelte';
+  import Icon from '@iconify/svelte';
 
   let loading = $state(false);
   let refreshing = $state(false);
@@ -150,19 +151,7 @@
           <!-- Dates -->
           <div class="flex items-start gap-3">
             <div class="p-2 bg-indigo-100 dark:bg-indigo-900 rounded-lg">
-              <svg
-                class="w-6 h-6 text-indigo-600 dark:text-indigo-300"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
-                />
-              </svg>
+              <Icon icon="mdi:calendar-month" class="w-6 h-6 text-indigo-600 dark:text-indigo-300" />
             </div>
             <div>
               <p class="text-sm font-semibold text-gray-600 dark:text-gray-400">Date</p>
@@ -176,25 +165,7 @@
           <!-- Location -->
           <div class="flex items-start gap-3">
             <div class="p-2 bg-green-100 dark:bg-green-900 rounded-lg">
-              <svg
-                class="w-6 h-6 text-green-600 dark:text-green-300"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
-                />
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
-                />
-              </svg>
+              <Icon icon="mdi:map-marker" class="w-6 h-6 text-green-600 dark:text-green-300" />
             </div>
             <div>
               <p class="text-sm font-semibold text-gray-600 dark:text-gray-400">Location</p>
@@ -229,19 +200,7 @@
       >
         <div class="p-6">
           <h2 class="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-2">
-            <svg
-              class="inline-block w-5 h-5 mr-2 -mt-1"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"
-              />
-            </svg>
+            <Icon icon="mdi:paperclip" class="inline-block w-5 h-5 mr-2 -mt-1" />
             Materials & Attachments
           </h2>
 
@@ -249,19 +208,7 @@
             {#if folder.attachments && folder.attachments.length > 0}
             <div class="mb-6 last:mb-0">
               <div class="flex items-center gap-2 mb-2">
-                <svg
-                  class="w-5 h-5 text-amber-600 dark:text-amber-400"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"
-                  />
-                </svg>
+                <Icon icon="mdi:folder" class="w-5 h-5 text-amber-600 dark:text-amber-400" />
                 <h3 class="text-base font-medium text-gray-700 dark:text-gray-300">
                   {folder.title || 'Attachments'}
                 </h3>
@@ -274,19 +221,7 @@
                 {/if}
                 {#if folder.is_protected}
                   <span title="Protected">
-                    <svg
-                      class="w-4 h-4 text-red-600 dark:text-red-400"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        stroke-width="2"
-                        d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
-                      />
-                    </svg>
+                    <Icon icon="mdi:lock" class="w-4 h-4 text-red-600 dark:text-red-400" />
                   </span>
                 {/if}
               </div>
