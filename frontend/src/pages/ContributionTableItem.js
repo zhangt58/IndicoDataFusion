@@ -1,4 +1,4 @@
-import { formatDate } from '../utils/dateUtils.js';
+import { convertDateTimeToLocal } from '../utils/dateUtils.js';
 import { deduplicateAttachments } from '../utils/attachmentUtils.js';
 
 /**
@@ -149,6 +149,34 @@ export function transformContributionToTableItem(contribution) {
   const attachments = extractAttachments(contribution);
   const attachmentsTooltip = attachments.map((a) => a.title || a.filename || '').join('\n');
 
+  // small local helper to preserve previous behavior: accept a DateInfo object or string
+  function formatStartDate(dateInfo) {
+    if (!dateInfo) return '';
+    // If it's an object with date/time use timezone-aware converter
+    if (typeof dateInfo === 'object' && dateInfo.date && dateInfo.time) {
+      try {
+        return convertDateTimeToLocal(dateInfo.date, dateInfo.time, dateInfo.tz);
+      } catch (e) {
+        console.warn('formatStartDate convert failed', e);
+      }
+    }
+
+    // If it's a string like 'YYYY-MM-DDTHH:MM:SS' or ISO, try Date
+    try {
+      const d = new Date(typeof dateInfo === 'string' ? dateInfo : String(dateInfo));
+      if (!isNaN(d.getTime())) {
+        const pad = (n) => String(n).padStart(2, '0');
+        return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(
+          d.getHours(),
+        )}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+      }
+    } catch (e) {
+      // ignore
+    }
+
+    return '';
+  }
+
   return {
     ID: rawId,
     IDNumber: isNaN(idNum) ? null : idNum,
@@ -158,8 +186,8 @@ export function transformContributionToTableItem(contribution) {
     Session: contribution.session || '',
     Track: contribution.track || '',
     // preserve both Start (formatted) and StartDate for compatibility
-    Start: formatDate(contribution.startDate),
-    StartDate: formatDate(contribution.startDate),
+    Start: formatStartDate(contribution.startDate),
+    StartDate: formatStartDate(contribution.startDate),
     StartISO: startISO,
     StartMillis: startMillis,
     Duration: contribution.duration ? `${contribution.duration} min` : '',

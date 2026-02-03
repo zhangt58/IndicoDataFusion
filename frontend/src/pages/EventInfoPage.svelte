@@ -2,7 +2,7 @@
   import { onMount, onDestroy } from 'svelte';
   import { GetEventInfo, IsTestMode, GetCacheStats } from '../../wailsjs/go/main/App';
   import { EventsOn, EventsOff } from '../../wailsjs/runtime/runtime';
-  import { formatDate } from '../utils/dateUtils.js';
+  import { convertDateTimeToLocal } from '../utils/dateUtils.js';
   import { createCachePage } from '../utils/cacheUtils.js';
   import { RefreshOutline } from 'flowbite-svelte-icons';
   import LoadErrorHint from './LoadErrorHint.svelte';
@@ -18,6 +18,8 @@
 
   let eventInfo = $state(null);
   let currentDataSource = null;
+  // Toggle to show dates converted to the user's local timezone
+  let showLocal = $state(false);
 
   async function loadData() {
     loading = true;
@@ -91,7 +93,28 @@
 
   // Wrapper to handle 'N/A' for empty dates in EventInfo
   function formatEventDate(dateInfo) {
-    return dateInfo ? formatDate(dateInfo) : 'N/A';
+    if (!dateInfo) return 'N/A';
+    // dateInfo is expected to have { date: 'YYYY-MM-DD', time: 'HH:MM:SS', tz: 'IANA' }
+    try {
+      if (dateInfo.date && dateInfo.time) {
+        // If the user toggled to show local timezone, convert; otherwise show original with tz label
+        if (showLocal) {
+          return convertDateTimeToLocal(dateInfo.date, dateInfo.time, dateInfo.tz);
+        }
+        const joined = [dateInfo.date, dateInfo.time].filter(Boolean).join(' ');
+        const tz = dateInfo.tz ? ` (${dateInfo.tz})` : '';
+        return `${joined}${tz}`;
+      }
+    } catch (e) {
+      console.warn('formatEventDate conversion failed:', e);
+    }
+
+    // Fallback: join available fields without timezone conversion
+    const d = dateInfo.date || '';
+    const t = dateInfo.time || '';
+    const tz = dateInfo.tz ? ` (${dateInfo.tz})` : '';
+    const joined = [d, t].filter(Boolean).join(' ');
+    return joined ? `${joined}${tz}` : 'N/A';
   }
 </script>
 
@@ -103,15 +126,30 @@
 {:else if error}
   <LoadErrorHint {error} message={errorString} title="Failed to load event information" />
 {:else if eventInfo}
-  <div class="max-w-full mx-auto mt-8">
+  <div class="max-w-full mx-auto mt-8 flex flex-col" style="height:calc(100vh - 9rem);">
     <!-- Event Header -->
-    <div class="bg-linear-to-r from-indigo-500 to-purple-600 rounded-t-lg p-6 text-white">
-      <div class="flex items-center justify-between mb-2">
+    <div class="bg-linear-to-r from-emerald-600 to-teal-500 dark:from-emerald-900 dark:to-emerald-700 rounded-t-lg p-5 text-white">
+      <div class="flex items-center justify-between mb-1">
         <div class="flex items-center gap-2">
-          <span class="px-3 py-1 bg-white/20 rounded-full text-sm font-medium">
+          <span class="px-3 py-1 bg-white/20 rounded-md shadown-md text-sm font-medium">
             {eventInfo.category || 'Conference'}
           </span>
-          <span class="text-sm opacity-80">ID: {eventInfo.id}</span>
+          <span class="text-sm opacity-80">
+            ID:
+            {#if eventInfo.url}
+              <a
+                href={eventInfo.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                class="underline hover:text-white/90 ml-1"
+                aria-label={`Open event ${eventInfo.id} in new tab`}
+              >
+                {eventInfo.id}
+              </a>
+            {:else}
+              <span class="ml-1">{eventInfo.id}</span>
+            {/if}
+          </span>
         </div>
         {#if !isTestMode}
           <div class="relative">
@@ -140,48 +178,61 @@
       <h1 class="text-2xl md:text-3xl font-bold">{eventInfo.title}</h1>
     </div>
 
-    <!-- Event Details Card -->
-    <div
-      class="bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 mb-1"
-      style={eventInfo.folders && eventInfo.folders.length > 0 ? 'max-height: 40vh; overflow-y: auto;' : 'max-height: 65vh; overflow-y: auto;'}
-    >
-      <!-- Date and Location -->
-      <div class="p-6 border-b border-gray-200 dark:border-gray-700">
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <!-- Dates -->
-          <div class="flex items-start gap-3">
-            <div class="p-2 bg-indigo-100 dark:bg-indigo-900 rounded-lg">
-              <Icon icon="mdi:calendar-month" class="w-6 h-6 text-indigo-600 dark:text-indigo-300" />
-            </div>
-            <div>
-              <p class="text-sm font-semibold text-gray-600 dark:text-gray-400">Date</p>
-              <p class="text-gray-800 dark:text-gray-200">{formatEventDate(eventInfo.startDate)}</p>
-              <p class="text-gray-600 dark:text-gray-400 text-sm">
-                to {formatEventDate(eventInfo.endDate)}
-              </p>
-            </div>
+    <!-- Date and Location -->
+    <div class="p-4 border-b border-gray-200 dark:border-gray-700 shadow-md">
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <!-- Dates -->
+        <div class="flex items-start gap-3">
+          <div class="p-2 bg-indigo-100 dark:bg-indigo-900 rounded-lg">
+            <Icon icon="mdi:calendar-month" class="w-6 h-6 text-indigo-600 dark:text-indigo-300" />
           </div>
+          <div>
+            <p class="text-sm font-semibold text-gray-600 dark:text-gray-400">
+              Date
+              <button
+                class="ml-2 inline-flex items-center cursor-pointer select-none px-2 py-0.5 text-xs font-medium rounded
+                  {showLocal
+                    ? 'bg-indigo-600 text-white hover:bg-indigo-700'
+                    : 'bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 hover:bg-gray-300 dark:hover:bg-gray-600'
+                }"
+                title={showLocal ? 'Showing in local timezone' : 'Show dates in your local timezone'}
+                onclick={() => (showLocal = !showLocal)}
+              >
+                Local
+              </button>
+            </p>
+            <p class="text-gray-800 dark:text-gray-200">{formatEventDate(eventInfo.startDate)}</p>
+            <p class="text-gray-600 dark:text-gray-400 text-sm">
+              to {formatEventDate(eventInfo.endDate)}
+            </p>
+          </div>
+        </div>
 
-          <!-- Location -->
-          <div class="flex items-start gap-3">
-            <div class="p-2 bg-green-100 dark:bg-green-900 rounded-lg">
-              <Icon icon="mdi:map-marker" class="w-6 h-6 text-green-600 dark:text-green-300" />
-            </div>
-            <div>
-              <p class="text-sm font-semibold text-gray-600 dark:text-gray-400">Location</p>
-              <p class="text-gray-800 dark:text-gray-200">{eventInfo.location}</p>
-              {#if eventInfo.address}
-                <p class="text-gray-600 dark:text-gray-400 text-sm">{eventInfo.address}</p>
-              {/if}
-            </div>
+        <!-- Location -->
+        <div class="flex items-start gap-3">
+          <div class="p-2 bg-green-100 dark:bg-green-900 rounded-lg">
+            <Icon icon="mdi:map-marker" class="w-6 h-6 text-green-600 dark:text-green-300" />
+          </div>
+          <div>
+            <p class="text-sm font-semibold text-gray-600 dark:text-gray-400">Location</p>
+            <p class="text-gray-800 dark:text-gray-200">{eventInfo.location}</p>
+            {#if eventInfo.address}
+              <p class="text-gray-600 dark:text-gray-400 text-sm">{eventInfo.address}</p>
+            {/if}
           </div>
         </div>
       </div>
+    </div>
 
+    <!-- Event Details Card -->
+    <div
+      class="bg-white dark:bg-gray-800 shadow-lg border border-gray-200 dark:border-gray-700 mt-0.5 flex flex-col"
+      style="flex:1 1 auto; min-height:0; overflow-y:auto;"
+    >
       <!-- Description -->
       {#if eventInfo.description}
-        <div class="p-6 border-b border-gray-200 dark:border-gray-700">
-          <h2 class="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-2">
+        <div class="p-4 border-b border-gray-200 dark:border-gray-700">
+          <h2 class="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-1">
             About the Event
           </h2>
           <div class="prose dark:prose-invert max-w-none text-gray-700 dark:text-gray-300">
@@ -195,10 +246,10 @@
     <!-- Materials & Attachments -->
     {#if eventInfo.folders && eventInfo.folders.length > 0}
       <div
-        class="bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700"
-        style="max-height: 35vh; overflow-y: auto;"
+        class="bg-white dark:bg-gray-800 rounded-b-lg shadow-lg border border-gray-200 dark:border-gray-700 mt-0.5 flex flex-col"
+        style="flex: none; max-height: 20vh; overflow-y: auto;"
       >
-        <div class="p-6">
+        <div class="p-4">
           <h2 class="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-2">
             <Icon icon="mdi:paperclip" class="inline-block w-5 h-5 mr-2 -mt-1" />
             Materials & Attachments
@@ -206,9 +257,9 @@
 
           {#each eventInfo.folders as folder}
             {#if folder.attachments && folder.attachments.length > 0}
-            <div class="mb-6 last:mb-0">
-              <div class="flex items-center gap-2 mb-2">
-                <Icon icon="mdi:folder" class="w-5 h-5 text-amber-600 dark:text-amber-400" />
+            <div class="mb-2 last:mb-0">
+              <div class="flex items-center gap-2 mb-1">
+                <Icon icon="mdi:folder" class="w-4 h-4 text-amber-600 dark:text-amber-400" />
                 <h3 class="text-base font-medium text-gray-700 dark:text-gray-300">
                   {folder.title || 'Attachments'}
                 </h3>
@@ -227,7 +278,7 @@
               </div>
 
               {#if folder.description}
-                <p class="text-sm text-gray-600 dark:text-gray-400 mb-2">{folder.description}</p>
+                <p class="text-sm text-gray-600 dark:text-gray-400 mb-1">{folder.description}</p>
               {/if}
 
               <AttachmentGrid attachments={folder.attachments} dedupe={true} />

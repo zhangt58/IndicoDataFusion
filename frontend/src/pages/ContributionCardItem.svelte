@@ -1,6 +1,6 @@
 <script>
   import { OpenSafeURL } from '../../wailsjs/go/main/App';
-  import { formatDate } from '../utils/dateUtils.js';
+  import { convertDateTimeToLocal } from '../utils/dateUtils.js';
   import TypeBadge from './TypeBadge.svelte';
   import SessionBadge from './SessionBadge.svelte';
   import AttachmentGrid from '../components/AttachmentGrid.svelte';
@@ -8,6 +8,42 @@
 
   let { contribution = {} } = $props();
 
+  // Per-date toggles to show the time in the runtime local timezone
+  let showStartLocal = $state(false);
+  let showEndLocal = $state(false);
+
+  // Local helper to replace old formatDate behavior: accepts DateInfo object or ISO string
+  function formatDateInfo(dateInfo, showLocal = false) {
+    if (!dateInfo) return '';
+    if (typeof dateInfo === 'object' && dateInfo.date && dateInfo.time) {
+      try {
+        // If the caller requested local display, convert; otherwise show original tz string
+        if (showLocal) {
+          return convertDateTimeToLocal(dateInfo.date, dateInfo.time, dateInfo.tz);
+        }
+
+        // show original timezone/wall-clock by default
+        return dateInfo.tz ? `${dateInfo.date} ${dateInfo.time} (${dateInfo.tz})` : `${dateInfo.date} ${dateInfo.time}`;
+      } catch (e) {
+        console.warn('formatDateInfo conversion failed', e);
+      }
+    }
+
+    // fallback for string/ISO
+    try {
+      const d = new Date(typeof dateInfo === 'string' ? dateInfo : String(dateInfo));
+      if (!isNaN(d.getTime())) {
+        const pad = (n) => String(n).padStart(2, '0');
+        return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(
+          d.getHours(),
+        )}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+      }
+    } catch (e) {
+      // ignore
+    }
+
+    return '';
+  }
 </script>
 
 <div
@@ -64,15 +100,41 @@
   <div class="mb-3 grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
     {#if contribution.startDate}
       <div>
-        <p class="text-xs font-semibold text-gray-600 dark:text-gray-400">Start:</p>
-        <p class="text-gray-700 dark:text-gray-300">{formatDate(contribution.startDate)}</p>
+        <div class="flex items-center justify-between">
+          <p class="text-xs font-semibold text-gray-600 dark:text-gray-400">Start:</p>
+          <button
+            class="ml-2 inline-flex items-center cursor-pointer select-none px-2 py-0.5 text-xs font-medium rounded
+              {showStartLocal
+                ? 'bg-indigo-600 text-white hover:bg-indigo-700'
+                : 'bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 hover:bg-gray-300 dark:hover:bg-gray-600'
+              }"
+            title={showStartLocal ? 'Showing in local timezone' : 'Show start time in your local timezone'}
+            onclick={() => (showStartLocal = !showStartLocal)}
+          >
+            Local
+          </button>
+        </div>
+        <p class="text-gray-700 dark:text-gray-300">{formatDateInfo(contribution.startDate, showStartLocal)}</p>
       </div>
     {/if}
 
     {#if contribution.endDate}
       <div>
-        <p class="text-xs font-semibold text-gray-600 dark:text-gray-400">End:</p>
-        <p class="text-gray-700 dark:text-gray-300">{formatDate(contribution.endDate)}</p>
+        <div class="flex items-center justify-between">
+          <p class="text-xs font-semibold text-gray-600 dark:text-gray-400">End:</p>
+          <button
+            class="ml-2 inline-flex items-center cursor-pointer select-none px-2 py-0.5 text-xs font-medium rounded
+              {showEndLocal
+                ? 'bg-indigo-600 text-white hover:bg-indigo-700'
+                : 'bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 hover:bg-gray-300 dark:hover:bg-gray-600'
+              }"
+            title={showEndLocal ? 'Showing in local timezone' : 'Show end time in your local timezone'}
+            onclick={() => (showEndLocal = !showEndLocal)}
+          >
+            Local
+          </button>
+        </div>
+        <p class="text-gray-700 dark:text-gray-300">{formatDateInfo(contribution.endDate, showEndLocal)}</p>
       </div>
     {/if}
 
