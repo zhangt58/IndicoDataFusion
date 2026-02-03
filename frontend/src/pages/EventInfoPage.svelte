@@ -103,12 +103,12 @@
 {:else if error}
   <LoadErrorHint {error} message={errorString} title="Failed to load event information" />
 {:else if eventInfo}
-  <div class="max-w-full mx-auto mt-8 flex flex-col" style="height:calc(100vh - 10rem);">
+  <div class="max-w-full mx-auto mt-8 flex flex-col" style="height:calc(100vh - 9rem);">
     <!-- Event Header -->
-    <div class="bg-linear-to-r from-indigo-500 to-purple-600 rounded-t-lg p-6 text-white">
-      <div class="flex items-center justify-between mb-2">
+    <div class="bg-linear-to-r from-emerald-600 to-teal-500 dark:from-emerald-900 dark:to-emerald-700 rounded-t-lg p-5 text-white">
+      <div class="flex items-center justify-between mb-1">
         <div class="flex items-center gap-2">
-          <span class="px-3 py-1 bg-white/20 rounded-xl text-sm font-medium">
+          <span class="px-3 py-1 bg-white/20 rounded-md shadown-md text-sm font-medium">
             {eventInfo.category || 'Conference'}
           </span>
           <span class="text-sm opacity-80">
@@ -155,48 +155,48 @@
       <h1 class="text-2xl md:text-3xl font-bold">{eventInfo.title}</h1>
     </div>
 
-    <!-- Event Details Card -->
-    <div
-      class="bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 mb-1 flex flex-col"
-      style="flex:1 1 auto; min-height:0; overflow-y:auto;"
-    >
-      <!-- Date and Location -->
-      <div class="p-4 border-b border-gray-200 dark:border-gray-700">
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <!-- Dates -->
-          <div class="flex items-start gap-3">
-            <div class="p-2 bg-indigo-100 dark:bg-indigo-900 rounded-lg">
-              <Icon icon="mdi:calendar-month" class="w-6 h-6 text-indigo-600 dark:text-indigo-300" />
-            </div>
-            <div>
-              <p class="text-sm font-semibold text-gray-600 dark:text-gray-400">Date</p>
-              <p class="text-gray-800 dark:text-gray-200">{formatEventDate(eventInfo.startDate)}</p>
-              <p class="text-gray-600 dark:text-gray-400 text-sm">
-                to {formatEventDate(eventInfo.endDate)}
-              </p>
-            </div>
+    <!-- Date and Location -->
+    <div class="p-4 border-b border-gray-200 dark:border-gray-700 shadow-md">
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <!-- Dates -->
+        <div class="flex items-start gap-3">
+          <div class="p-2 bg-indigo-100 dark:bg-indigo-900 rounded-lg">
+            <Icon icon="mdi:calendar-month" class="w-6 h-6 text-indigo-600 dark:text-indigo-300" />
           </div>
+          <div>
+            <p class="text-sm font-semibold text-gray-600 dark:text-gray-400">Date</p>
+            <p class="text-gray-800 dark:text-gray-200">{formatEventDate(eventInfo.startDate)}</p>
+            <p class="text-gray-600 dark:text-gray-400 text-sm">
+              to {formatEventDate(eventInfo.endDate)}
+            </p>
+          </div>
+        </div>
 
-          <!-- Location -->
-          <div class="flex items-start gap-3">
-            <div class="p-2 bg-green-100 dark:bg-green-900 rounded-lg">
-              <Icon icon="mdi:map-marker" class="w-6 h-6 text-green-600 dark:text-green-300" />
-            </div>
-            <div>
-              <p class="text-sm font-semibold text-gray-600 dark:text-gray-400">Location</p>
-              <p class="text-gray-800 dark:text-gray-200">{eventInfo.location}</p>
-              {#if eventInfo.address}
-                <p class="text-gray-600 dark:text-gray-400 text-sm">{eventInfo.address}</p>
-              {/if}
-            </div>
+        <!-- Location -->
+        <div class="flex items-start gap-3">
+          <div class="p-2 bg-green-100 dark:bg-green-900 rounded-lg">
+            <Icon icon="mdi:map-marker" class="w-6 h-6 text-green-600 dark:text-green-300" />
+          </div>
+          <div>
+            <p class="text-sm font-semibold text-gray-600 dark:text-gray-400">Location</p>
+            <p class="text-gray-800 dark:text-gray-200">{eventInfo.location}</p>
+            {#if eventInfo.address}
+              <p class="text-gray-600 dark:text-gray-400 text-sm">{eventInfo.address}</p>
+            {/if}
           </div>
         </div>
       </div>
+    </div>
 
+    <!-- Event Details Card -->
+    <div
+      class="bg-white dark:bg-gray-800 shadow-lg border border-gray-200 dark:border-gray-700 mt-0.5 flex flex-col"
+      style="flex:1 1 auto; min-height:0; overflow-y:auto;"
+    >
       <!-- Description -->
       {#if eventInfo.description}
         <div class="p-4 border-b border-gray-200 dark:border-gray-700">
-          <h2 class="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-2">
+          <h2 class="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-1">
             About the Event
           </h2>
           <div class="prose dark:prose-invert max-w-none text-gray-700 dark:text-gray-300">
@@ -210,7 +210,7 @@
     <!-- Materials & Attachments -->
     {#if eventInfo.folders && eventInfo.folders.length > 0}
       <div
-        class="bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 mt-1.5 flex flex-col"
+        class="bg-white dark:bg-gray-800 rounded-b-lg shadow-lg border border-gray-200 dark:border-gray-700 mt-0.5 flex flex-col"
         style="flex: none; max-height: 20vh; overflow-y: auto;"
       >
         <div class="p-4">
