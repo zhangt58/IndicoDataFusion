@@ -2,7 +2,7 @@
   import { onMount, onDestroy } from 'svelte';
   import { GetEventInfo, IsTestMode, GetCacheStats } from '../../wailsjs/go/main/App';
   import { EventsOn, EventsOff } from '../../wailsjs/runtime/runtime';
-  import { formatDate } from '../utils/dateUtils.js';
+  import { convertDateTimeToLocal } from '../utils/dateUtils.js';
   import { createCachePage } from '../utils/cacheUtils.js';
   import { RefreshOutline } from 'flowbite-svelte-icons';
   import LoadErrorHint from './LoadErrorHint.svelte';
@@ -91,7 +91,22 @@
 
   // Wrapper to handle 'N/A' for empty dates in EventInfo
   function formatEventDate(dateInfo) {
-    return dateInfo ? formatDate(dateInfo) : 'N/A';
+    if (!dateInfo) return 'N/A';
+    // dateInfo is expected to have { date: 'YYYY-MM-DD', time: 'HH:MM:SS', tz: 'IANA' }
+    try {
+      if (dateInfo.date && dateInfo.time) {
+        return convertDateTimeToLocal(dateInfo.date, dateInfo.time, dateInfo.tz);
+      }
+    } catch (e) {
+      console.warn('formatEventDate conversion failed:', e);
+    }
+
+    // Fallback: join available fields without timezone conversion
+    const d = dateInfo.date || '';
+    const t = dateInfo.time || '';
+    const tz = dateInfo.tz ? ` (${dateInfo.tz})` : '';
+    const joined = [d, t].filter(Boolean).join(' ');
+    return joined ? `${joined}${tz}` : 'N/A';
   }
 </script>
 

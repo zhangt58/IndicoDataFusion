@@ -1,6 +1,6 @@
 <script>
   import { OpenSafeURL } from '../../wailsjs/go/main/App';
-  import { formatDate } from '../utils/dateUtils.js';
+  import { convertDateTimeToLocal } from '../utils/dateUtils.js';
   import TypeBadge from './TypeBadge.svelte';
   import SessionBadge from './SessionBadge.svelte';
   import AttachmentGrid from '../components/AttachmentGrid.svelte';
@@ -8,6 +8,32 @@
 
   let { contribution = {} } = $props();
 
+  // Local helper to replace old formatDate behavior: accepts DateInfo object or ISO string
+  function formatDateInfo(dateInfo) {
+    if (!dateInfo) return '';
+    if (typeof dateInfo === 'object' && dateInfo.date && dateInfo.time) {
+      try {
+        return convertDateTimeToLocal(dateInfo.date, dateInfo.time, dateInfo.tz);
+      } catch (e) {
+        console.warn('formatDateInfo conversion failed', e);
+      }
+    }
+
+    // fallback for string/ISO
+    try {
+      const d = new Date(typeof dateInfo === 'string' ? dateInfo : String(dateInfo));
+      if (!isNaN(d.getTime())) {
+        const pad = (n) => String(n).padStart(2, '0');
+        return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(
+          d.getHours(),
+        )}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+      }
+    } catch (e) {
+      // ignore
+    }
+
+    return '';
+  }
 </script>
 
 <div
@@ -65,14 +91,14 @@
     {#if contribution.startDate}
       <div>
         <p class="text-xs font-semibold text-gray-600 dark:text-gray-400">Start:</p>
-        <p class="text-gray-700 dark:text-gray-300">{formatDate(contribution.startDate)}</p>
+        <p class="text-gray-700 dark:text-gray-300">{formatDateInfo(contribution.startDate)}</p>
       </div>
     {/if}
 
     {#if contribution.endDate}
       <div>
         <p class="text-xs font-semibold text-gray-600 dark:text-gray-400">End:</p>
-        <p class="text-gray-700 dark:text-gray-300">{formatDate(contribution.endDate)}</p>
+        <p class="text-gray-700 dark:text-gray-300">{formatDateInfo(contribution.endDate)}</p>
       </div>
     {/if}
 
