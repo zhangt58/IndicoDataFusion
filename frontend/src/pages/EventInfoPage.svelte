@@ -103,7 +103,7 @@
 {:else if error}
   <LoadErrorHint {error} message={errorString} title="Failed to load event information" />
 {:else if eventInfo}
-  <div class="max-w-full mx-auto mt-8">
+  <div class="max-w-full mx-auto mt-8 flex flex-col" style="height:calc(100vh - 10rem);">
     <!-- Event Header -->
     <div class="bg-linear-to-r from-indigo-500 to-purple-600 rounded-t-lg p-6 text-white">
       <div class="flex items-center justify-between mb-2">
@@ -142,8 +142,8 @@
 
     <!-- Event Details Card -->
     <div
-      class="bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 mb-1"
-      style={eventInfo.folders && eventInfo.folders.length > 0 ? 'max-height: 40vh; overflow-y: auto;' : 'max-height: 65vh; overflow-y: auto;'}
+      class="bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 mb-1 flex flex-col"
+      style="flex:1 1 auto; min-height:0; overflow-y:auto;"
     >
       <!-- Date and Location -->
       <div class="p-6 border-b border-gray-200 dark:border-gray-700">
@@ -180,7 +180,7 @@
 
       <!-- Description -->
       {#if eventInfo.description}
-        <div class="p-6 border-b border-gray-200 dark:border-gray-700">
+        <div class="p-4 border-b border-gray-200 dark:border-gray-700">
           <h2 class="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-2">
             About the Event
           </h2>
@@ -195,10 +195,10 @@
     <!-- Materials & Attachments -->
     {#if eventInfo.folders && eventInfo.folders.length > 0}
       <div
-        class="bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700"
-        style="max-height: 35vh; overflow-y: auto;"
+        class="bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 mt-1.5 flex flex-col"
+        style="flex: none; max-height: 20vh; overflow-y: auto;"
       >
-        <div class="p-6">
+        <div class="p-4">
           <h2 class="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-2">
             <Icon icon="mdi:paperclip" class="inline-block w-5 h-5 mr-2 -mt-1" />
             Materials & Attachments
@@ -206,9 +206,9 @@
 
           {#each eventInfo.folders as folder}
             {#if folder.attachments && folder.attachments.length > 0}
-            <div class="mb-6 last:mb-0">
-              <div class="flex items-center gap-2 mb-2">
-                <Icon icon="mdi:folder" class="w-5 h-5 text-amber-600 dark:text-amber-400" />
+            <div class="mb-3 last:mb-0">
+              <div class="flex items-center gap-2 mb-1">
+                <Icon icon="mdi:folder" class="w-4 h-4 text-amber-600 dark:text-amber-400" />
                 <h3 class="text-base font-medium text-gray-700 dark:text-gray-300">
                   {folder.title || 'Attachments'}
                 </h3>
@@ -227,7 +227,7 @@
               </div>
 
               {#if folder.description}
-                <p class="text-sm text-gray-600 dark:text-gray-400 mb-2">{folder.description}</p>
+                <p class="text-sm text-gray-600 dark:text-gray-400 mb-1">{folder.description}</p>
               {/if}
 
               <AttachmentGrid attachments={folder.attachments} dedupe={true} />
