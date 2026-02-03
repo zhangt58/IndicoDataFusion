@@ -98,7 +98,8 @@ type AbstractData struct {
 	Files             []interface{} `json:"files"` // generic for now
 
 	// if this abstract to be reviewed by the current user
-	IsMyReview bool `json:"is_my_review"`
+	IsMyReview bool   `json:"is_my_review"`
+	ReviewURL  string `json:"review_url"`
 
 	// Aggregated Ratings (computed fields for frontend convenience)
 	FirstPriority  float64 `json:"first_priority"`

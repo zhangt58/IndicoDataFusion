@@ -475,6 +475,7 @@ func (h *DataSourceHandler) getAbstractsFromAPI(ctx context.Context) ([]indico.A
 		// Mark abstracts that are in my review list
 		for i := range response.Abstracts {
 			response.Abstracts[i].IsMyReview = myReviewIDsSet[response.Abstracts[i].FriendlyID]
+			response.Abstracts[i].ReviewURL = fmt.Sprintf("%s/event/%d/abstracts/%d", h.client.BaseURL, h.client.EventID, response.Abstracts[i].ID)
 		}
 	}
 
@@ -710,6 +711,7 @@ func (h *DataSourceHandler) RefreshAbstractByID(ctx context.Context, id int) (*i
 	myReviewIDsSet := getReviewIDsSet(h, ctx)
 	if myReviewIDsSet != nil {
 		abstract.IsMyReview = myReviewIDsSet[abstract.FriendlyID]
+		abstract.ReviewURL = fmt.Sprintf("%s/event/%d/abstracts/%d", h.client.BaseURL, h.client.EventID, abstract.ID)
 	}
 
 	// Update the cache if available
