@@ -108,10 +108,25 @@
     <div class="bg-linear-to-r from-indigo-500 to-purple-600 rounded-t-lg p-6 text-white">
       <div class="flex items-center justify-between mb-2">
         <div class="flex items-center gap-2">
-          <span class="px-3 py-1 bg-white/20 rounded-full text-sm font-medium">
+          <span class="px-3 py-1 bg-white/20 rounded-xl text-sm font-medium">
             {eventInfo.category || 'Conference'}
           </span>
-          <span class="text-sm opacity-80">ID: {eventInfo.id}</span>
+          <span class="text-sm opacity-80">
+            ID:
+            {#if eventInfo.url}
+              <a
+                href={eventInfo.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                class="underline hover:text-white/90 ml-1"
+                aria-label={`Open event ${eventInfo.id} in new tab`}
+              >
+                {eventInfo.id}
+              </a>
+            {:else}
+              <span class="ml-1">{eventInfo.id}</span>
+            {/if}
+          </span>
         </div>
         {#if !isTestMode}
           <div class="relative">
@@ -146,7 +161,7 @@
       style="flex:1 1 auto; min-height:0; overflow-y:auto;"
     >
       <!-- Date and Location -->
-      <div class="p-6 border-b border-gray-200 dark:border-gray-700">
+      <div class="p-4 border-b border-gray-200 dark:border-gray-700">
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
           <!-- Dates -->
           <div class="flex items-start gap-3">
@@ -206,7 +221,7 @@
 
           {#each eventInfo.folders as folder}
             {#if folder.attachments && folder.attachments.length > 0}
-            <div class="mb-3 last:mb-0">
+            <div class="mb-2 last:mb-0">
               <div class="flex items-center gap-2 mb-1">
                 <Icon icon="mdi:folder" class="w-4 h-4 text-amber-600 dark:text-amber-400" />
                 <h3 class="text-base font-medium text-gray-700 dark:text-gray-300">
