@@ -18,6 +18,8 @@
 
   let eventInfo = $state(null);
   let currentDataSource = null;
+  // Toggle to show dates converted to the user's local timezone
+  let showLocal = $state(false);
 
   async function loadData() {
     loading = true;
@@ -95,7 +97,13 @@
     // dateInfo is expected to have { date: 'YYYY-MM-DD', time: 'HH:MM:SS', tz: 'IANA' }
     try {
       if (dateInfo.date && dateInfo.time) {
-        return convertDateTimeToLocal(dateInfo.date, dateInfo.time, dateInfo.tz);
+        // If the user toggled to show local timezone, convert; otherwise show original with tz label
+        if (showLocal) {
+          return convertDateTimeToLocal(dateInfo.date, dateInfo.time, dateInfo.tz);
+        }
+        const joined = [dateInfo.date, dateInfo.time].filter(Boolean).join(' ');
+        const tz = dateInfo.tz ? ` (${dateInfo.tz})` : '';
+        return `${joined}${tz}`;
       }
     } catch (e) {
       console.warn('formatEventDate conversion failed:', e);
@@ -179,7 +187,20 @@
             <Icon icon="mdi:calendar-month" class="w-6 h-6 text-indigo-600 dark:text-indigo-300" />
           </div>
           <div>
-            <p class="text-sm font-semibold text-gray-600 dark:text-gray-400">Date</p>
+            <p class="text-sm font-semibold text-gray-600 dark:text-gray-400">
+              Date
+              <button
+                class="ml-2 inline-flex items-center cursor-pointer select-none px-2 py-0.5 text-xs font-medium rounded
+                  {showLocal
+                    ? 'bg-indigo-600 text-white hover:bg-indigo-700'
+                    : 'bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 hover:bg-gray-300 dark:hover:bg-gray-600'
+                }"
+                title={showLocal ? 'Showing in local timezone' : 'Show dates in your local timezone'}
+                onclick={() => (showLocal = !showLocal)}
+              >
+                Local
+              </button>
+            </p>
             <p class="text-gray-800 dark:text-gray-200">{formatEventDate(eventInfo.startDate)}</p>
             <p class="text-gray-600 dark:text-gray-400 text-sm">
               to {formatEventDate(eventInfo.endDate)}
