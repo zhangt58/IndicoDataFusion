@@ -1,13 +1,14 @@
 <script>
   import { RefreshAbstractByID } from '../../wailsjs/go/main/App';
   import { ClipboardListOutline } from 'flowbite-svelte-icons';
+  import { OpenSafeURL } from '../../wailsjs/go/main/App';
+  import Icon from '@iconify/svelte';
   import TypeBadge from './TypeBadge.svelte';
   import TrackBadge from './TrackBadge.svelte';
   import StateBadge from './StateBadge.svelte';
   import AffiliationDialog from '../components/AffiliationDialog.svelte';
   import AffiliationBadge from '../components/AffiliationBadge.svelte';
   import AbstractReviewsDialog from '../components/AbstractReviewsDialog.svelte';
-  import { getTrackLabel } from './AbstractTableItem.js';
 
   let {
     abstract = $bindable({}),
@@ -101,6 +102,17 @@
         >
           <ClipboardListOutline class="w-3 h-3" />
           My Review
+          <a
+            href={abstract.review_url}
+            onclick={() => OpenSafeURL(abstract.review_url)}
+            target="_blank"
+            rel="noopener noreferrer"
+            class="ml-1 inline-flex items-center"
+            title="Open review page"
+            aria-label="Open review page"
+          >
+            <Icon icon="mdi:open-in-new" class="w-3 h-3 text-blue-600 dark:text-blue-300" aria-hidden="true" />
+          </a>
         </span>
       {/if}
       <button
