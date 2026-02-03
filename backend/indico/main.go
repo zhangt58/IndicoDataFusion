@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"regexp"
 	"strings"
 	"time"
 
@@ -56,7 +57,16 @@ func (c *IndicoClient) GetEventInfo() (*Event, error) {
 		return nil, fmt.Errorf("no results in response")
 	}
 
-	return &resp.Results[0], nil
+	// Take the first result and post-process the description so that any
+	// relative links of the form "/event/{ID}/..." are expanded to the
+	// full event URL (event.URL). This helps the frontend render links
+	// correctly when the description contains relative paths.
+	ev := resp.Results[0]
+	if ev.Description != "" && ev.URL != "" {
+		ev.Description = expandEventLinksInHTML(ev.Description, ev.URL, ev.ID)
+	}
+
+	return &ev, nil
 }
 
 func (c *IndicoClient) DoGet(ctx context.Context, path string, query url.Values, out interface{}) error {
@@ -121,6 +131,42 @@ func StringsTrimRightSlash(s string) string {
 		s = s[:len(s)-1]
 	}
 	return s
+}
+
+// expandEventLinksInHTML replaces occurrences of "/event/{eventID}..." with
+// the provided eventURL plus the remainder. It uses a regexp to find any
+// substring that starts with /event/{eventID} and continues until a
+// whitespace, quote, or angle bracket, and preserves the remainder (path,
+// query, fragment).
+func expandEventLinksInHTML(desc string, eventURL string, eventID string) string {
+	if desc == "" || eventURL == "" || eventID == "" {
+		return desc
+	}
+
+	trimmed := strings.TrimRight(eventURL, "/")
+	// Match /event/{eventID} followed by any number of chars that are not
+	// whitespace, single-quote, double-quote, or angle brackets.
+	pattern := regexp.QuoteMeta("/event/"+eventID) + `([^\s"'<>]*)`
+	re := regexp.MustCompile(pattern)
+
+	out := re.ReplaceAllStringFunc(desc, func(m string) string {
+		// m starts with /event/{eventID}
+		prefix := "/event/" + eventID
+		if len(m) <= len(prefix) {
+			return trimmed
+		}
+		remainder := m[len(prefix):]
+		newVal := trimmed
+		if remainder != "" {
+			if strings.HasPrefix(remainder, "/") {
+				newVal += remainder
+			} else {
+				newVal += "/" + remainder
+			}
+		}
+		return newVal
+	})
+	return out
 }
 
 // ExtractAbstractIDsAndCSRFFromFile parses an HTML file and returns two values:
