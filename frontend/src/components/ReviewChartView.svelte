@@ -147,7 +147,7 @@
 
 <div class="p-2 mb-1">
   <!-- Summary stats bar -->
-  <div class="grid grid-cols-3 gap-4 mb-4 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
+  <div class="grid grid-cols-3 gap-4 mb-1 bg-gray-50 dark:bg-gray-800 rounded-lg">
     <div class="text-center">
       <div class="text-2xl font-bold text-blue-600 dark:text-blue-400">
         {chartData.totalReviews}
@@ -169,7 +169,7 @@
   </div>
 
   <!-- Tabs for different visualizations -->
-  <Tabs class="shadow-md rounded-md">
+  <Tabs tabStyle="underline">
     <TabItem open title="By Reviewer">
       <div class="p-0.5">
         {#if reviewerOptions && reviewerOptions.series && reviewerOptions.series.length}
