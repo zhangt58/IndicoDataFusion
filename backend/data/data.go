@@ -479,6 +479,11 @@ func (h *DataSourceHandler) getAbstractsFromAPI(ctx context.Context) ([]indico.A
 		}
 	}
 
+	// Set IndicoURL for each abstract
+	for i := range response.Abstracts {
+		response.Abstracts[i].IndicoURL = fmt.Sprintf("%s/event/%d/abstracts/%d", h.client.BaseURL, h.client.EventID, response.Abstracts[i].ID)
+	}
+
 	return response.Abstracts, nil
 }
 

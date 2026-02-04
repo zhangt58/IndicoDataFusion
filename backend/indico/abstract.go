@@ -66,6 +66,9 @@ type AbstractData struct {
 	Title      string `json:"title"`
 	Content    string `json:"content"`
 
+	// the original URL of the abstract in Indico
+	IndicoURL string `json:"indico_url"`
+
 	// Scoring and Judgment
 	Score           *float64 `json:"score"` // pointer to handle null values
 	Judge           *Judge   `json:"judge"` // pointer to handle null values
