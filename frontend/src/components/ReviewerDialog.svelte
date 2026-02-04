@@ -1,6 +1,5 @@
 <script>
   import { Modal } from 'flowbite-svelte';
-  import { CloseOutline } from 'flowbite-svelte-icons';
   import ReviewerCard from './ReviewerCard.svelte';
   import AffiliationDialog from './AffiliationDialog.svelte';
   import Icon from '@iconify/svelte';
@@ -64,7 +63,7 @@
       class="text-gray-400 bg-transparent hover:bg-gray-200 hover:text-gray-900 rounded-lg text-sm p-1.5 ml-auto inline-flex items-center dark:hover:bg-gray-600 dark:hover:text-white"
       onclick={closeDialog}
     >
-      <CloseOutline class="w-5 h-5" />
+      <Icon icon="mdi:close" class="w-5 h-5" />
     </button>
   </div>
 

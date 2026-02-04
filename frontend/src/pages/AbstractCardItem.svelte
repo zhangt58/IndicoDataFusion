@@ -1,7 +1,5 @@
 <script>
   import { RefreshAbstractByID } from '../../wailsjs/go/main/App';
-  import { ClipboardListOutline } from 'flowbite-svelte-icons';
-  import { UserCircleOutline } from 'flowbite-svelte-icons';
   import { OpenSafeURL } from '../../wailsjs/go/main/App';
   import Icon from '@iconify/svelte';
   import TypeBadge from './TypeBadge.svelte';
@@ -102,7 +100,7 @@
           class="px-2 py-1 text-xs rounded bg-purple-100 dark:bg-purple-900 text-purple-700 dark:text-purple-200 font-semibold flex items-center gap-1"
           title="This abstract is on your review track"
         >
-          <ClipboardListOutline class="w-3 h-3" />
+          <Icon icon="mdi:clipboard-list" class="w-3 h-3" />
           My Review
           <a
             href={abstract.review_url}
@@ -148,7 +146,7 @@
         {#if abstract.submitter.avatar_url}
           <img src={abstract.submitter.avatar_url} alt={`Avatar of ${abstract.submitter.full_name || 'submitter'}`} class="w-6 h-6 rounded-full object-cover" />
         {:else}
-          <UserCircleOutline class="w-6 h-6 text-gray-500 dark:text-gray-400" />
+          <Icon icon="mdi:account-circle" class="w-6 h-6 text-gray-500 dark:text-gray-400" />
         {/if}
         {abstract.submitter.full_name}
       </p>
@@ -228,7 +226,7 @@
           {#if abstract.judge.avatar_url}
             <img src={abstract.judge.avatar_url} alt={`Avatar of ${abstract.judge.full_name || 'judge'}`} class="w-6 h-6 rounded-full object-cover" />
           {:else}
-            <UserCircleOutline class="w-6 h-6 text-gray-500 dark:text-gray-400" />
+            <Icon icon="mdi:account-circle" class="w-6 h-6 text-gray-500 dark:text-gray-400" />
           {/if}
           {abstract.judge.full_name}
         </p>

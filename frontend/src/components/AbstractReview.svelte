@@ -1,14 +1,5 @@
 <script>
-  import {
-    UserCircleOutline,
-    CalendarMonthOutline,
-    MessagesOutline,
-    StarOutline,
-    ArrowUpOutline,
-    ArrowDownOutline,
-    ArrowsRepeatOutline,
-    FileCopyOutline,
-  } from 'flowbite-svelte-icons';
+  import Icon from '@iconify/svelte';
   import AffiliationBadge from './AffiliationBadge.svelte';
   import TrackBadge from '../pages/TrackBadge.svelte';
   import TypeBadge from '../pages/TypeBadge.svelte';
@@ -33,35 +24,35 @@
     switch (action) {
       case 'accept':
         return {
-          icon: ArrowUpOutline,
+          icon: 'mdi:arrow-up',
           class:
             'bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 border-green-300 dark:border-green-700',
           label: 'Accept',
         };
       case 'reject':
         return {
-          icon: ArrowDownOutline,
+          icon: 'mdi:arrow-down',
           class:
             'bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200 border-red-300 dark:border-red-700',
           label: 'Reject',
         };
       case 'change_tracks':
         return {
-          icon: ArrowsRepeatOutline,
+          icon: 'mdi:repeat',
           class:
             'bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 border-blue-300 dark:border-blue-700',
           label: 'Change Tracks',
         };
       case 'mark_as_duplicate':
         return {
-          icon: FileCopyOutline,
+          icon: 'mdi:content-copy',
           class:
             'bg-orange-100 dark:bg-orange-900 text-orange-800 dark:text-orange-200 border-orange-300 dark:border-orange-700',
           label: 'Mark as Duplicate',
         };
       default:
         return {
-          icon: MessagesOutline,
+          icon: 'mdi:message-text',
           class:
             'bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200 border-gray-300 dark:border-gray-600',
           label: action,
@@ -85,7 +76,6 @@
   }
 
   const actionStyle = $derived(review ? getActionStyle(review.proposed_action) : null);
-  const ActionIcon = $derived(actionStyle ? actionStyle.icon : null);
 </script>
 
 {#if review}
@@ -102,7 +92,7 @@
             class="w-8 h-8 rounded-full object-cover shrink-0 mt-1"
           />
         {:else}
-          <UserCircleOutline class="w-8 h-8 text-gray-500 dark:text-gray-400 shrink-0 mt-1" />
+          <Icon icon="mdi:account-circle" class="w-8 h-8 text-gray-500 dark:text-gray-400 shrink-0 mt-1" />
         {/if}
         <div class="flex-1 min-w-0">
           <p class="text-sm font-semibold text-gray-800 dark:text-white">
@@ -122,9 +112,9 @@
       </div>
 
       <!-- Proposed Action Badge -->
-      {#if actionStyle && ActionIcon}
+      {#if actionStyle}
         <div class="flex items-center gap-2 px-2 py-1 rounded-lg border {actionStyle.class}">
-          <ActionIcon class="w-4 h-4" />
+          <Icon icon={actionStyle.icon} class="w-4 h-4" />
           <span class="text-xs font-semibold">{actionStyle.label}</span>
         </div>
       {/if}
@@ -139,12 +129,12 @@
     <!-- Timestamps -->
     <div class="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
       <div class="flex items-center gap-1">
-        <CalendarMonthOutline class="w-4 h-4" />
+        <Icon icon="mdi:calendar" class="w-4 h-4" />
         <span>Created: {formatDate(review.created_dt)}</span>
       </div>
       {#if review.modified_dt}
         <div class="flex items-center gap-1">
-          <CalendarMonthOutline class="w-4 h-4" />
+          <Icon icon="mdi:calendar" class="w-4 h-4" />
           <span>Modified: {formatDate(review.modified_dt)}</span>
         </div>
       {/if}
@@ -154,7 +144,7 @@
     {#if review.comment && review.comment.trim()}
       <div class="bg-gray-50 dark:bg-gray-700 rounded p-2">
         <div class="flex items-center gap-1 mb-1">
-          <MessagesOutline class="w-4 h-4 text-gray-500 dark:text-gray-400" />
+          <Icon icon="mdi:message-text" class="w-4 h-4 text-gray-500 dark:text-gray-400" />
           <span class="text-xs font-semibold text-gray-700 dark:text-gray-300">Comment</span>
         </div>
         <p class="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap wrap-break-word">
@@ -167,7 +157,7 @@
     {#if review.ratings && review.ratings.length > 0}
       <div class="bg-gray-50 dark:bg-gray-700 rounded p-2">
         <div class="flex items-center gap-1 mb-1">
-          <StarOutline class="w-4 h-4 text-yellow-500" />
+          <Icon icon="mdi:star-outline" class="w-4 h-4 text-yellow-500" />
           <span class="text-xs font-semibold text-gray-700 dark:text-gray-300">Ratings</span>
         </div>
         <div class="space-y-1">

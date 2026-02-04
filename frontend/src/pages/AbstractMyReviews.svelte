@@ -1,9 +1,5 @@
 <script>
-  import {
-    ClipboardListOutline,
-    FilterOutline,
-    ChevronUpOutline,
-  } from 'flowbite-svelte-icons';
+  import Icon from '@iconify/svelte';
   import { GetReviewTracks } from '../../wailsjs/go/main/App';
 
   let {
@@ -144,7 +140,7 @@
         class="p-2 hover:bg-sky-300 dark:hover:bg-sky-800 rounded-md transition-colors"
         title="Expand My Reviews"
       >
-        <ClipboardListOutline class="w-5 h-5 text-gray-800 dark:text-gray-100" />
+        <Icon icon="mdi:clipboard-list" class="w-5 h-5 text-gray-800 dark:text-gray-100" />
       </button>
     {:else}
       <!-- Expanded view -->
@@ -158,7 +154,7 @@
           <h3
             class="text-sm font-semibold text-gray-800 dark:text-gray-100 flex items-center gap-2"
           >
-            <ClipboardListOutline class="w-5 h-5" />
+            <Icon icon="mdi:clipboard-list" class="w-5 h-5" />
             My Review Tracks
           </h3>
           <div class="flex items-center gap-1">
@@ -167,7 +163,7 @@
               class="text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 p-1"
               title="Collapse"
             >
-              <ChevronUpOutline class="w-4 h-4" />
+              <Icon icon="mdi:chevron-up" class="w-4 h-4" />
             </button>
             <button
               onclick={close}
@@ -185,7 +181,7 @@
             disabled={loading}
             class="px-3 py-1.5 bg-blue-500 hover:bg-blue-600 disabled:bg-blue-300 text-white rounded text-xs font-medium transition-colors flex items-center gap-1"
           >
-            <FilterOutline class="w-4 h-4" />
+            <Icon icon="mdi:filter" class="w-4 h-4" />
             {loading ? 'Fetching...' : 'Fetch My Reviews'}
           </button>
         </div>

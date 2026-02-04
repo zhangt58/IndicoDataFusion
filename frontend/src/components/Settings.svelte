@@ -1,7 +1,7 @@
 <script>
   import { onMount, onDestroy } from 'svelte';
   import { Modal } from 'flowbite-svelte';
-  import { InfoCircleSolid, WindowSolid, CogOutline, DatabaseSolid } from 'flowbite-svelte-icons';
+  import Icon from '@iconify/svelte';
   import { GetAppInfo, OpenSafeURL } from '../../wailsjs/go/main/App';
   import AboutTab from './AboutTab.svelte';
   import WindowTab from './WindowTab.svelte';
@@ -74,7 +74,7 @@
         : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'}"
       onclick={() => setTab('about')}
     >
-      <InfoCircleSolid class="w-4 h-4" />
+      <Icon icon="mdi:information" class="w-4 h-4" />
       About
     </button>
     <button
@@ -85,7 +85,7 @@
         : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'}"
       onclick={() => setTab('window')}
     >
-      <WindowSolid class="w-4 h-4" />
+      <Icon icon="mdi:window-maximize" class="w-4 h-4" />
       Window
     </button>
     <button
@@ -96,7 +96,7 @@
         : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'}"
       onclick={() => setTab('config')}
     >
-      <CogOutline class="w-4 h-4" />
+      <Icon icon="mdi:cog" class="w-4 h-4" />
       Configuration
     </button>
     <button
@@ -107,7 +107,7 @@
         : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'}"
       onclick={() => setTab('cache')}
     >
-      <DatabaseSolid class="w-4 h-4" />
+      <Icon icon="mdi:database" class="w-4 h-4" />
       Cache
     </button>
   </div>

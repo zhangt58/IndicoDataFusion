@@ -1,7 +1,7 @@
 <script>
   import { RefreshAbstractByID } from '../../wailsjs/go/main/App';
   import { DataTable, DataTableControls } from '@zhangt58/svelte-vtable';
-  import { ClipboardListOutline } from 'flowbite-svelte-icons';
+  import Icon from '@iconify/svelte';
   import TypeBadge from './TypeBadge.svelte';
   import AbstractDetailsDialog from './AbstractDetailsDialog.svelte';
   import TrackDetailsDialog from './TrackDetailsDialog.svelte';
@@ -423,7 +423,7 @@
             <span
               class="px-2 py-1 text-purple-700 dark:text-purple-200 font-medium flex items-center gap-0.5"
               title="This abstract is on your review track">
-            <ClipboardListOutline class="w-3 h-3" />Yes
+            <Icon icon="mdi:clipboard-list" class="w-3 h-3" />Yes
             </span>
           {/if}
         {:else if col.id === 'Title'}

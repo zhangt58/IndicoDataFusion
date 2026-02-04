@@ -6,9 +6,8 @@
     Quit,
     WindowIsMaximised,
   } from '../../wailsjs/runtime/runtime.js';
-  import { MinusOutline, CloseOutline } from 'flowbite-svelte-icons';
-  import iconImage from '../assets/images/icon.png';
   import Icon from '@iconify/svelte';
+  import iconImage from '../assets/images/icon.png';
 
   let isMaximised = $state(false);
 
@@ -85,9 +84,7 @@
       title="Minimize"
       type="button"
     >
-      <MinusOutline
-        class="w-4 h-4 text-gray-600 dark:text-gray-400 group-hover:text-gray-900 dark:group-hover:text-gray-100"
-      />
+      <Icon icon="mdi:minus" class="w-4 h-4 text-gray-600 dark:text-gray-400 group-hover:text-gray-900 dark:group-hover:text-gray-100" />
     </button>
 
     <!-- Maximize/Restore -->
@@ -119,7 +116,7 @@
       title="Close"
       type="button"
     >
-      <CloseOutline class="w-4 h-4 text-gray-600 dark:text-gray-400 group-hover:text-white" />
+      <Icon icon="mdi:close" class="w-4 h-4 text-gray-600 dark:text-gray-400 group-hover:text-white" />
     </button>
   </div>
 </div>
