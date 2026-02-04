@@ -95,7 +95,15 @@
     <!-- Header: Reviewer and Action -->
     <div class="flex justify-between items-start gap-2">
       <div class="flex items-start gap-2 flex-1">
-        <UserCircleOutline class="w-8 h-8 text-gray-500 dark:text-gray-400 shrink-0 mt-1" />
+        {#if review.user && review.user.avatar_url}
+          <img
+            src={review.user.avatar_url}
+            alt={`Avatar of ${review.user.full_name || 'reviewer'}`}
+            class="w-8 h-8 rounded-full object-cover shrink-0 mt-1"
+          />
+        {:else}
+          <UserCircleOutline class="w-8 h-8 text-gray-500 dark:text-gray-400 shrink-0 mt-1" />
+        {/if}
         <div class="flex-1 min-w-0">
           <p class="text-sm font-semibold text-gray-800 dark:text-white">
             {review.user.full_name}

@@ -1,6 +1,7 @@
 <script>
   import { RefreshAbstractByID } from '../../wailsjs/go/main/App';
   import { ClipboardListOutline } from 'flowbite-svelte-icons';
+  import { UserCircleOutline } from 'flowbite-svelte-icons';
   import { OpenSafeURL } from '../../wailsjs/go/main/App';
   import Icon from '@iconify/svelte';
   import TypeBadge from './TypeBadge.svelte';
@@ -143,7 +144,12 @@
   {#if abstract.submitter}
     <div class="mb-3">
       <p class="text-xs font-semibold text-gray-600 dark:text-gray-400">Submitted by:</p>
-      <p class="text-sm text-gray-700 dark:text-gray-300">
+      <p class="text-sm text-gray-700 dark:text-gray-300 flex items-center gap-2">
+        {#if abstract.submitter.avatar_url}
+          <img src={abstract.submitter.avatar_url} alt={`Avatar of ${abstract.submitter.full_name || 'submitter'}`} class="w-6 h-6 rounded-full object-cover" />
+        {:else}
+          <UserCircleOutline class="w-6 h-6 text-gray-500 dark:text-gray-400" />
+        {/if}
         {abstract.submitter.full_name}
       </p>
       {#if abstract.submitter.affiliation}
@@ -218,7 +224,12 @@
     {#if abstract.judge}
       <div>
         <p class="text-xs font-semibold text-gray-600 dark:text-gray-400">Judge:</p>
-        <p class="text-sm text-gray-700 dark:text-gray-300">
+        <p class="text-sm text-gray-700 dark:text-gray-300 flex items-center gap-2">
+          {#if abstract.judge.avatar_url}
+            <img src={abstract.judge.avatar_url} alt={`Avatar of ${abstract.judge.full_name || 'judge'}`} class="w-6 h-6 rounded-full object-cover" />
+          {:else}
+            <UserCircleOutline class="w-6 h-6 text-gray-500 dark:text-gray-400" />
+          {/if}
           {abstract.judge.full_name}
         </p>
         {#if abstract.judge.affiliation}
