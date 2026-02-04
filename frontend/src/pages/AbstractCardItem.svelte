@@ -289,7 +289,7 @@
   {/if}
 
   <!-- Metadata -->
-  <div class="mt-3 pt-3 border-t border-gray-200 dark:border-gray-600 text-xs text-gray-500">
+  <div class="mt-2 pt-3 border-t border-gray-200 dark:border-gray-600 text-xs text-gray-500">
     <div class="flex gap-4 items-center">
       <span>Modified: {abstract.modified_dt}</span>
       {#if abstract.custom_fields && abstract.custom_fields.length > 0}
@@ -306,6 +306,28 @@
       {/if}
     </div>
   </div>
+
+  <!-- Link to Indico -->
+  {#if abstract.indico_url}
+    <div class="mt-2 pt-3 border-t border-gray-200 dark:border-gray-600">
+      <a
+         href={abstract.indico_url}
+         onclick={async (e) => {
+          e.preventDefault();
+          if (!abstract.indico_url) return;
+          try {
+            await OpenSafeURL(abstract.indico_url);
+          } catch (e) {
+            console.error('BrowserOpenURL failed', e);
+          }
+        }}
+          class="text-sm text-blue-600 dark:text-blue-400 hover:underline"
+          title="Open abstract link in web-browser"
+      >
+        View on Indico →
+      </a>
+    </div>
+  {/if}
 
   <!-- Raw JSON (collapsible) -->
   <div class="mt-2">
