@@ -228,7 +228,7 @@ export function transformAbstractToTableItem(abstract) {
     AuthorsTooltip: getAllAuthorsTooltip(abstract.persons), // All authors for tooltip
     FirstPriority: abstract.first_priority ?? 0,
     SecondPriority: abstract.second_priority ?? 0,
-    IsMyReview: (abstract.is_my_review === true) ? 'Yes' : 'No',
+    IsMyReview: abstract.is_my_review === true ? 'Yes' : 'No',
   };
 }
 

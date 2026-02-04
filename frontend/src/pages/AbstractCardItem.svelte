@@ -1,29 +1,22 @@
 <script>
   import { RefreshAbstractByID } from '../../wailsjs/go/main/App';
-  import { ClipboardListOutline } from 'flowbite-svelte-icons';
+  import { OpenSafeURL } from '../../wailsjs/go/main/App';
+  import Icon from '@iconify/svelte';
   import TypeBadge from './TypeBadge.svelte';
   import TrackBadge from './TrackBadge.svelte';
   import StateBadge from './StateBadge.svelte';
   import AffiliationDialog from '../components/AffiliationDialog.svelte';
   import AffiliationBadge from '../components/AffiliationBadge.svelte';
   import AbstractReviewsDialog from '../components/AbstractReviewsDialog.svelte';
-  import { getTrackLabel } from './AbstractTableItem.js';
+  import RawJsonDialog from '../components/RawJsonDialog.svelte';
 
-  let {
-    abstract = $bindable({}),
-    onRefresh = null,
-    isMyReview = false
-  } = $props();
+  let { abstract = $bindable({}), onRefresh = null, isMyReview = false } = $props();
 
   // Dialog state
   let showAffiliationDialog = $state(false);
   let selectedAffiliation = $state(null);
   let showReviewsDialog = $state(false);
-  // Add state to control the raw JSON collapsible
-  let showRawJson = $state(false);
-
-  // copied-state for copy button
-  let showCopied = $state(false);
+  let showRawJsonDialog = $state(false);
 
   // refresh state
   let isRefreshing = $state(false);
@@ -63,26 +56,10 @@
   // Use precomputed aggregated ratings from backend
   const firstPriorityTotal = $derived(abstract.first_priority || 0);
   const secondPriorityTotal = $derived(abstract.second_priority || 0);
-
-  async function copyRawJson() {
-    // prevent details toggle (additional precaution)
-    try {
-      const text = JSON.stringify(abstract, null, 2);
-
-      if (navigator && navigator.clipboard && navigator.clipboard.writeText) {
-        await navigator.clipboard.writeText(text);
-        showCopied = true;
-        setTimeout(() => (showCopied = false), 2000);
-      }
-    } catch (err) {
-      // best-effort: inform user
-      alert('Copy failed: ' + (err && err.message ? err.message : String(err)));
-    }
-  }
 </script>
 
 <div
-  class="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 border border-gray-200 dark:border-gray-700"
+  class="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 py-4 border border-gray-200 dark:border-gray-700"
 >
   <!-- Title and Status -->
   <div class="flex justify-between items-start mb-3">
@@ -99,8 +76,23 @@
           class="px-2 py-1 text-xs rounded bg-purple-100 dark:bg-purple-900 text-purple-700 dark:text-purple-200 font-semibold flex items-center gap-1"
           title="This abstract is on your review track"
         >
-          <ClipboardListOutline class="w-3 h-3" />
+          <Icon icon="mdi:clipboard-list" class="w-3 h-3" />
           My Review
+          <a
+            href={abstract.review_url}
+            onclick={() => OpenSafeURL(abstract.review_url)}
+            target="_blank"
+            rel="noopener noreferrer"
+            class="ml-1 inline-flex items-center"
+            title="Open review page"
+            aria-label="Open review page"
+          >
+            <Icon
+              icon="mdi:open-in-new"
+              class="w-3 h-3 text-blue-600 dark:text-blue-300"
+              aria-hidden="true"
+            />
+          </a>
         </span>
       {/if}
       <button
@@ -130,7 +122,16 @@
   {#if abstract.submitter}
     <div class="mb-3">
       <p class="text-xs font-semibold text-gray-600 dark:text-gray-400">Submitted by:</p>
-      <p class="text-sm text-gray-700 dark:text-gray-300">
+      <p class="text-sm text-gray-700 dark:text-gray-300 flex items-center gap-2">
+        {#if abstract.submitter.avatar_url}
+          <img
+            src={abstract.submitter.avatar_url}
+            alt={`Avatar of ${abstract.submitter.full_name || 'submitter'}`}
+            class="w-6 h-6 rounded-full object-cover"
+          />
+        {:else}
+          <Icon icon="mdi:account-circle" class="w-6 h-6 text-gray-500 dark:text-gray-400" />
+        {/if}
         {abstract.submitter.full_name}
       </p>
       {#if abstract.submitter.affiliation}
@@ -174,7 +175,10 @@
   {#if abstract.accepted_track}
     <div class="mb-3">
       <p class="text-xs font-semibold text-gray-600 dark:text-gray-400">Accepted track:</p>
-      <TrackBadge text={abstract.accepted_track.title ?? abstract.accepted_track.code} type="accepted" />
+      <TrackBadge
+        text={abstract.accepted_track.title ?? abstract.accepted_track.code}
+        type="accepted"
+      />
     </div>
   {/if}
 
@@ -205,7 +209,16 @@
     {#if abstract.judge}
       <div>
         <p class="text-xs font-semibold text-gray-600 dark:text-gray-400">Judge:</p>
-        <p class="text-sm text-gray-700 dark:text-gray-300">
+        <p class="text-sm text-gray-700 dark:text-gray-300 flex items-center gap-2">
+          {#if abstract.judge.avatar_url}
+            <img
+              src={abstract.judge.avatar_url}
+              alt={`Avatar of ${abstract.judge.full_name || 'judge'}`}
+              class="w-6 h-6 rounded-full object-cover"
+            />
+          {:else}
+            <Icon icon="mdi:account-circle" class="w-6 h-6 text-gray-500 dark:text-gray-400" />
+          {/if}
           {abstract.judge.full_name}
         </p>
         {#if abstract.judge.affiliation}
@@ -277,7 +290,7 @@
   {/if}
 
   <!-- Metadata -->
-  <div class="mt-3 pt-3 border-t border-gray-200 dark:border-gray-600 text-xs text-gray-500">
+  <div class="mt-2 pt-3 border-t border-gray-200 dark:border-gray-600 text-xs text-gray-500">
     <div class="flex gap-4 items-center">
       <span>Modified: {abstract.modified_dt}</span>
       {#if abstract.custom_fields && abstract.custom_fields.length > 0}
@@ -295,35 +308,43 @@
     </div>
   </div>
 
-  <!-- Raw JSON (collapsible) -->
-  <div class="mt-2">
-    <details class="bg-gray-50 dark:bg-gray-700 rounded p-1" bind:open={showRawJson}>
-      <summary
-        class="cursor-pointer text-sm font-semibold text-gray-700 dark:text-gray-300 flex justify-between items-center"
+  <!-- Link to Indico (with View Raw JSON button aligned to the right) -->
+  {#if abstract.indico_url}
+    <div
+      class="mt-2 pt-3 border-t border-gray-200 dark:border-gray-600 flex items-center justify-between"
+    >
+      <a
+        href={abstract.indico_url}
+        onclick={async (e) => {
+          e.preventDefault();
+          if (!abstract.indico_url) return;
+          try {
+            await OpenSafeURL(abstract.indico_url);
+          } catch (e) {
+            console.error('BrowserOpenURL failed', e);
+          }
+        }}
+        class="text-sm text-blue-600 dark:text-blue-400 hover:underline"
+        title="Open abstract link in web-browser"
       >
-        <span>Raw abstract JSON</span>
-        <span class="inline-flex items-center gap-1">
-          <span class="relative inline-flex items-center">
-            <button
-              onclick={copyRawJson}
-              class="text-xs px-1 py-1 rounded bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 transition-colors duration-150 hover:bg-gray-100 hover:text-gray-900 dark:hover:bg-gray-900 dark:hover:text-white focus:outline-none focus:ring-2 focus:ring-indigo-300 dark:focus:ring-indigo-600"
-              aria-label="Copy raw JSON to clipboard"
-              aria-describedby="copy-tooltip"
-              title="Copy JSON"
-            >
-              {showCopied ? 'Copied' : 'Copy'}
-            </button>
-          </span>
-          <span class="text-xs text-gray-500">{showRawJson ? 'Hide' : 'Show'}</span>
-        </span>
-      </summary>
-      <pre
-        class="mt-1 overflow-auto text-xs text-gray-700 dark:text-gray-300"
-        style="max-height:360px;white-space:pre-wrap;">
-{JSON.stringify(abstract, null, 2)}
-    </pre>
-    </details>
-  </div>
+        View on Indico →
+      </a>
+
+      <button
+        type="button"
+        class="text-sm text-blue-600 dark:text-blue-400 hover:underline"
+        onclick={() => (showRawJsonDialog = true)}
+        title="View raw JSON"
+      >
+        View Raw JSON
+      </button>
+    </div>
+    <RawJsonDialog
+      bind:open={showRawJsonDialog}
+      data={abstract}
+      title={`Abstract [${abstract.id}]`}
+    />
+  {/if}
 </div>
 
 <!-- Affiliation Details Dialog -->

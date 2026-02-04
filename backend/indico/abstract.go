@@ -66,6 +66,9 @@ type AbstractData struct {
 	Title      string `json:"title"`
 	Content    string `json:"content"`
 
+	// the original URL of the abstract in Indico
+	IndicoURL string `json:"indico_url"`
+
 	// Scoring and Judgment
 	Score           *float64 `json:"score"` // pointer to handle null values
 	Judge           *Judge   `json:"judge"` // pointer to handle null values
@@ -98,7 +101,8 @@ type AbstractData struct {
 	Files             []interface{} `json:"files"` // generic for now
 
 	// if this abstract to be reviewed by the current user
-	IsMyReview bool `json:"is_my_review"`
+	IsMyReview bool   `json:"is_my_review"`
+	ReviewURL  string `json:"review_url"`
 
 	// Aggregated Ratings (computed fields for frontend convenience)
 	FirstPriority  float64 `json:"first_priority"`

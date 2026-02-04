@@ -4,10 +4,9 @@
   import { EventsOn, EventsOff } from '../../wailsjs/runtime/runtime';
   import { convertDateTimeToLocal } from '../utils/dateUtils.js';
   import { createCachePage } from '../utils/cacheUtils.js';
-  import { RefreshOutline } from 'flowbite-svelte-icons';
+  import Icon from '@iconify/svelte';
   import LoadErrorHint from './LoadErrorHint.svelte';
   import AttachmentGrid from '../components/AttachmentGrid.svelte';
-  import Icon from '@iconify/svelte';
 
   let loading = $state(false);
   let refreshing = $state(false);
@@ -128,7 +127,9 @@
 {:else if eventInfo}
   <div class="max-w-full mx-auto mt-8 flex flex-col" style="height:calc(100vh - 9rem);">
     <!-- Event Header -->
-    <div class="bg-linear-to-r from-emerald-600 to-teal-500 dark:from-emerald-900 dark:to-emerald-700 rounded-t-lg p-5 text-white">
+    <div
+      class="bg-linear-to-r from-emerald-600 to-teal-500 dark:from-emerald-900 dark:to-emerald-700 rounded-t-lg p-5 text-white"
+    >
       <div class="flex items-center justify-between mb-1">
         <div class="flex items-center gap-2">
           <span class="px-3 py-1 bg-white/20 rounded-md shadown-md text-sm font-medium">
@@ -159,7 +160,10 @@
               class="p-2 rounded-lg bg-white/20 hover:bg-white/30 transition-colors disabled:opacity-50"
               title={cacheExpired ? 'Cache expired - Click to refresh' : 'Refresh from API'}
             >
-              <RefreshOutline class={`shrink-0 h-6 w-6 ${refreshing ? 'animate-spin' : ''}`} />
+              <Icon
+                icon="mdi:refresh"
+                class={`shrink-0 h-6 w-6 ${refreshing ? 'animate-spin' : ''}`}
+              />
             </button>
             {#if cacheExpired && !refreshing}
               <span class="absolute -top-1 -right-1 flex h-3 w-3">
@@ -192,10 +196,11 @@
               <button
                 class="ml-2 inline-flex items-center cursor-pointer select-none px-2 py-0.5 text-xs font-medium rounded
                   {showLocal
-                    ? 'bg-indigo-600 text-white hover:bg-indigo-700'
-                    : 'bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 hover:bg-gray-300 dark:hover:bg-gray-600'
-                }"
-                title={showLocal ? 'Showing in local timezone' : 'Show dates in your local timezone'}
+                  ? 'bg-indigo-600 text-white hover:bg-indigo-700'
+                  : 'bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 hover:bg-gray-300 dark:hover:bg-gray-600'}"
+                title={showLocal
+                  ? 'Showing in local timezone'
+                  : 'Show dates in your local timezone'}
                 onclick={() => (showLocal = !showLocal)}
               >
                 Local
@@ -240,7 +245,6 @@
           </div>
         </div>
       {/if}
-
     </div>
 
     <!-- Materials & Attachments -->
@@ -257,32 +261,32 @@
 
           {#each eventInfo.folders as folder}
             {#if folder.attachments && folder.attachments.length > 0}
-            <div class="mb-2 last:mb-0">
-              <div class="flex items-center gap-2 mb-1">
-                <Icon icon="mdi:folder" class="w-4 h-4 text-amber-600 dark:text-amber-400" />
-                <h3 class="text-base font-medium text-gray-700 dark:text-gray-300">
-                  {folder.title || 'Attachments'}
-                </h3>
-                {#if folder.default_folder}
-                  <span
-                    class="px-2 py-0.5 text-xs font-medium bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 rounded"
-                  >
-                    Default
-                  </span>
+              <div class="mb-2 last:mb-0">
+                <div class="flex items-center gap-2 mb-1">
+                  <Icon icon="mdi:folder" class="w-4 h-4 text-amber-600 dark:text-amber-400" />
+                  <h3 class="text-base font-medium text-gray-700 dark:text-gray-300">
+                    {folder.title || 'Attachments'}
+                  </h3>
+                  {#if folder.default_folder}
+                    <span
+                      class="px-2 py-0.5 text-xs font-medium bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 rounded"
+                    >
+                      Default
+                    </span>
+                  {/if}
+                  {#if folder.is_protected}
+                    <span title="Protected">
+                      <Icon icon="mdi:lock" class="w-4 h-4 text-red-600 dark:text-red-400" />
+                    </span>
+                  {/if}
+                </div>
+
+                {#if folder.description}
+                  <p class="text-sm text-gray-600 dark:text-gray-400 mb-1">{folder.description}</p>
                 {/if}
-                {#if folder.is_protected}
-                  <span title="Protected">
-                    <Icon icon="mdi:lock" class="w-4 h-4 text-red-600 dark:text-red-400" />
-                  </span>
-                {/if}
+
+                <AttachmentGrid attachments={folder.attachments} dedupe={true} />
               </div>
-
-              {#if folder.description}
-                <p class="text-sm text-gray-600 dark:text-gray-400 mb-1">{folder.description}</p>
-              {/if}
-
-              <AttachmentGrid attachments={folder.attachments} dedupe={true} />
-            </div>
             {/if}
           {/each}
         </div>

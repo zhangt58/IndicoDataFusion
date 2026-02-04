@@ -467,7 +467,7 @@
         {:else if col.id === 'Attachments'}
           {#if item.Attachments && item.Attachments.length > 0}
             <div class="flex gap-1 items-center">
-              {#each item.Attachments.slice(0,3) as att}
+              {#each item.Attachments.slice(0, 3) as att}
                 {@const fileInfo = getAttachmentIcon(att)}
                 <button
                   class="p-1 rounded-md hover:bg-gray-300 dark:hover:bg-gray-200 cursor-pointer shadow-md dark:shadow-white/30"

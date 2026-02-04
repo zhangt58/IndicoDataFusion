@@ -475,6 +475,36 @@ func (h *DataSourceHandler) getAbstractsFromAPI(ctx context.Context) ([]indico.A
 		// Mark abstracts that are in my review list
 		for i := range response.Abstracts {
 			response.Abstracts[i].IsMyReview = myReviewIDsSet[response.Abstracts[i].FriendlyID]
+			response.Abstracts[i].ReviewURL = fmt.Sprintf("%s/event/%d/abstracts/%d", h.client.BaseURL, h.client.EventID, response.Abstracts[i].ID)
+		}
+	}
+
+	// Set IndicoURL for each abstract
+	for i := range response.Abstracts {
+		response.Abstracts[i].IndicoURL = fmt.Sprintf("%s/event/%d/abstracts/%d", h.client.BaseURL, h.client.EventID, response.Abstracts[i].ID)
+	}
+
+	// Ensure reviewer avatar URLs are absolute by prefixing the client's BaseURL
+	for i := range response.Abstracts {
+		for j := range response.Abstracts[i].Reviews {
+			av := response.Abstracts[i].Reviews[j].User.AvatarURL
+			if av != "" && !strings.HasPrefix(av, "http") {
+				response.Abstracts[i].Reviews[j].User.AvatarURL = h.client.BaseURL + av
+			}
+		}
+		// Submitter avatar
+		if response.Abstracts[i].Submitter != nil {
+			sav := response.Abstracts[i].Submitter.AvatarURL
+			if sav != "" && !strings.HasPrefix(sav, "http") {
+				response.Abstracts[i].Submitter.AvatarURL = h.client.BaseURL + sav
+			}
+		}
+		// Judge avatar
+		if response.Abstracts[i].Judge != nil {
+			jav := response.Abstracts[i].Judge.AvatarURL
+			if jav != "" && !strings.HasPrefix(jav, "http") {
+				response.Abstracts[i].Judge.AvatarURL = h.client.BaseURL + jav
+			}
 		}
 	}
 
@@ -710,6 +740,27 @@ func (h *DataSourceHandler) RefreshAbstractByID(ctx context.Context, id int) (*i
 	myReviewIDsSet := getReviewIDsSet(h, ctx)
 	if myReviewIDsSet != nil {
 		abstract.IsMyReview = myReviewIDsSet[abstract.FriendlyID]
+		abstract.ReviewURL = fmt.Sprintf("%s/event/%d/abstracts/%d", h.client.BaseURL, h.client.EventID, abstract.ID)
+	}
+
+	// Ensure avatar URLs are absolute for single-abstract refresh as well
+	for j := range abstract.Reviews {
+		av := abstract.Reviews[j].User.AvatarURL
+		if av != "" && !strings.HasPrefix(av, "http") {
+			abstract.Reviews[j].User.AvatarURL = h.client.BaseURL + av
+		}
+	}
+	if abstract.Submitter != nil {
+		sav := abstract.Submitter.AvatarURL
+		if sav != "" && !strings.HasPrefix(sav, "http") {
+			abstract.Submitter.AvatarURL = h.client.BaseURL + sav
+		}
+	}
+	if abstract.Judge != nil {
+		jav := abstract.Judge.AvatarURL
+		if jav != "" && !strings.HasPrefix(jav, "http") {
+			abstract.Judge.AvatarURL = h.client.BaseURL + jav
+		}
 	}
 
 	// Update the cache if available

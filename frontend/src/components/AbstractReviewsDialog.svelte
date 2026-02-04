@@ -1,11 +1,6 @@
 <script>
   import { Modal } from 'flowbite-svelte';
-  import {
-    CloseOutline,
-    MessagesOutline,
-    ChevronLeftOutline,
-    ChevronRightOutline,
-  } from 'flowbite-svelte-icons';
+  import Icon from '@iconify/svelte';
   import AbstractReview from '../components/AbstractReview.svelte';
   import { onMount, onDestroy } from 'svelte';
 
@@ -77,7 +72,7 @@
 <Modal bind:open size="lg" dismissable={false}>
   <div class="flex justify-between items-start mb-2">
     <div class="flex items-center gap-2 flex-1 min-w-0">
-      <MessagesOutline class="w-6 h-6 text-blue-600 dark:text-blue-400 shrink-0" />
+      <Icon icon="mdi:message-text" class="w-7 h-7 text-blue-600 dark:text-blue-400 shrink-0" />
       <div class="flex-1 min-w-0">
         <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Abstract Reviews</h3>
         {#if abstractTitle}
@@ -92,7 +87,7 @@
       class="text-gray-400 bg-transparent hover:bg-gray-200 hover:text-gray-900 rounded-lg text-sm p-1.5 ml-2 inline-flex items-center dark:hover:bg-gray-600 dark:hover:text-white shrink-0"
       onclick={closeDialog}
     >
-      <CloseOutline class="w-5 h-5" />
+      <Icon icon="mdi:close" class="w-5 h-5" />
     </button>
   </div>
 
@@ -131,7 +126,7 @@
         onclick={goToPrevious}
         disabled={!hasPrevious}
       >
-        <ChevronLeftOutline class="w-4 h-4" />
+        <Icon icon="mdi:chevron-left" class="w-4 h-4" />
         Previous
       </button>
       <span class="text-sm font-semibold text-gray-700 dark:text-gray-300"
@@ -144,7 +139,7 @@
         disabled={!hasNext}
       >
         Next
-        <ChevronRightOutline class="w-4 h-4" />
+        <Icon icon="mdi:chevron-right" class="w-4 h-4" />
       </button>
     </div>
 
@@ -171,7 +166,10 @@
     {/if}
   {:else}
     <div class="text-center py-8">
-      <MessagesOutline class="w-16 h-16 mx-auto text-gray-300 dark:text-gray-600 mb-3" />
+      <Icon
+        icon="mdi:message-text"
+        class="w-16 h-16 mx-auto text-gray-300 dark:text-gray-600 mb-3"
+      />
       <p class="text-gray-500 dark:text-gray-400">No reviews available for this abstract.</p>
     </div>
   {/if}

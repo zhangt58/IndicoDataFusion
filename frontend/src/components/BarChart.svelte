@@ -2,11 +2,19 @@
   import { onMount, onDestroy } from 'svelte';
 
   // Props
-  let { labels = [], series = [], colors = [], title = 'Institutes', height = '40vh' } = $props();
+  let {
+    labels = [],
+    series = [],
+    colors = [],
+    title = 'Institutes',
+    height = '40vh',
+    onItemClick = null,
+  } = $props();
 
   let container = $state(null);
   let chart = null;
   let echarts = null;
+  let _clickHandler = null;
 
   function buildOption() {
     const total = (series || []).reduce((a, b) => a + (b || 0), 0);
@@ -59,6 +67,7 @@
             return v.length > 50 ? v.slice(0, 47) + '...' : v;
           },
         },
+        triggerEvent: !!onItemClick,
       },
       dataZoom,
       series: [
@@ -102,11 +111,28 @@
     if (!container) return;
     chart = echarts.init(container);
     setOptions();
+    // register click handler if provided
+    if (onItemClick && chart && typeof chart.on === 'function') {
+      _clickHandler = function (params) {
+        try {
+          onItemClick(params);
+        } catch (err) {
+          console.error('Error in onItemClick handler:', err);
+        }
+      };
+      chart.on('click', _clickHandler);
+    }
     window.addEventListener('resize', resize);
   });
 
   onDestroy(() => {
     window.removeEventListener('resize', resize);
+    if (chart) {
+      if (_clickHandler && typeof chart.off === 'function') {
+        chart.off('click', _clickHandler);
+        _clickHandler = null;
+      }
+    }
     if (chart) {
       chart.dispose();
       chart = null;

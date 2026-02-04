@@ -1,13 +1,9 @@
 <script>
   import { Modal } from 'flowbite-svelte';
-  import { CloseOutline } from 'flowbite-svelte-icons';
+  import Icon from '@iconify/svelte';
   import AbstractCardItem from './AbstractCardItem.svelte';
 
-  let {
-    open = $bindable(false),
-    abstract = $bindable(null),
-    isMyReview = false
-  } = $props();
+  let { open = $bindable(false), abstract = $bindable(null), isMyReview = false } = $props();
 
   // Close dialog
   function closeDialog() {
@@ -29,10 +25,10 @@
       class="text-gray-400 bg-transparent hover:bg-gray-200 hover:text-gray-900 rounded-lg text-sm p-1.5 ml-auto inline-flex items-center dark:hover:bg-gray-600 dark:hover:text-white"
       onclick={closeDialog}
     >
-      <CloseOutline class="shrink-0 h-6 w-6" />
+      <Icon icon="mdi:close" class="shrink-0 h-6 w-6" />
     </button>
   </div>
   {#if abstract}
-    <AbstractCardItem bind:abstract onRefresh={handleRefresh} isMyReview={isMyReview} />
+    <AbstractCardItem bind:abstract onRefresh={handleRefresh} {isMyReview} />
   {/if}
 </Modal>

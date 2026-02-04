@@ -1,11 +1,6 @@
 <script>
   import { Modal } from 'flowbite-svelte';
-  import {
-    CloseOutline,
-    BuildingOutline,
-    GlobeOutline,
-    MapPinOutline,
-  } from 'flowbite-svelte-icons';
+  import Icon from '@iconify/svelte';
 
   let { open = $bindable(false), affiliation = null } = $props();
 
@@ -39,7 +34,7 @@
 <Modal bind:open size="md" dismissable={false} class="max-w-xl mx-auto">
   <div class="flex justify-between items-start mb-4">
     <div class="flex items-center gap-2">
-      <BuildingOutline class="w-6 h-6 text-blue-600 dark:text-blue-400" />
+      <Icon icon="mdi:building" class="w-6 h-6 text-blue-600 dark:text-blue-400" />
       <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Affiliation Details</h3>
     </div>
     <button
@@ -47,7 +42,7 @@
       class="text-gray-400 bg-transparent hover:bg-gray-200 hover:text-gray-900 rounded-lg text-sm p-1.5 ml-auto inline-flex items-center dark:hover:bg-gray-600 dark:hover:text-white"
       onclick={closeDialog}
     >
-      <CloseOutline class="w-5 h-5" />
+      <Icon icon="mdi:close" class="w-5 h-5" />
     </button>
   </div>
 
@@ -66,7 +61,10 @@
       <!-- Location Information -->
       {#if affiliation.city || affiliation.country_name}
         <div class="flex items-start gap-3">
-          <MapPinOutline class="w-5 h-5 text-gray-500 dark:text-gray-400 mt-0.5 shrink-0" />
+          <Icon
+            icon="mdi:map-marker"
+            class="w-5 h-5 text-gray-500 dark:text-gray-400 mt-0.5 shrink-0"
+          />
           <div class="flex-1">
             <p class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">Location</p>
             {#if affiliation.city}
@@ -92,7 +90,7 @@
       <!-- Street Address -->
       {#if affiliation.street}
         <div class="flex items-start gap-3">
-          <GlobeOutline class="w-5 h-5 text-gray-500 dark:text-gray-400 mt-0.5 shrink-0" />
+          <Icon icon="mdi:earth" class="w-5 h-5 text-gray-500 dark:text-gray-400 mt-0.5 shrink-0" />
           <div class="flex-1">
             <p class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">Address</p>
             <p class="text-sm text-gray-600 dark:text-gray-400">{affiliation.street}</p>

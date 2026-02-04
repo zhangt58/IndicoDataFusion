@@ -79,9 +79,7 @@ export function convertDateTimeToLocal(date, time, tz) {
     const tzMinute = parseInt(map.minute, 10);
     const tzSecond = parseInt(map.second, 10);
 
-    if (
-      [tzYear, tzMonth, tzDay, tzHour, tzMinute, tzSecond].some((n) => Number.isNaN(n))
-    ) {
+    if ([tzYear, tzMonth, tzDay, tzHour, tzMinute, tzSecond].some((n) => Number.isNaN(n))) {
       throw new Error('Failed to obtain timezone parts');
     }
 

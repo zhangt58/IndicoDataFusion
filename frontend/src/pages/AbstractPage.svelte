@@ -1,12 +1,6 @@
 <script>
   import { onMount, onDestroy } from 'svelte';
-  import {
-    GridOutline,
-    CreditCardOutline,
-    RefreshOutline,
-    ChartOutline,
-    ClipboardListOutline,
-  } from 'flowbite-svelte-icons';
+  import Icon from '@iconify/svelte';
   import { GetAbstracts, IsTestMode, GetCacheStats } from '../../wailsjs/go/main/App';
   import { EventsOn, EventsOff } from '../../wailsjs/runtime/runtime';
   import { createCachePage } from '../utils/cacheUtils.js';
@@ -128,7 +122,10 @@
             class="p-1.5 rounded transition-colors hover:bg-sky-100 disabled:opacity-50"
             title={cacheExpired ? 'Cache expired - Click to refresh' : 'Refresh from API'}
           >
-            <RefreshOutline class={`shrink-0 h-6 w-6 ${refreshing ? 'animate-spin' : ''}`} />
+            <Icon
+              icon="mdi:refresh"
+              class={`shrink-0 h-6 w-6 ${refreshing ? 'animate-spin' : ''}`}
+            />
           </button>
           {#if cacheExpired && !refreshing}
             <span class="absolute -top-1 -right-1 flex h-3 w-3">
@@ -150,7 +147,7 @@
           : 'hover:bg-sky-100'}"
         title="Card View"
       >
-        <CreditCardOutline class="shrink-0 h-6 w-6" />
+        <Icon icon="mdi:credit-card" class="shrink-0 h-6 w-6" />
       </button>
       <button
         onclick={() => (viewMode = 'table')}
@@ -159,7 +156,7 @@
           : 'hover:bg-sky-100'}"
         title="Table View"
       >
-        <GridOutline class="shrink-0 h-6 w-6" />
+        <Icon icon="mdi:grid" class="shrink-0 h-6 w-6" />
       </button>
       <button
         onclick={() => (viewMode = 'chart')}
@@ -170,7 +167,7 @@
         aria-label="Chart View"
         disabled={loading || abstractData.length === 0}
       >
-        <ChartOutline class="shrink-0 h-6 w-6" />
+        <Icon icon="mdi:chart-bar" class="shrink-0 h-6 w-6" />
       </button>
       <button
         bind:this={reviewButton}
@@ -181,7 +178,7 @@
         title="My Reviews"
         aria-label="My Reviews"
       >
-        <ClipboardListOutline class="shrink-0 h-6 w-6" />
+        <Icon icon="mdi:clipboard-list" class="shrink-0 h-6 w-6" />
       </button>
     </div>
   </div>
@@ -198,10 +195,7 @@
               mt-8 mb-4 h-[calc(100vh-9rem)]"
   >
     {#if viewMode === 'table'}
-      <AbstractTableView
-        bind:abstractData
-        selectedReviewTrackID={selectedReviewTrackID}
-      />
+      <AbstractTableView bind:abstractData {selectedReviewTrackID} />
     {:else if viewMode === 'chart'}
       {#if abstractData && abstractData.length > 0}
         <AbstractChartView {abstractData} />

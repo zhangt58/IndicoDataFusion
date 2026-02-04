@@ -23,7 +23,9 @@
         }
 
         // show original timezone/wall-clock by default
-        return dateInfo.tz ? `${dateInfo.date} ${dateInfo.time} (${dateInfo.tz})` : `${dateInfo.date} ${dateInfo.time}`;
+        return dateInfo.tz
+          ? `${dateInfo.date} ${dateInfo.time} (${dateInfo.tz})`
+          : `${dateInfo.date} ${dateInfo.time}`;
       } catch (e) {
         console.warn('formatDateInfo conversion failed', e);
       }
@@ -105,16 +107,19 @@
           <button
             class="ml-2 inline-flex items-center cursor-pointer select-none px-2 py-0.5 text-xs font-medium rounded
               {showStartLocal
-                ? 'bg-indigo-600 text-white hover:bg-indigo-700'
-                : 'bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 hover:bg-gray-300 dark:hover:bg-gray-600'
-              }"
-            title={showStartLocal ? 'Showing in local timezone' : 'Show start time in your local timezone'}
+              ? 'bg-indigo-600 text-white hover:bg-indigo-700'
+              : 'bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 hover:bg-gray-300 dark:hover:bg-gray-600'}"
+            title={showStartLocal
+              ? 'Showing in local timezone'
+              : 'Show start time in your local timezone'}
             onclick={() => (showStartLocal = !showStartLocal)}
           >
             Local
           </button>
         </div>
-        <p class="text-gray-700 dark:text-gray-300">{formatDateInfo(contribution.startDate, showStartLocal)}</p>
+        <p class="text-gray-700 dark:text-gray-300">
+          {formatDateInfo(contribution.startDate, showStartLocal)}
+        </p>
       </div>
     {/if}
 
@@ -125,16 +130,19 @@
           <button
             class="ml-2 inline-flex items-center cursor-pointer select-none px-2 py-0.5 text-xs font-medium rounded
               {showEndLocal
-                ? 'bg-indigo-600 text-white hover:bg-indigo-700'
-                : 'bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 hover:bg-gray-300 dark:hover:bg-gray-600'
-              }"
-            title={showEndLocal ? 'Showing in local timezone' : 'Show end time in your local timezone'}
+              ? 'bg-indigo-600 text-white hover:bg-indigo-700'
+              : 'bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 hover:bg-gray-300 dark:hover:bg-gray-600'}"
+            title={showEndLocal
+              ? 'Showing in local timezone'
+              : 'Show end time in your local timezone'}
             onclick={() => (showEndLocal = !showEndLocal)}
           >
             Local
           </button>
         </div>
-        <p class="text-gray-700 dark:text-gray-300">{formatDateInfo(contribution.endDate, showEndLocal)}</p>
+        <p class="text-gray-700 dark:text-gray-300">
+          {formatDateInfo(contribution.endDate, showEndLocal)}
+        </p>
       </div>
     {/if}
 
@@ -267,7 +275,9 @@
               {folder.title || 'Attachments'}
             </h3>
             {#if folder.default_folder}
-              <span class="px-2 py-0.5 text-xs font-medium bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 rounded">
+              <span
+                class="px-2 py-0.5 text-xs font-medium bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 rounded"
+              >
                 Default
               </span>
             {/if}

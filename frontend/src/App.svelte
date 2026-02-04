@@ -1,13 +1,7 @@
 <script>
   import { onMount, onDestroy } from 'svelte';
   import { fly, fade } from 'svelte/transition';
-  import {
-    AlignJustifyOutline,
-    BookOpenSolid,
-    BookSolid,
-    CogOutline,
-    HomeSolid,
-  } from 'flowbite-svelte-icons';
+  import Icon from '@iconify/svelte';
   import './app.css';
   import { goto } from './router/index.js';
   import LocalRouter from './router/Router.svelte';
@@ -104,7 +98,7 @@
         title="Home"
         type="button"
       >
-        <HomeSolid class="text-gray-700 dark:text-gray-200" />
+        <Icon icon="mdi:home" class="text-gray-700 dark:text-gray-200" />
         <span class="hidden sm:inline">Home</span>
       </button>
 
@@ -115,7 +109,7 @@
         title="Abstracts"
         type="button"
       >
-        <BookSolid class="text-gray-700 dark:text-gray-200" />
+        <Icon icon="mdi:book" class="text-gray-700 dark:text-gray-200" />
         <span class="hidden sm:inline">Abstract</span>
       </button>
 
@@ -126,7 +120,7 @@
         title="Contributions"
         type="button"
       >
-        <BookOpenSolid class="text-gray-700 dark:text-gray-200" />
+        <Icon icon="mdi:book-open" class="text-gray-700 dark:text-gray-200" />
         <span class="hidden sm:inline">Contrib</span>
       </button>
 
@@ -137,7 +131,7 @@
         title="Settings"
         type="button"
       >
-        <CogOutline class="text-gray-700 dark:text-gray-200" />
+        <Icon icon="mdi:cog" class="text-gray-700 dark:text-gray-200" />
         <span class="hidden sm:inline">Settings</span>
       </button>
 
@@ -148,7 +142,7 @@
         title="Toggle sidebar"
         type="button"
       >
-        <AlignJustifyOutline class="text-blue-500 dark:text-blue-400" />
+        <Icon icon="mdi:menu" class="text-blue-500 dark:text-blue-400" />
         <span class="text-sm font-semibold text-blue-500 dark:text-blue-400 whitespace-nowrap"
           >IndicoDataFusion</span
         >
@@ -163,7 +157,7 @@
         title="Toggle sidebar"
         type="button"
       >
-        <AlignJustifyOutline class="text-blue-500 dark:text-blue-400" />
+        <Icon icon="mdi:menu" class="text-blue-500 dark:text-blue-400" />
       </button>
     </div>
   {/if}

@@ -1,6 +1,6 @@
 <script>
   import { Modal } from 'flowbite-svelte';
-  import { CloseOutline } from 'flowbite-svelte-icons';
+  import Icon from '@iconify/svelte';
   import { getShortTrackName } from './AbstractTableItem.js';
 
   let { open = $bindable(false), tracks = [], allTracks = [], showTypes = true } = $props();
@@ -46,7 +46,10 @@
   // Get unique full track names for the list, sorted
   let uniqueTracks = $derived(
     allTracks
-      .filter((track, index, self) => index === self.findIndex((t) => getDisplayTitle(t) === getDisplayTitle(track)))
+      .filter(
+        (track, index, self) =>
+          index === self.findIndex((t) => getDisplayTitle(t) === getDisplayTitle(track)),
+      )
       .sort(sortTracks),
   );
 
@@ -74,7 +77,7 @@
       class="text-gray-400 bg-transparent hover:bg-gray-200 hover:text-gray-900 rounded-lg text-sm p-1.5 ml-auto inline-flex items-center dark:hover:bg-gray-600 dark:hover:text-white"
       onclick={closeDialog}
     >
-      <CloseOutline class="shrink-0 h-6 w-6" />
+      <Icon icon="mdi:close" class="shrink-0 h-6 w-6" />
     </button>
   </div>
 
@@ -95,7 +98,11 @@
                   {track.type === 'accepted' ? 'Accepted' : 'Reviewed'}
                 </span>
               {/if}
-              <p class="text-sm text-gray-700 dark:text-gray-300 m-0">{getDisplayTitle(track)}{#if track && track.id}<span class="ml-2 text-xs text-gray-500">ID: {track.id}</span>{/if}</p>
+              <p class="text-sm text-gray-700 dark:text-gray-300 m-0">
+                {getDisplayTitle(track)}{#if track && track.id}<span
+                    class="ml-2 text-xs text-gray-500">ID: {track.id}</span
+                  >{/if}
+              </p>
             </div>
           </div>
         {/if}
@@ -120,25 +127,33 @@
               <li
                 class="text-sm pl-2 border-l-2 border-green-400 text-green-700 dark:text-green-300 font-semibold"
               >
-                {getDisplayTitle(track)}{#if track && track.id}<span class="ml-2 text-xs text-gray-500">ID: {track.id}</span>{/if}
+                {getDisplayTitle(track)}{#if track && track.id}<span
+                    class="ml-2 text-xs text-gray-500">ID: {track.id}</span
+                  >{/if}
               </li>
             {:else if currentType === 'reviewed'}
               <li
                 class="text-sm pl-2 border-l-2 border-purple-400 text-purple-700 dark:text-purple-300 font-semibold"
               >
-                {getDisplayTitle(track)}{#if track && track.id}<span class="ml-2 text-xs text-gray-500">ID: {track.id}</span>{/if}
+                {getDisplayTitle(track)}{#if track && track.id}<span
+                    class="ml-2 text-xs text-gray-500">ID: {track.id}</span
+                  >{/if}
               </li>
             {:else}
               <!-- current track but no meaningful type: neutral highlight -->
               <li
                 class="text-sm pl-2 border-l-2 border-gray-400 text-gray-700 dark:text-gray-300 font-semibold"
               >
-                {getDisplayTitle(track)}{#if track && track.id}<span class="ml-2 text-xs text-gray-500">ID: {track.id}</span>{/if}
+                {getDisplayTitle(track)}{#if track && track.id}<span
+                    class="ml-2 text-xs text-gray-500">ID: {track.id}</span
+                  >{/if}
               </li>
             {/if}
           {:else}
             <li class="text-sm pl-2 border-l-2 border-blue-400 text-blue-700 dark:text-blue-300">
-              {getDisplayTitle(track)}{#if track && track.id}<span class="ml-2 text-xs text-gray-500">ID: {track.id}</span>{/if}
+              {getDisplayTitle(track)}{#if track && track.id}<span
+                  class="ml-2 text-xs text-gray-500">ID: {track.id}</span
+                >{/if}
             </li>
           {/if}
         {/each}

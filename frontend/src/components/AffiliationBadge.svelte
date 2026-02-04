@@ -1,5 +1,5 @@
 <script>
-  import { BuildingOutline } from 'flowbite-svelte-icons';
+  import Icon from '@iconify/svelte';
 
   let { affiliation, onclick, className = '', showCity = true } = $props();
 
@@ -18,7 +18,7 @@
     onclick={handleClick}
     title="Click to view affiliation details"
   >
-    <BuildingOutline class="w-3 h-3" />
+    <Icon icon="mdi:building" class="w-4 h-4" />
     <span class="block text-left">{affiliation.name}</span>
     {#if showCity && (affiliation.city || affiliation.country_code)}
       <span class="text-gray-500 dark:text-gray-400">
