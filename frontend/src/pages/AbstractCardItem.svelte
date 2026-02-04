@@ -8,6 +8,7 @@
   import AffiliationDialog from '../components/AffiliationDialog.svelte';
   import AffiliationBadge from '../components/AffiliationBadge.svelte';
   import AbstractReviewsDialog from '../components/AbstractReviewsDialog.svelte';
+  import RawJsonDialog from '../components/RawJsonDialog.svelte';
 
   let {
     abstract = $bindable({}),
@@ -19,11 +20,7 @@
   let showAffiliationDialog = $state(false);
   let selectedAffiliation = $state(null);
   let showReviewsDialog = $state(false);
-  // Add state to control the raw JSON collapsible
-  let showRawJson = $state(false);
-
-  // copied-state for copy button
-  let showCopied = $state(false);
+  let showRawJsonDialog = $state(false);
 
   // refresh state
   let isRefreshing = $state(false);
@@ -64,26 +61,10 @@
   const firstPriorityTotal = $derived(abstract.first_priority || 0);
   const secondPriorityTotal = $derived(abstract.second_priority || 0);
 
-  async function copyRawJson() {
-    // prevent details toggle (additional precaution)
-    try {
-      const text = JSON.stringify(abstract, null, 2);
-
-      if (navigator && navigator.clipboard && navigator.clipboard.writeText) {
-        await navigator.clipboard.writeText(text);
-        showCopied = true;
-        setTimeout(() => (showCopied = false), 2000);
-      }
-    } catch (err) {
-      // best-effort: inform user
-      alert('Copy failed: ' + (err && err.message ? err.message : String(err)));
-    }
-  }
-
 </script>
 
 <div
-  class="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 border border-gray-200 dark:border-gray-700"
+  class="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 py-4 border border-gray-200 dark:border-gray-700"
 >
   <!-- Title and Status -->
   <div class="flex justify-between items-start mb-3">
@@ -317,9 +298,9 @@
     </div>
   </div>
 
-  <!-- Link to Indico -->
+  <!-- Link to Indico (with View Raw JSON button aligned to the right) -->
   {#if abstract.indico_url}
-    <div class="mt-2 pt-3 border-t border-gray-200 dark:border-gray-600">
+    <div class="mt-2 pt-3 border-t border-gray-200 dark:border-gray-600 flex items-center justify-between">
       <a
          href={abstract.indico_url}
          onclick={async (e) => {
@@ -336,57 +317,18 @@
       >
         View on Indico →
       </a>
-    </div>
-  {/if}
 
-  <!-- Raw JSON (collapsible) -->
-  <div class="mt-2">
-    <details class="bg-gray-50 dark:bg-gray-700 rounded p-1" bind:open={showRawJson}>
-      <summary
-        class="cursor-pointer text-sm font-semibold text-gray-700 dark:text-gray-300 flex justify-between items-center"
+      <button
+        type="button"
+        class="text-sm text-blue-600 dark:text-blue-400 hover:underline"
+        onclick={() => (showRawJsonDialog = true)}
+        title="View raw JSON"
       >
-        <span>Raw JSON</span>
-        <span class="inline-flex items-center gap-1">
-          <span class="relative inline-flex items-center">
-            <button
-              onclick={(e) => { e.stopPropagation(); copyRawJson(); }}
-              class="text-xs px-1 py-1 rounded bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 transition-colors duration-150 hover:bg-gray-100 hover:text-gray-900 dark:hover:bg-gray-900 dark:hover:text-white focus:outline-none focus:ring-2 focus:ring-indigo-300 dark:focus:ring-indigo-600"
-              aria-label={showCopied ? 'Copied' : 'Copy raw JSON to clipboard'}
-              aria-describedby="copy-tooltip"
-              title={showCopied ? 'Copied' : 'Copy JSON'}
-            >
-              {#if showCopied}
-                <Icon icon="mdi:check" class="w-4 h-4 text-green-600 dark:text-green-400" aria-hidden="true" />
-              {:else}
-                <Icon icon="mdi:content-copy" class="w-4 h-4 text-gray-600 dark:text-gray-200" aria-hidden="true" />
-              {/if}
-            </button>
-          </span>
-          <!-- Collapsible icon button: chevron-down when closed, chevron-up when open. -->
-          <span class="text-xs text-gray-500">
-            <button
-              type="button"
-              onclick={(e) => { e.stopPropagation(); showRawJson = !showRawJson; }}
-              class="inline-flex items-center p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800 focus:outline-none"
-              aria-label={showRawJson ? 'Hide raw JSON' : 'Show raw JSON'}
-              title={showRawJson ? 'Hide raw JSON' : 'Show raw JSON'}
-            >
-              {#if showRawJson}
-                <Icon icon="mdi:chevron-up" class="w-4 h-4 text-gray-600 dark:text-gray-300" aria-hidden="true" />
-              {:else}
-                <Icon icon="mdi:chevron-down" class="w-4 h-4 text-gray-600 dark:text-gray-300" aria-hidden="true" />
-              {/if}
-            </button>
-          </span>
-         </span>
-       </summary>
-      <pre
-        class="mt-1 overflow-auto text-xs text-gray-700 dark:text-gray-300 max-h-80 whitespace-pre-wrap"
-      >
-{JSON.stringify(abstract, null, 2)}
-     </pre>
-     </details>
-   </div>
+        View Raw JSON
+      </button>
+    </div>
+    <RawJsonDialog bind:open={showRawJsonDialog} data={abstract} title={`Abstract [${abstract.id}]`} />
+  {/if}
  </div>
 
 <!-- Affiliation Details Dialog -->
