@@ -1,7 +1,7 @@
 <script>
   import { Tabs, TabItem } from 'flowbite-svelte';
-  import AffiliationBarChart from './AffiliationBarChart.svelte';
-  import AffiliationDonut from './AffiliationDonut.svelte';
+  import BarChart from './BarChart.svelte';
+  import DonutChart from './DonutChart.svelte';
   import RatingsBarChart from './RatingsBarChart.svelte';
   import ReviewTimeline from './ReviewTimeline.svelte';
 
@@ -173,7 +173,7 @@
     <TabItem open title="By Reviewer">
       <div class="p-0.5">
         {#if reviewerOptions && reviewerOptions.series && reviewerOptions.series.length}
-          <AffiliationBarChart
+          <BarChart
             labels={reviewerOptions.labels}
             series={reviewerOptions.series}
             colors={reviewerOptions.colors}
@@ -191,7 +191,7 @@
         {#if trackOptions && trackOptions.series && trackOptions.series.length}
           <div class="flex flex-col md:flex-row gap-0.5">
             <div class="w-full md:w-1/2">
-              <AffiliationDonut
+              <DonutChart
                 labels={trackOptions.labels}
                 series={trackOptions.series}
                 colors={trackOptions.colors}
@@ -201,7 +201,7 @@
               />
             </div>
             <div class="w-full md:w-1/2">
-              <AffiliationBarChart
+              <BarChart
                 labels={trackOptions.labels}
                 series={trackOptions.series}
                 colors={trackOptions.colors}
@@ -219,7 +219,7 @@
     <TabItem title="By Action">
       <div class="p-0.5">
         {#if actionOptions && actionOptions.series && actionOptions.series.length}
-          <AffiliationDonut
+          <DonutChart
             labels={actionOptions.labels}
             series={actionOptions.series}
             colors={actionOptions.colors}

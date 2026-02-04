@@ -1,6 +1,6 @@
 <script>
-  import AffiliationDonut from '../components/AffiliationDonut.svelte';
-  import AffiliationBarChart from '../components/AffiliationBarChart.svelte';
+  import DonutChart from '../components/DonutChart.svelte';
+  import BarChart from '../components/BarChart.svelte';
   import AbstractSubmissionTrend from '../components/AbstractSubmissionTrend.svelte';
   import ReviewChartView from "../components/ReviewChartView.svelte";
   import { Tabs, TabItem } from 'flowbite-svelte';
@@ -237,7 +237,7 @@
                 {#if instituteOptions && instituteOptions.series && instituteOptions.series.length}
                   <div class="flex flex-col md:flex-row gap-0.5">
                     <div class="w-full md:w-3/5">
-                      <AffiliationDonut
+                      <DonutChart
                         labels={instituteOptions.labels}
                         series={instituteOptions.series}
                         colors={instituteOptions.colors}
@@ -249,7 +249,7 @@
 
                     {#if instituteFullOptions && instituteFullOptions.series && instituteFullOptions.series.length}
                       <div class="w-full md:w-2/5">
-                        <AffiliationBarChart
+                        <BarChart
                           labels={instituteFullOptions.labels}
                           series={instituteFullOptions.series}
                           colors={instituteFullOptions.colors}
@@ -268,7 +268,7 @@
             <TabItem title="By Country">
               <div class="p-0.5">
                 {#if countryOptions && countryOptions.series && countryOptions.series.length}
-                  <AffiliationDonut
+                  <DonutChart
                     labels={countryOptions.labels}
                     series={countryOptions.series}
                     colors={countryOptions.colors}
@@ -284,7 +284,7 @@
             <TabItem title="By Continent">
               <div class="p-0.5">
                 {#if continentOptions && continentOptions.series && continentOptions.series.length}
-                  <AffiliationDonut
+                  <DonutChart
                     labels={continentOptions.labels}
                     series={continentOptions.series}
                     colors={continentOptions.colors}
