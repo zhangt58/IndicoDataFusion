@@ -80,6 +80,7 @@
       alert('Copy failed: ' + (err && err.message ? err.message : String(err)));
     }
   }
+
 </script>
 
 <div
@@ -335,30 +336,49 @@
       <summary
         class="cursor-pointer text-sm font-semibold text-gray-700 dark:text-gray-300 flex justify-between items-center"
       >
-        <span>Raw abstract JSON</span>
+        <span>Raw JSON</span>
         <span class="inline-flex items-center gap-1">
           <span class="relative inline-flex items-center">
             <button
-              onclick={copyRawJson}
+              onclick={(e) => { e.stopPropagation(); copyRawJson(); }}
               class="text-xs px-1 py-1 rounded bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 transition-colors duration-150 hover:bg-gray-100 hover:text-gray-900 dark:hover:bg-gray-900 dark:hover:text-white focus:outline-none focus:ring-2 focus:ring-indigo-300 dark:focus:ring-indigo-600"
-              aria-label="Copy raw JSON to clipboard"
+              aria-label={showCopied ? 'Copied' : 'Copy raw JSON to clipboard'}
               aria-describedby="copy-tooltip"
-              title="Copy JSON"
+              title={showCopied ? 'Copied' : 'Copy JSON'}
             >
-              {showCopied ? 'Copied' : 'Copy'}
+              {#if showCopied}
+                <Icon icon="mdi:check" class="w-4 h-4 text-green-600 dark:text-green-400" aria-hidden="true" />
+              {:else}
+                <Icon icon="mdi:content-copy" class="w-4 h-4 text-gray-600 dark:text-gray-200" aria-hidden="true" />
+              {/if}
             </button>
           </span>
-          <span class="text-xs text-gray-500">{showRawJson ? 'Hide' : 'Show'}</span>
-        </span>
-      </summary>
+          <!-- Collapsible icon button: chevron-down when closed, chevron-up when open. -->
+          <span class="text-xs text-gray-500">
+            <button
+              type="button"
+              onclick={(e) => { e.stopPropagation(); showRawJson = !showRawJson; }}
+              class="inline-flex items-center p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800 focus:outline-none"
+              aria-label={showRawJson ? 'Hide raw JSON' : 'Show raw JSON'}
+              title={showRawJson ? 'Hide raw JSON' : 'Show raw JSON'}
+            >
+              {#if showRawJson}
+                <Icon icon="mdi:chevron-up" class="w-4 h-4 text-gray-600 dark:text-gray-300" aria-hidden="true" />
+              {:else}
+                <Icon icon="mdi:chevron-down" class="w-4 h-4 text-gray-600 dark:text-gray-300" aria-hidden="true" />
+              {/if}
+            </button>
+          </span>
+         </span>
+       </summary>
       <pre
-        class="mt-1 overflow-auto text-xs text-gray-700 dark:text-gray-300"
-        style="max-height:360px;white-space:pre-wrap;">
+        class="mt-1 overflow-auto text-xs text-gray-700 dark:text-gray-300 max-h-80 whitespace-pre-wrap"
+      >
 {JSON.stringify(abstract, null, 2)}
-    </pre>
-    </details>
-  </div>
-</div>
+     </pre>
+     </details>
+   </div>
+ </div>
 
 <!-- Affiliation Details Dialog -->
 <AffiliationDialog bind:open={showAffiliationDialog} affiliation={selectedAffiliation} />
