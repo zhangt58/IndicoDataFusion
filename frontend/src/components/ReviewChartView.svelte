@@ -4,6 +4,7 @@
   import DonutChart from './DonutChart.svelte';
   import RatingsBarChart from './RatingsBarChart.svelte';
   import ReviewTimeline from './ReviewTimeline.svelte';
+  import ReviewerDialog from './ReviewerDialog.svelte';
 
   // Props: expects an array of abstracts with reviews data
   let { abstractData = [] } = $props();
@@ -68,6 +69,18 @@
     return map;
   }
 
+  // Build a map of reviewer name -> representative reviewer user object (first found)
+  function buildReviewerObjectMap(reviews) {
+    const m = new Map();
+    for (const review of reviews) {
+      const name = review.user?.full_name || review.user?.email || 'Unknown';
+      if (!m.has(name) && review.user) {
+        m.set(name, review.user);
+      }
+    }
+    return m;
+  }
+
   // 2. Review stats by track
   function aggregateByTrack(reviews) {
     const map = new Map();
@@ -120,6 +133,7 @@
     const reviews = collectReviews(abstractData || []);
 
     const reviewerMap = aggregateByReviewer(reviews);
+    const reviewerObjMap = buildReviewerObjectMap(reviews);
     const trackMap = aggregateByTrack(reviews);
     const actionMap = aggregateByAction(reviews);
 
@@ -127,10 +141,12 @@
     const trackTop = topN(trackMap, 10);
 
     return {
+      // Mark reviewer chart labels as clickable so they'll be styled by echarts
       reviewer: buildChartOptions(reviewerTop, reviewerColors),
       track: buildChartOptions(trackTop, trackColors),
       action: buildChartOptions(actionMap, Object.values(actionColors)),
       reviews, // Pass all reviews for Timeline component
+      reviewerObjMap,
       totalReviews: reviews.length,
       uniqueReviewers: reviewerMap.size,
       uniqueTracks: trackMap.size,
@@ -141,8 +157,25 @@
   const trackOptions = $derived(chartData.track);
   const actionOptions = $derived(chartData.action);
   const allReviews = $derived(chartData.reviews);
+  const reviewerObjMap = $derived(chartData.reviewerObjMap);
 
   const chartHeight = '50vh';
+
+  // Modal state for showing reviewer details
+  let showReviewerModal = $state(false);
+  let selectedReviewer = $state(null);
+
+  function handleReviewerClick(params) {
+    // params.name is the label (reviewer name)
+    if (params.targetType === 'axisLabel') {
+      const reviewerName = params.value;
+      const reviewerObj = reviewerObjMap.get(reviewerName);
+      if (reviewerObj) {
+        selectedReviewer = reviewerObj;
+        showReviewerModal = true;
+      }
+    }
+  }
 </script>
 
 <div class="p-2 mb-1">
@@ -179,6 +212,7 @@
             colors={reviewerOptions.colors}
             title="Reviews per Reviewer"
             height={chartHeight}
+            onItemClick={handleReviewerClick}
           />
         {:else}
           <div class="text-sm text-gray-500 text-center py-8">No review data available</div>
@@ -246,3 +280,6 @@
     </TabItem>
   </Tabs>
 </div>
+
+<!-- Reviewer detail modal -->
+<ReviewerDialog bind:open={showReviewerModal} reviewer={selectedReviewer} />
