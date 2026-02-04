@@ -84,7 +84,10 @@
       title="Minimize"
       type="button"
     >
-      <Icon icon="mdi:minus" class="w-4 h-4 text-gray-600 dark:text-gray-400 group-hover:text-gray-900 dark:group-hover:text-gray-100" />
+      <Icon
+        icon="mdi:minus"
+        class="w-4 h-4 text-gray-600 dark:text-gray-400 group-hover:text-gray-900 dark:group-hover:text-gray-100"
+      />
     </button>
 
     <!-- Maximize/Restore -->
@@ -99,9 +102,15 @@
       type="button"
     >
       {#if isMaximised}
-        <Icon icon="mdi:window-restore" class="w-4 h-4 text-gray-600 dark:text-gray-400 group-hover:text-gray-900 dark:group-hover:text-gray-100" />
+        <Icon
+          icon="mdi:window-restore"
+          class="w-4 h-4 text-gray-600 dark:text-gray-400 group-hover:text-gray-900 dark:group-hover:text-gray-100"
+        />
       {:else}
-        <Icon icon="mdi:window-maximize" class="w-4 h-4 text-gray-600 dark:text-gray-400 group-hover:text-gray-900 dark:group-hover:text-gray-100" />
+        <Icon
+          icon="mdi:window-maximize"
+          class="w-4 h-4 text-gray-600 dark:text-gray-400 group-hover:text-gray-900 dark:group-hover:text-gray-100"
+        />
       {/if}
     </button>
 
@@ -116,7 +125,10 @@
       title="Close"
       type="button"
     >
-      <Icon icon="mdi:close" class="w-4 h-4 text-gray-600 dark:text-gray-400 group-hover:text-white" />
+      <Icon
+        icon="mdi:close"
+        class="w-4 h-4 text-gray-600 dark:text-gray-400 group-hover:text-white"
+      />
     </button>
   </div>
 </div>

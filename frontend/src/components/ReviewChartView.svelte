@@ -269,7 +269,7 @@
 
     <TabItem title="Ratings">
       <div class="p-0.5">
-        <RatingsBarChart abstractData={abstractData} height={chartHeight} />
+        <RatingsBarChart {abstractData} height={chartHeight} />
       </div>
     </TabItem>
 

@@ -111,10 +111,10 @@ function extractAttachments(contribution) {
 
   // Map to simplified objects expected by the table components
   return (deduped || []).map((att) => ({
-    title: att && (att.title || att.filename) ? (att.title || att.filename) : '',
-    filename: att && (att.filename || '') || '',
-    download_url: att && (att.download_url || att.url || att.downloadUrl || '') || '',
-    content_type: att && (att.content_type || att.contentType || '') || '',
+    title: att && (att.title || att.filename) ? att.title || att.filename : '',
+    filename: (att && (att.filename || '')) || '',
+    download_url: (att && (att.download_url || att.url || att.downloadUrl || '')) || '',
+    content_type: (att && (att.content_type || att.contentType || '')) || '',
   }));
 }
 

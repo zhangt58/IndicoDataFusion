@@ -41,7 +41,6 @@
   });
 
   async function openDashboard() {
-
     const url = dashboardURL();
     console.log(url);
     if (!url) return;
@@ -69,7 +68,7 @@
 
   {#if reviewer}
     <div class="space-y-4">
-      <ReviewerCard reviewer={reviewer} showEmail={true} onAffiliationClick={handleAffiliationClick} />
+      <ReviewerCard {reviewer} showEmail={true} onAffiliationClick={handleAffiliationClick} />
 
       <div class="pt-2 border-t border-gray-200 dark:border-gray-700">
         <div class="flex items-center gap-4 text-xs text-gray-500 dark:text-gray-400">
@@ -97,4 +96,4 @@
 </Modal>
 
 <!-- Nested affiliation dialog -->
-<AffiliationDialog bind:open={affiliationOpen} affiliation={affiliation} />
+<AffiliationDialog bind:open={affiliationOpen} {affiliation} />

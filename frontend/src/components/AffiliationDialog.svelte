@@ -61,7 +61,10 @@
       <!-- Location Information -->
       {#if affiliation.city || affiliation.country_name}
         <div class="flex items-start gap-3">
-          <Icon icon="mdi:map-marker" class="w-5 h-5 text-gray-500 dark:text-gray-400 mt-0.5 shrink-0" />
+          <Icon
+            icon="mdi:map-marker"
+            class="w-5 h-5 text-gray-500 dark:text-gray-400 mt-0.5 shrink-0"
+          />
           <div class="flex-1">
             <p class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">Location</p>
             {#if affiliation.city}

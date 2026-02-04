@@ -462,7 +462,10 @@
           <span class="text-sm text-gray-600 dark:text-gray-400"
             >{(configData?.apiTokens || []).length} tokens</span
           >
-          <Icon icon="mdi:chevron-down" class={`w-5 h-5 text-gray-500 dark:text-gray-400 transform transition-transform ${showAdvanced ? 'rotate-180' : ''}`} />
+          <Icon
+            icon="mdi:chevron-down"
+            class={`w-5 h-5 text-gray-500 dark:text-gray-400 transform transition-transform ${showAdvanced ? 'rotate-180' : ''}`}
+          />
         </div>
       </div>
       {#if showAdvanced}
@@ -486,7 +489,10 @@
               <h4 class="text-md font-semibold text-gray-900 dark:text-gray-100">
                 Cache Configuration
               </h4>
-              <Icon icon="mdi:chevron-down" class={`w-5 h-5 text-gray-500 dark:text-gray-400 transform transition-transform ${showCacheConfig ? 'rotate-180' : ''}`} />
+              <Icon
+                icon="mdi:chevron-down"
+                class={`w-5 h-5 text-gray-500 dark:text-gray-400 transform transition-transform ${showCacheConfig ? 'rotate-180' : ''}`}
+              />
             </div>
 
             {#if showCacheConfig}

@@ -3,11 +3,7 @@
   import Icon from '@iconify/svelte';
   import AbstractCardItem from './AbstractCardItem.svelte';
 
-  let {
-    open = $bindable(false),
-    abstract = $bindable(null),
-    isMyReview = false
-  } = $props();
+  let { open = $bindable(false), abstract = $bindable(null), isMyReview = false } = $props();
 
   // Close dialog
   function closeDialog() {
@@ -33,6 +29,6 @@
     </button>
   </div>
   {#if abstract}
-    <AbstractCardItem bind:abstract onRefresh={handleRefresh} isMyReview={isMyReview} />
+    <AbstractCardItem bind:abstract onRefresh={handleRefresh} {isMyReview} />
   {/if}
 </Modal>

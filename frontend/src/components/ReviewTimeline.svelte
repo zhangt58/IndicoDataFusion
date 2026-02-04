@@ -2,11 +2,7 @@
   import { onMount, onDestroy } from 'svelte';
 
   // Props (Rune-style)
-  let {
-    reviews = [],
-    title = 'Review Submissions Over Time',
-    height = '50vh',
-  } = $props();
+  let { reviews = [], title = 'Review Submissions Over Time', height = '50vh' } = $props();
 
   let container = null;
   let chart = null;
@@ -45,7 +41,7 @@
     const showSlider = timelineData.labels.length > 20;
     const sliderEnd = Math.min(
       100,
-      Math.round((20 / Math.max(1, timelineData.labels.length)) * 100)
+      Math.round((20 / Math.max(1, timelineData.labels.length)) * 100),
     );
 
     return {

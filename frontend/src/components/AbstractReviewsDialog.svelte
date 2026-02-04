@@ -166,7 +166,10 @@
     {/if}
   {:else}
     <div class="text-center py-8">
-      <Icon icon="mdi:message-text" class="w-16 h-16 mx-auto text-gray-300 dark:text-gray-600 mb-3" />
+      <Icon
+        icon="mdi:message-text"
+        class="w-16 h-16 mx-auto text-gray-300 dark:text-gray-600 mb-3"
+      />
       <p class="text-gray-500 dark:text-gray-400">No reviews available for this abstract.</p>
     </div>
   {/if}

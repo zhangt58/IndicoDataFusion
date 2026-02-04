@@ -483,7 +483,10 @@
       <div
         class="bg-gray-50 dark:bg-gray-800 rounded-lg p-8 text-center border border-gray-200 dark:border-gray-700"
       >
-        <Icon icon="mdi:database-off" class="w-16 h-16 mx-auto text-gray-400 dark:text-gray-500 mb-4" />
+        <Icon
+          icon="mdi:database-off"
+          class="w-16 h-16 mx-auto text-gray-400 dark:text-gray-500 mb-4"
+        />
         <p class="text-gray-600 dark:text-gray-400 text-lg">No cached data available</p>
         <p class="text-gray-500 dark:text-gray-500 text-sm mt-2">
           Data will be cached when you fetch it from the API
@@ -529,7 +532,11 @@
 <!-- Confirmation Modal for Clear Cache -->
 <Modal bind:open={showClearConfirm} size="sm" autoclose={false}>
   <div class="text-center">
-    <Icon icon="mdi:alert-circle" class="mx-auto mb-4 text-gray-400 w-12 h-12 dark:text-gray-200" aria-hidden="true" />
+    <Icon
+      icon="mdi:alert-circle"
+      class="mx-auto mb-4 text-gray-400 w-12 h-12 dark:text-gray-200"
+      aria-hidden="true"
+    />
     <h3 class="mb-5 text-lg font-normal text-gray-500 dark:text-gray-400">
       Are you sure you want to clear all cached data? This will remove the cache file.
     </h3>

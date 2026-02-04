@@ -2,7 +2,14 @@
   import { onMount, onDestroy } from 'svelte';
 
   // Props
-  let { labels = [], series = [], colors = [], title = 'Institutes', height = '40vh', onItemClick = null } = $props();
+  let {
+    labels = [],
+    series = [],
+    colors = [],
+    title = 'Institutes',
+    height = '40vh',
+    onItemClick = null,
+  } = $props();
 
   let container = $state(null);
   let chart = null;

@@ -10,12 +10,14 @@
   import TitleButton from '../components/TitleButton.svelte';
   import TrackBadge from './TrackBadge.svelte';
   import StateBadge from './StateBadge.svelte';
-  import { getTableItems, getShortTrackName, getTrackLabelByID, getAllTracks } from './AbstractTableItem.js';
+  import {
+    getTableItems,
+    getShortTrackName,
+    getTrackLabelByID,
+    getAllTracks,
+  } from './AbstractTableItem.js';
 
-  let {
-    abstractData = $bindable([]),
-    selectedReviewTrackID = null,
-  } = $props();
+  let { abstractData = $bindable([]), selectedReviewTrackID = null } = $props();
 
   // Abstract dialog state
   let showAbstractDialog = $state(false);
@@ -52,7 +54,7 @@
     { id: 'State', title: 'State', stretch: 2 },
     { id: 'Submitter', title: 'Submitter', stretch: 3 },
     { id: 'Affiliation', title: 'Affiliation', stretch: 3 },
-    { id: 'Score', title: 'Score', stretch: 1, 'hide': true },
+    { id: 'Score', title: 'Score', stretch: 1, hide: true },
     { id: 'Submitted', title: 'Submitted', stretch: 2 },
     { id: 'Authors', title: 'Authors', stretch: 2 },
     { id: 'IsMyReview', title: 'IsMyReview', stretch: 1 },
@@ -308,7 +310,11 @@
     }
 
     // numeric sort for Score, First Priority and Second Priority
-    if (originalKey === 'Score' || originalKey === 'First Priority' || originalKey === 'Second Priority') {
+    if (
+      originalKey === 'Score' ||
+      originalKey === 'First Priority' ||
+      originalKey === 'Second Priority'
+    ) {
       // read values via mapped idKey (table item properties)
       const aVal = a[idKey];
       const bVal = b[idKey];
@@ -334,7 +340,11 @@
     }
 
     // Special-case Track: extract number from strings like "MC10" or "MC10: description"
-    if (originalKey === 'Accepted Track' || originalKey === 'Reviewed Track' || originalKey === 'Submitted Track') {
+    if (
+      originalKey === 'Accepted Track' ||
+      originalKey === 'Reviewed Track' ||
+      originalKey === 'Submitted Track'
+    ) {
       const extractTrackNumber = (str) => {
         if (!str) return NaN;
         const match = String(str).match(/\d+/);
@@ -422,8 +432,9 @@
           {#if item.IsMyReview === 'Yes'}
             <span
               class="px-2 py-1 text-purple-700 dark:text-purple-200 font-medium flex items-center gap-0.5"
-              title="This abstract is on your review track">
-            <Icon icon="mdi:clipboard-list" class="w-3 h-3" />Yes
+              title="This abstract is on your review track"
+            >
+              <Icon icon="mdi:clipboard-list" class="w-3 h-3" />Yes
             </span>
           {/if}
         {:else if col.id === 'Title'}

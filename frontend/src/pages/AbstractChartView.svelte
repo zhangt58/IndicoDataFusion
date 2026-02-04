@@ -2,7 +2,7 @@
   import DonutChart from '../components/DonutChart.svelte';
   import BarChart from '../components/BarChart.svelte';
   import AbstractSubmissionTrend from '../components/AbstractSubmissionTrend.svelte';
-  import ReviewChartView from "../components/ReviewChartView.svelte";
+  import ReviewChartView from '../components/ReviewChartView.svelte';
   import { Tabs, TabItem } from 'flowbite-svelte';
 
   // Props: array of abstract objects (same shape returned by GetAbstracts)

@@ -103,8 +103,11 @@
               <!-- reuse icon payload (parent uses flowbite variant) -->
               🗑
             </button>
-            <Icon icon="mdi:chevron-down" class={`w-5 h-5 text-gray-500 dark:text-gray-400 transform transition-transform ${expandedSources[i] ? 'rotate-180' : ''}`} />
-           </div>
+            <Icon
+              icon="mdi:chevron-down"
+              class={`w-5 h-5 text-gray-500 dark:text-gray-400 transform transition-transform ${expandedSources[i] ? 'rotate-180' : ''}`}
+            />
+          </div>
         </div>
 
         <!-- Content -->

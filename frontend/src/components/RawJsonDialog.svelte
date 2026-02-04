@@ -1,9 +1,5 @@
 <script>
-  let {
-    open = $bindable(false),
-    data = $bindable({}),
-    title = $bindable('View JSON')
-  } = $props();
+  let { open = $bindable(false), data = $bindable({}), title = $bindable('View JSON') } = $props();
 
   let showCopied = $state(false);
 
@@ -66,7 +62,9 @@
       aria-modal="true"
       aria-label={title}
     >
-      <div class="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
+      <div
+        class="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700"
+      >
         <h2 class="text-sm font-semibold text-gray-800 dark:text-gray-100">{title}</h2>
         <div class="flex items-center gap-2">
           <button
@@ -109,4 +107,3 @@
     </div>
   </div>
 {/if}
-

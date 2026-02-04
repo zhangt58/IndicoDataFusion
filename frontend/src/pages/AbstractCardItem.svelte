@@ -10,11 +10,7 @@
   import AbstractReviewsDialog from '../components/AbstractReviewsDialog.svelte';
   import RawJsonDialog from '../components/RawJsonDialog.svelte';
 
-  let {
-    abstract = $bindable({}),
-    onRefresh = null,
-    isMyReview = false
-  } = $props();
+  let { abstract = $bindable({}), onRefresh = null, isMyReview = false } = $props();
 
   // Dialog state
   let showAffiliationDialog = $state(false);
@@ -60,7 +56,6 @@
   // Use precomputed aggregated ratings from backend
   const firstPriorityTotal = $derived(abstract.first_priority || 0);
   const secondPriorityTotal = $derived(abstract.second_priority || 0);
-
 </script>
 
 <div
@@ -92,7 +87,11 @@
             title="Open review page"
             aria-label="Open review page"
           >
-            <Icon icon="mdi:open-in-new" class="w-3 h-3 text-blue-600 dark:text-blue-300" aria-hidden="true" />
+            <Icon
+              icon="mdi:open-in-new"
+              class="w-3 h-3 text-blue-600 dark:text-blue-300"
+              aria-hidden="true"
+            />
           </a>
         </span>
       {/if}
@@ -125,7 +124,11 @@
       <p class="text-xs font-semibold text-gray-600 dark:text-gray-400">Submitted by:</p>
       <p class="text-sm text-gray-700 dark:text-gray-300 flex items-center gap-2">
         {#if abstract.submitter.avatar_url}
-          <img src={abstract.submitter.avatar_url} alt={`Avatar of ${abstract.submitter.full_name || 'submitter'}`} class="w-6 h-6 rounded-full object-cover" />
+          <img
+            src={abstract.submitter.avatar_url}
+            alt={`Avatar of ${abstract.submitter.full_name || 'submitter'}`}
+            class="w-6 h-6 rounded-full object-cover"
+          />
         {:else}
           <Icon icon="mdi:account-circle" class="w-6 h-6 text-gray-500 dark:text-gray-400" />
         {/if}
@@ -172,7 +175,10 @@
   {#if abstract.accepted_track}
     <div class="mb-3">
       <p class="text-xs font-semibold text-gray-600 dark:text-gray-400">Accepted track:</p>
-      <TrackBadge text={abstract.accepted_track.title ?? abstract.accepted_track.code} type="accepted" />
+      <TrackBadge
+        text={abstract.accepted_track.title ?? abstract.accepted_track.code}
+        type="accepted"
+      />
     </div>
   {/if}
 
@@ -205,7 +211,11 @@
         <p class="text-xs font-semibold text-gray-600 dark:text-gray-400">Judge:</p>
         <p class="text-sm text-gray-700 dark:text-gray-300 flex items-center gap-2">
           {#if abstract.judge.avatar_url}
-            <img src={abstract.judge.avatar_url} alt={`Avatar of ${abstract.judge.full_name || 'judge'}`} class="w-6 h-6 rounded-full object-cover" />
+            <img
+              src={abstract.judge.avatar_url}
+              alt={`Avatar of ${abstract.judge.full_name || 'judge'}`}
+              class="w-6 h-6 rounded-full object-cover"
+            />
           {:else}
             <Icon icon="mdi:account-circle" class="w-6 h-6 text-gray-500 dark:text-gray-400" />
           {/if}
@@ -300,10 +310,12 @@
 
   <!-- Link to Indico (with View Raw JSON button aligned to the right) -->
   {#if abstract.indico_url}
-    <div class="mt-2 pt-3 border-t border-gray-200 dark:border-gray-600 flex items-center justify-between">
+    <div
+      class="mt-2 pt-3 border-t border-gray-200 dark:border-gray-600 flex items-center justify-between"
+    >
       <a
-         href={abstract.indico_url}
-         onclick={async (e) => {
+        href={abstract.indico_url}
+        onclick={async (e) => {
           e.preventDefault();
           if (!abstract.indico_url) return;
           try {
@@ -312,8 +324,8 @@
             console.error('BrowserOpenURL failed', e);
           }
         }}
-          class="text-sm text-blue-600 dark:text-blue-400 hover:underline"
-          title="Open abstract link in web-browser"
+        class="text-sm text-blue-600 dark:text-blue-400 hover:underline"
+        title="Open abstract link in web-browser"
       >
         View on Indico →
       </a>
@@ -327,9 +339,13 @@
         View Raw JSON
       </button>
     </div>
-    <RawJsonDialog bind:open={showRawJsonDialog} data={abstract} title={`Abstract [${abstract.id}]`} />
+    <RawJsonDialog
+      bind:open={showRawJsonDialog}
+      data={abstract}
+      title={`Abstract [${abstract.id}]`}
+    />
   {/if}
- </div>
+</div>
 
 <!-- Affiliation Details Dialog -->
 <AffiliationDialog bind:open={showAffiliationDialog} affiliation={selectedAffiliation} />

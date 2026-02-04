@@ -92,7 +92,10 @@
             class="w-8 h-8 rounded-full object-cover shrink-0 mt-1"
           />
         {:else}
-          <Icon icon="mdi:account-circle" class="w-8 h-8 text-gray-500 dark:text-gray-400 shrink-0 mt-1" />
+          <Icon
+            icon="mdi:account-circle"
+            class="w-8 h-8 text-gray-500 dark:text-gray-400 shrink-0 mt-1"
+          />
         {/if}
         <div class="flex-1 min-w-0">
           <p class="text-sm font-semibold text-gray-800 dark:text-white">

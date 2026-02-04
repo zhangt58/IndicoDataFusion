@@ -198,10 +198,11 @@
           </div>
           <div class="flex flex-wrap gap-2">
             {#each reviewTracks as track}
-              {#if track.link }
+              {#if track.link}
                 <button
                   onclick={() => handleTrackClick(track)}
-                  class="relative px-2 py-1 text-xs rounded transition-colors {selectedTrackID === track.track_id
+                  class="relative px-2 py-1 text-xs rounded transition-colors {selectedTrackID ===
+                  track.track_id
                     ? 'bg-blue-500 text-white'
                     : 'bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 hover:bg-gray-300 dark:hover:bg-gray-600'}"
                   title={track.name}
