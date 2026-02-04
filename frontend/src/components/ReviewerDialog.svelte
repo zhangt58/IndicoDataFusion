@@ -42,7 +42,6 @@
 
   async function openDashboard() {
     const url = dashboardURL();
-    console.log(url);
     if (!url) return;
     try {
       await OpenSafeURL(url);
