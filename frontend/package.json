@@ -25,7 +25,6 @@
     "echarts": "^6.0.0",
     "flowbite": "^4.0.1",
     "flowbite-svelte": "^1.28.1",
-    "flowbite-svelte-icons": "^3.0.0",
     "svelte-virtuallists": "^1.4.2"
   }
 }
