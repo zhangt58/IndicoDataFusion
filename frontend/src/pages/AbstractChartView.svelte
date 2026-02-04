@@ -2,6 +2,7 @@
   import AffiliationDonut from '../components/AffiliationDonut.svelte';
   import AffiliationBarChart from '../components/AffiliationBarChart.svelte';
   import AbstractSubmissionTrend from '../components/AbstractSubmissionTrend.svelte';
+  import ReviewChartView from "../components/ReviewChartView.svelte";
   import { Tabs, TabItem } from 'flowbite-svelte';
 
   // Props: array of abstract objects (same shape returned by GetAbstracts)
@@ -305,6 +306,17 @@
       <div class="p-0.5">
         {#if abstractData && abstractData.length}
           <AbstractSubmissionTrend submittedTimes={abstractData} title={''} height={'40vh'} />
+        {:else}
+          <div class="text-sm text-gray-500 text-center py-8">No abstracts to display.</div>
+        {/if}
+      </div>
+    </TabItem>
+
+    <TabItem title="Reviews">
+      <!-- Review content -->
+      <div class="p-0.5">
+        {#if abstractData && abstractData.length}
+          <ReviewChartView {abstractData} />
         {:else}
           <div class="text-sm text-gray-500 text-center py-8">No abstracts to display.</div>
         {/if}
