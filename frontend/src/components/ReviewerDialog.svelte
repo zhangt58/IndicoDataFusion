@@ -3,6 +3,8 @@
   import { CloseOutline } from 'flowbite-svelte-icons';
   import ReviewerCard from './ReviewerCard.svelte';
   import AffiliationDialog from './AffiliationDialog.svelte';
+  import Icon from '@iconify/svelte';
+  import { OpenSafeURL } from '../../wailsjs/go/main/App';
 
   let { open = $bindable(false), reviewer = null } = $props();
 
@@ -18,10 +20,42 @@
     affiliation = aff;
     affiliationOpen = true;
   }
+
+  // Derived dashboard URL from reviewer.avatar_url (nullable)
+  const dashboardURL = $derived(() => {
+    if (!reviewer) return null;
+    const av = reviewer.avatar_url;
+    if (!av) return null;
+    try {
+      const u = new URL(av, window.location.origin);
+      // find '/user' in the pathname
+      const idx = u.pathname.indexOf('/user');
+      let basePath = u.origin;
+      if (idx !== -1) {
+        basePath += u.pathname.slice(0, idx);
+      }
+      if (!reviewer.id) return null;
+      return basePath + '/user/' + reviewer.id + '/dashboard';
+    } catch (e) {
+      return null;
+    }
+  });
+
+  async function openDashboard() {
+
+    const url = dashboardURL();
+    console.log(url);
+    if (!url) return;
+    try {
+      await OpenSafeURL(url);
+    } catch (e) {
+      console.error('OpenSafeURL failed', e);
+    }
+  }
 </script>
 
 <Modal bind:open size="md" dismissable={false} class="max-w-xl mx-auto">
-  <div class="flex justify-between items-start mb-4">
+  <div class="flex justify-between items-start mb-2">
     <div class="flex items-center gap-2">
       <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Reviewer Details</h3>
     </div>
@@ -39,10 +73,23 @@
       <ReviewerCard reviewer={reviewer} showEmail={true} onAffiliationClick={handleAffiliationClick} />
 
       <div class="pt-2 border-t border-gray-200 dark:border-gray-700">
-        <div class="text-sm text-gray-600 dark:text-gray-400">Identifier: {reviewer.identifier || 'N/A'}</div>
-        {#if reviewer.id}
-          <div class="text-sm text-gray-600 dark:text-gray-400">ID: {reviewer.id}</div>
-        {/if}
+        <div class="flex items-center gap-4 text-xs text-gray-500 dark:text-gray-400">
+          {#if reviewer.identifier}
+            <div class="truncate font-mono">Identifier: {reviewer.identifier}</div>
+          {/if}
+
+          {#if dashboardURL()}
+            <button
+              type="button"
+              class="ml-auto hover:text-blue-500 hover:dark:text-blue-100 inline-flex items-center gap-1 cursor-pointer"
+              onclick={openDashboard}
+              aria-label="Open reviewer dashboard in browser"
+              title="Open reviewer dashboard in browser"
+            >
+              <Icon icon="mdi:open-in-new" class="w-4 h-4" />
+            </button>
+          {/if}
+        </div>
       </div>
     </div>
   {:else}

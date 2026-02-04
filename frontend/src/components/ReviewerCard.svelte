@@ -1,5 +1,6 @@
 <script>
   import AffiliationBadge from './AffiliationBadge.svelte';
+  import Icon from "@iconify/svelte";
 
   // Props
   let { reviewer = null, showEmail = true, onAffiliationClick = null } = $props();
@@ -58,17 +59,15 @@
           {#if reviewer.id}
             <div>ID: {reviewer.id}</div>
           {/if}
-          {#if reviewer.identifier}
-            <div class="truncate">{reviewer.identifier}</div>
-          {/if}
         </div>
       </div>
 
       <div class="mt-2 flex items-center gap-2 flex-wrap">
         {#if showEmail && reviewer.email}
+          <Icon icon="mdi:email" class="w-4 h-4" />
           <a
             href={`mailto:${reviewer.email}`}
-            class="text-xs text-blue-600 dark:text-blue-400 hover:underline truncate"
+            class="text-xs truncate hover:text-blue-500 hover:dark:text-blue-100"
             title={reviewer.email}
           >
             {reviewer.email}
