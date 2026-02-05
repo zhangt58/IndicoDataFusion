@@ -2,28 +2,16 @@
   import { onMount, onDestroy } from 'svelte';
   import cloud from 'd3-cloud';
   import { GetWordFrequencies } from '../../wailsjs/go/main/App';
+  import { Select } from 'flowbite-svelte';
 
-  // Props (Svelte 5 Rune-style)
   let {
     text = '',
     abstracts = [],
     minLength = 3,
-    maxWords = 100,
+    maxWords = $bindable(100),
     width = 800,
     height = 400,
     title = 'Word Cloud',
-    colorScheme = [
-      '#1f77b4',
-      '#ff7f0e',
-      '#2ca02c',
-      '#d62728',
-      '#9467bd',
-      '#8c564b',
-      '#e377c2',
-      '#7f7f7f',
-      '#bcbd22',
-      '#17becf',
-    ],
   } = $props();
 
   let container = $state(null);
@@ -34,6 +22,27 @@
   let resizeObserver = null;
   let actualWidth = $state(800);
   let actualHeight = $state(400);
+
+  let colorScheme = [
+    '#1f77b4',
+    '#ff7f0e',
+    '#2ca02c',
+    '#d62728',
+    '#9467bd',
+    '#8c564b',
+    '#e377c2',
+    '#7f7f7f',
+    '#bcbd22',
+    '#17becf',
+  ]
+
+  let maxWordsOptions = [
+    { value: 100, name: "Show top 100 Words" },
+    { value: 200, name: "Show top 200 Words" },
+    { value: 300, name: "Show top 300 Words" },
+    { value: 400, name: "Show top 400 Words" },
+    { value: 500, name: "Show top 500 Words" },
+  ]
 
   // Extract text from abstracts array
   const extractedText = $derived(() => {
@@ -63,8 +72,8 @@
     loading = true;
     error = null;
     try {
-      const effectiveTopN = maxWords;
-      words = await GetWordFrequencies(inputText, minLength, effectiveTopN);
+      // Ensure maxWords is a number (Select emits string values)
+      words = await GetWordFrequencies(inputText, minLength, Number(maxWords));
     } catch (err) {
       console.error('Failed to fetch word frequencies:', err);
       error = err.message || 'Failed to fetch word frequencies';
@@ -194,14 +203,16 @@
 
 <div
   bind:this={container}
-  class="flex flex-col items-center justify-center"
+  class="flex flex-col items-center justify-center last:-mt-4"
   style="width: 100%; height: {height}; min-height: {height};"
 >
   {#if title}
-    <h3 class="text-center text-lg font-semibold text-gray-900 dark:text-white mb-4">
+    <h3 class="text-center text-lg font-semibold text-gray-900 dark:text-white mb-2">
       {title}
     </h3>
   {/if}
+
+  <Select size="sm" bind:value={maxWords} items={maxWordsOptions} class="shadow-sm"/>
 
   {#if loading}
     <div class="flex items-center justify-center h-full">

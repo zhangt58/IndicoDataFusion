@@ -328,7 +328,7 @@
       <!-- Word Cloud content -->
       <div class="p-0.5">
         {#if abstractData && abstractData.length}
-          <WordCloud abstracts={abstractData} minLength={3} maxWords={100} height='70vh' title="" />
+          <WordCloud abstracts={abstractData} minLength={3} maxWords={200} height='70vh' title="" />
         {:else}
           <div class="text-sm text-gray-500 text-center py-8">No abstracts to display.</div>
         {/if}
