@@ -22,6 +22,7 @@
   "dependencies": {
     "@tailwindcss/vite": "^4.1.17",
     "@zhangt58/svelte-vtable": "^0.1.2",
+    "d3-cloud": "^1.2.8",
     "echarts": "^6.0.0",
     "flowbite": "^4.0.1",
     "flowbite-svelte": "^1.28.1",

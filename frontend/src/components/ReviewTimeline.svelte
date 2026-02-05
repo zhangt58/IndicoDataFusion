@@ -4,9 +4,9 @@
   // Props (Rune-style)
   let { reviews = [], title = 'Review Submissions Over Time', height = '50vh' } = $props();
 
-  let container = null;
-  let chart = null;
-  let echarts = null;
+  let container = $state(null);
+  let chart = $state(null);
+  let echarts = $state(null);
 
   // Build review timeline data
   function buildReviewTimeline(reviewList) {
