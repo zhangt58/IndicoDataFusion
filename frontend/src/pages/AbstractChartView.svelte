@@ -3,6 +3,7 @@
   import BarChart from '../components/BarChart.svelte';
   import AbstractSubmissionTrend from '../components/AbstractSubmissionTrend.svelte';
   import ReviewChartView from '../components/ReviewChartView.svelte';
+  import WordCloud from '../components/WordCloud.svelte';
   import { Tabs, TabItem } from 'flowbite-svelte';
 
   // Props: array of abstract objects (same shape returned by GetAbstracts)
@@ -317,6 +318,17 @@
       <div class="p-0.5">
         {#if abstractData && abstractData.length}
           <ReviewChartView {abstractData} />
+        {:else}
+          <div class="text-sm text-gray-500 text-center py-8">No abstracts to display.</div>
+        {/if}
+      </div>
+    </TabItem>
+
+    <TabItem title="Word Cloud">
+      <!-- Word Cloud content -->
+      <div class="p-0.5">
+        {#if abstractData && abstractData.length}
+          <WordCloud abstracts={abstractData} minLength={3} maxWords={100} height='70vh' title="" />
         {:else}
           <div class="text-sm text-gray-500 text-center py-8">No abstracts to display.</div>
         {/if}
