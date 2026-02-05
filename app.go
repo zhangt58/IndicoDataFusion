@@ -575,3 +575,8 @@ func (a *App) OpenSafeURL(rawURL string) error {
 
 	return nil
 }
+
+// GetWordFrequencies computes word frequencies from input text
+func (a *App) GetWordFrequencies(text string, minLength int, topN int) []data.WordFrequency {
+	return data.GetWordFrequencies(text, minLength, topN)
+}
