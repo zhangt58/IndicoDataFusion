@@ -2,7 +2,11 @@ package data
 
 import (
 	"strings"
+
+	pluralize "github.com/gertd/go-pluralize"
 )
+
+var pluralClient = pluralize.NewClient()
 
 // WordFrequency represents a word and its frequency count
 type WordFrequency struct {
@@ -10,8 +14,37 @@ type WordFrequency struct {
 	Count int    `json:"count"`
 }
 
+// normalizeWord converts simple plural and possessive forms to a canonical singular
+// It uses github.com/gertd/go-pluralize to detect and convert plurals when possible,
+// and falls back to a few heuristic rules for cases not covered by the library.
+func normalizeWord(word string) string {
+	// remove English possessive endings (e.g., "author's" -> "author")
+	if strings.HasSuffix(word, "'s") || strings.HasSuffix(word, "’s") {
+		if len(word) > 2 {
+			word = word[:len(word)-2]
+		}
+	}
+
+	if word == "" {
+		return word
+	}
+
+	// If the pluralize library thinks this is plural, convert to singular
+	if pluralClient.IsPlural(word) {
+		sing := pluralClient.Singular(word)
+		if sing != "" {
+			return sing
+		}
+	}
+	return word
+}
+
 // GetWordFrequencies computes word frequencies from input text with stopword filtering
-func GetWordFrequencies(text string, minLength int, topN int) []WordFrequency {
+// New optional parameter: enablePluralNormalization ...bool
+// If provided and true, plural forms will be normalized to singular before counting.
+// When omitted (default) plural normalization is disabled.
+func GetWordFrequencies(text string, minLength int, topN int, enablePluralNorm bool) []WordFrequency {
+
 	// Common English stopwords to filter out
 	stopwords := map[string]bool{
 		"the": true, "be": true, "to": true, "of": true, "and": true,
@@ -51,9 +84,17 @@ func GetWordFrequencies(text string, minLength int, topN int) []WordFrequency {
 
 	for _, word := range words {
 		word = strings.TrimSpace(word)
-		// Filter by length and stopwords
-		if len(word) >= minLength && !stopwords[word] {
-			wordCount[word]++
+		if word == "" {
+			continue
+		}
+		// normalize plural/possessive forms to singular only when option enabled
+		n := word
+		if enablePluralNorm {
+			n = normalizeWord(word)
+		}
+		// Filter by length and stopwords (use normalized form for both checks)
+		if len(n) >= minLength && !stopwords[n] {
+			wordCount[n]++
 		}
 	}
 
