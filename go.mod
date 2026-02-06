@@ -3,6 +3,7 @@ module IndicoDataFusion
 go 1.25
 
 require (
+	github.com/gertd/go-pluralize v0.2.1
 	github.com/pkg/errors v0.9.1
 	github.com/wailsapp/wails/v2 v2.11.0
 	github.com/zalando/go-keyring v0.2.6
