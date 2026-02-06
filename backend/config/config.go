@@ -3,6 +3,7 @@ package config
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"gopkg.in/yaml.v3"
@@ -55,10 +56,13 @@ type TestConfig struct {
 
 // DataSource represents a named data source configuration.
 type DataSource struct {
-	Name   string        `json:"name"`
-	Type   string        `json:"type"` // "indico" or "test"
-	Indico *IndicoConfig `json:"indico,omitempty"`
-	Test   *TestConfig   `json:"test,omitempty"`
+	Name        string        `json:"name"`
+	Type        string        `json:"type"` // "indico" or "test"
+	Indico      *IndicoConfig `json:"indico,omitempty"`
+	Test        *TestConfig   `json:"test,omitempty"`
+	Favorite    bool          `json:"favorite,omitempty" yaml:"favorite,omitempty"`
+	Description string        `json:"description,omitempty" yaml:"description,omitempty"`
+	Tags        []string      `json:"tags,omitempty" yaml:"tags,omitempty"`
 }
 
 // CacheConfig holds cache configuration.
@@ -134,6 +138,33 @@ func (c *Config) GetDataSource(name string) (*DataSource, error) {
 			tc.Contribs = contribs
 		}
 		ds.Test = tc
+	}
+
+	// Optional common fields: favorite, description, tags
+	if fav, ok := rawData["favorite"].(bool); ok {
+		ds.Favorite = fav
+	} else if favStr, ok := rawData["favorite"].(string); ok {
+		// accept common string forms
+		if strings.EqualFold(favStr, "true") {
+			ds.Favorite = true
+		} else {
+			ds.Favorite = false
+		}
+	}
+
+	if desc, ok := rawData["description"].(string); ok {
+		ds.Description = desc
+	}
+
+	if tagsRaw, ok := rawData["tags"].([]any); ok {
+		for _, t := range tagsRaw {
+			if s, ok := t.(string); ok {
+				ds.Tags = append(ds.Tags, s)
+			}
+		}
+	} else if tagsStrSlice, ok := rawData["tags"].([]string); ok {
+		// unlikely from yaml.Unmarshal into map[string]any, but handle just in case
+		ds.Tags = append(ds.Tags, tagsStrSlice...)
 	}
 
 	return ds, nil
@@ -257,7 +288,7 @@ type ConfigPathInfo struct {
 	Path string `json:"path"`
 }
 
-// ConfigData represents the structured configuration for the UI.
+// ConfigDataUI napfrepresents the structured configuration for the UI.
 type ConfigDataUI struct {
 	ActiveDataSourceName string         `json:"activeDataSourceName"`
 	DataSources          []DataSource   `json:"dataSources"`
@@ -320,6 +351,15 @@ func BuildConfigFromStructuredUI(configData *ConfigDataUI) *Config {
 			rawData["event_info"] = ds.Test.EventInfo
 			rawData["abstracts"] = ds.Test.Abstracts
 			rawData["contribs"] = ds.Test.Contribs
+		}
+
+		// Include optional fields so they are persisted
+		rawData["favorite"] = ds.Favorite
+		if ds.Description != "" {
+			rawData["description"] = ds.Description
+		}
+		if len(ds.Tags) > 0 {
+			rawData["tags"] = ds.Tags
 		}
 
 		cfg.DataSources[ds.Name] = rawData
