@@ -2,7 +2,7 @@
   import { onMount, onDestroy } from 'svelte';
   import cloud from 'd3-cloud';
   import { GetWordFrequencies } from '../../wailsjs/go/main/App';
-  import { Select } from 'flowbite-svelte';
+  import { Select, Toggle } from 'flowbite-svelte';
 
   let {
     text = '',
@@ -22,6 +22,9 @@
   let resizeObserver = null;
   let actualWidth = $state(800);
   let actualHeight = $state(400);
+
+  // plural normalization toggle
+  let enablePluralNorm = $state(false);
 
   let colorScheme = [
     '#1f77b4',
@@ -73,7 +76,7 @@
     error = null;
     try {
       // Ensure maxWords is a number (Select emits string values)
-      words = await GetWordFrequencies(inputText, minLength, Number(maxWords));
+      words = await GetWordFrequencies(inputText, minLength, Number(maxWords), enablePluralNorm);
     } catch (err) {
       console.error('Failed to fetch word frequencies:', err);
       error = err.message || 'Failed to fetch word frequencies';
@@ -172,6 +175,11 @@
 
   // Watch for text changes
   $effect(() => {
+    // reference reactive inputs so the effect re-runs when they change
+    extractedText();
+    minLength;
+    maxWords;
+    enablePluralNorm;
     fetchWordFrequencies();
   });
 
@@ -212,7 +220,14 @@
     </h3>
   {/if}
 
-  <Select size="sm" bind:value={maxWords} items={maxWordsOptions} class="shadow-sm"/>
+  <div class="flex flex-row items-center justify-center w-full gap-10 shadow-sm py-1 px-2 rounded-md">
+    <div class="flex-1">
+      <Select size="sm" bind:value={maxWords} items={maxWordsOptions} />
+    </div>
+    <div class="ml-auto">
+      <Toggle size="small" bind:checked={enablePluralNorm}>Merge Plural?</Toggle>
+    </div>
+  </div>
 
   {#if loading}
     <div class="flex items-center justify-center h-full">
