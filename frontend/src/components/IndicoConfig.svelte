@@ -1,7 +1,11 @@
 <script>
+  import Icon from '@iconify/svelte';
+  import { addTagTo, removeTagFrom, toggleFavoriteOn } from '../utils/dataSourceUtils.js';
+  import TagEditor from './TagEditor.svelte';
   let {
     open = $bindable(false),
     existingNames = [],
+    existingTags = [],
     placeholders = {
       confName: 'Conference name, e.g. IPAC25',
       baseUrl: 'https://indico.jacow.org',
@@ -22,6 +26,10 @@
     // store the selected token name (reference), not the raw token value
     apiTokenName: '',
     timeout: '60s',
+    // New fields
+    favorite: false,
+    description: '',
+    tags: [],
   });
   // validation errors for the form fields
   let newIndicoErrors = $state({ name: '', baseUrl: '', eventId: '', timeout: '' });
@@ -39,6 +47,10 @@
     newIndico.apiTokenName = apiTokens && apiTokens.length > 0 ? apiTokens[0].name || '' : '';
     newIndico.timeout = placeholders.timeout || '60s';
     newIndicoErrors = { name: '', baseUrl: '', eventId: '', timeout: '' };
+    // initialize new fields
+    newIndico.favorite = false;
+    newIndico.description = '';
+    newIndico.tags = [];
   }
 
   function validateNewIndico() {
@@ -103,6 +115,10 @@
       eventId: newIndico.eventId,
       apiTokenName: newIndico.apiTokenName,
       timeout: newIndico.timeout,
+      // include new fields
+      favorite: newIndico.favorite,
+      description: newIndico.description,
+      tags: newIndico.tags || [],
     };
     onCreate(payload);
   }
@@ -223,6 +239,47 @@
             <p class="text-xs text-red-500 mt-1">{newIndicoErrors.timeout}</p>
           {/if}
         </div>
+
+        <!-- New fields: Favorite, Description, Tags -->
+        <div class="pt-2 border-t border-gray-100 dark:border-gray-800">
+          <div class="grid grid-cols-1 gap-2">
+            <div class="flex items-center gap-2">
+              <button
+                type="button"
+                class="p-1 rounded focus:outline-none focus:ring-2 focus:ring-indigo-300"
+                onclick={() => toggleFavoriteOn(newIndico)}
+                aria-pressed={newIndico.favorite}
+                title={newIndico.favorite ? 'Unmark favorite' : 'Mark favorite'}
+              >
+                <Icon icon={newIndico.favorite ? 'mdi:star' : 'mdi:star-outline'} class="w-5 h-5 text-yellow-500" aria-hidden="true" />
+              </button>
+              <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Favorite</span>
+            </div>
+
+            <div>
+              <label for="new-indico-description" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Description</label>
+              <input
+                id="new-indico-description"
+                type="text"
+                bind:value={newIndico.description}
+                placeholder="Optional note about this data source"
+                class="w-full rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              />
+            </div>
+
+            <div>
+              <label for="new-indico-tags" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Tags</label>
+              <TagEditor
+                tags={newIndico.tags}
+                onAdd={(t) => addTagTo(newIndico, t)}
+                onRemove={(idx) => removeTagFrom(newIndico, idx)}
+                suggestions={existingTags ? existingTags.filter((t) => !(newIndico.tags || []).includes(t)) : []}
+                placeholder="Add tag and press Enter"
+              />
+            </div>
+          </div>
+        </div>
+
       </div>
       <div class="mt-4 flex justify-end gap-2">
         <button
