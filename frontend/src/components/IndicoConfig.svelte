@@ -177,41 +177,43 @@
             <p class="text-xs text-red-500 mt-1">{newIndicoErrors.name}</p>
           {/if}
         </div>
-        <div>
-          <label
-            for="new-indico-baseUrl"
-            class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Base URL</label
-          >
-          <input
-            id="new-indico-baseUrl"
-            type="text"
-            bind:value={newIndico.baseUrl}
-            class="w-full rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm"
-            placeholder={placeholders.baseUrl}
-            list="baseUrl-suggestions"
-          />
-          <datalist id="baseUrl-suggestions">
-            <option value="https://indico.jacow.org">https://indico.jacow.org</option>
-            <option value="https://indico.global">https://indico.global</option>
-          </datalist>
-          {#if newIndicoErrors.baseUrl}
-            <p class="text-xs text-red-500 mt-1">{newIndicoErrors.baseUrl}</p>
-          {/if}
-        </div>
-        <div>
-          <label
-            for="new-indico-eventId"
-            class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Event ID</label
-          >
-          <input
-            id="new-indico-eventId"
-            type="number"
-            bind:value={newIndico.eventId}
-            class="w-full rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm"
-          />
-          {#if newIndicoErrors.eventId}
-            <p class="text-xs text-red-500 mt-1">{newIndicoErrors.eventId}</p>
-          {/if}
+        <div class="grid grid-cols-1 sm:grid-cols-[2fr_1fr] gap-2">
+          <div>
+            <label
+              for="new-indico-baseUrl"
+              class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Base URL</label
+            >
+            <input
+              id="new-indico-baseUrl"
+              type="text"
+              bind:value={newIndico.baseUrl}
+              class="w-full rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm"
+              placeholder={placeholders.baseUrl}
+              list="baseUrl-suggestions"
+            />
+            <datalist id="baseUrl-suggestions">
+              <option value="https://indico.jacow.org">https://indico.jacow.org</option>
+              <option value="https://indico.global">https://indico.global</option>
+            </datalist>
+            {#if newIndicoErrors.baseUrl}
+              <p class="text-xs text-red-500 mt-1">{newIndicoErrors.baseUrl}</p>
+            {/if}
+          </div>
+          <div>
+            <label
+              for="new-indico-eventId"
+              class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Event ID</label
+            >
+            <input
+              id="new-indico-eventId"
+              type="number"
+              bind:value={newIndico.eventId}
+              class="w-full rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm"
+            />
+            {#if newIndicoErrors.eventId}
+              <p class="text-xs text-red-500 mt-1">{newIndicoErrors.eventId}</p>
+            {/if}
+          </div>
         </div>
         <div>
           <label
@@ -235,22 +237,6 @@
               bind:value={newIndico.apiTokenName}
               class="w-full rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm font-mono"
             />
-          {/if}
-        </div>
-        <div>
-          <label
-            for="new-indico-timeout"
-            class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Timeout</label
-          >
-          <input
-            id="new-indico-timeout"
-            type="text"
-            bind:value={newIndico.timeout}
-            class="w-full rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm"
-            placeholder={placeholders.timeout}
-          />
-          {#if newIndicoErrors.timeout}
-            <p class="text-xs text-red-500 mt-1">{newIndicoErrors.timeout}</p>
           {/if}
         </div>
 
@@ -281,6 +267,24 @@
           </div>
         </div>
 
+        <!-- Moved: Timeout (placed at end of the form) -->
+        <div>
+          <label
+            for="new-indico-timeout"
+            class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Timeout</label
+          >
+          <input
+            id="new-indico-timeout"
+            type="text"
+            bind:value={newIndico.timeout}
+            class="w-full rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm"
+            placeholder={placeholders.timeout}
+          />
+          {#if newIndicoErrors.timeout}
+            <p class="text-xs text-red-500 mt-1">{newIndicoErrors.timeout}</p>
+          {/if}
+        </div>
+
       </div>
       <div class="mt-4 flex justify-end gap-2">
         <button
@@ -292,7 +296,7 @@
           onclick={onSave}
           disabled={saving}
         >
-          {saving ? 'Saving...' : 'Add'}
+          {saving ? 'Saving...' : 'OK'}
         </button>
       </div>
     </div>
