@@ -143,9 +143,23 @@
     <div
       class="relative z-50 w-full max-w-md mx-4 bg-white dark:bg-gray-800 rounded-lg shadow-lg p-4 pointer-events-auto"
     >
-      <h4 class="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-3">
-        Add Indico Data Source
-      </h4>
+      <div class="flex items-center justify-between mb-3">
+        <h4 class="text-lg font-semibold text-gray-900 dark:text-gray-100">
+          Add Indico Data Source
+        </h4>
+        <div>
+          <button
+            type="button"
+            class="p-1 rounded focus:outline-none focus:ring-2 focus:ring-indigo-300"
+            onclick={() => toggleFavoriteOn(newIndico)}
+            aria-pressed={newIndico.favorite}
+            title={newIndico.favorite ? 'Unmark favorite' : 'Mark favorite'}
+          >
+            <Icon icon={newIndico.favorite ? 'mdi:star' : 'mdi:star-outline'} class="w-8 h-8 text-yellow-500" aria-hidden="true" />
+            <span class="sr-only">Toggle favorite</span>
+          </button>
+        </div>
+      </div>
       <div class="space-y-2">
         <div>
           <label
@@ -240,22 +254,9 @@
           {/if}
         </div>
 
-        <!-- New fields: Favorite, Description, Tags -->
+        <!-- New fields: Description, Tags (Favorite moved to header) -->
         <div class="pt-2 border-t border-gray-100 dark:border-gray-800">
           <div class="grid grid-cols-1 gap-2">
-            <div class="flex items-center gap-2">
-              <button
-                type="button"
-                class="p-1 rounded focus:outline-none focus:ring-2 focus:ring-indigo-300"
-                onclick={() => toggleFavoriteOn(newIndico)}
-                aria-pressed={newIndico.favorite}
-                title={newIndico.favorite ? 'Unmark favorite' : 'Mark favorite'}
-              >
-                <Icon icon={newIndico.favorite ? 'mdi:star' : 'mdi:star-outline'} class="w-5 h-5 text-yellow-500" aria-hidden="true" />
-              </button>
-              <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Favorite</span>
-            </div>
-
             <div>
               <label for="new-indico-description" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Description</label>
               <input
