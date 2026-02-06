@@ -1,5 +1,7 @@
 <script>
   import Icon from '@iconify/svelte';
+  import { addTagTo, removeTagFrom, toggleFavoriteOn, collectAllTags } from '../utils/dataSourceUtils.js';
+  import TagEditor from './TagEditor.svelte';
   let {
     configData = { dataSources: [] },
     expandedSources = {},
@@ -15,6 +17,11 @@
     onDelete = (_index) => {},
     onToggle = (_index) => {},
   } = $props();
+
+  // Collect all existing tags across data sources (for suggestions)
+  function getAllTags() {
+    return collectAllTags(configData && configData.dataSources ? configData.dataSources : []);
+  }
 </script>
 
 <div
@@ -249,13 +256,51 @@
                 </div>
               </div>
             {/if}
-            <!-- Error message for data source name -->
-            {#if nameErrors[i]}
-              <div class="text-red-500 text-sm mt-1">{nameErrors[i]}</div>
-            {/if}
+
+            <!-- New: Favorite / Description / Tags -->
+            <div class="pt-2 border-t border-gray-100 dark:border-gray-800">
+              <div class="grid grid-cols-1 gap-2">
+                <div class="flex items-center gap-2">
+                  <button
+                    type="button"
+                    class="p-1 rounded focus:outline-none focus:ring-2 focus:ring-indigo-300"
+                    onclick={(e) => { e.preventDefault(); e.stopPropagation(); const ds = configData.dataSources[i]; if (ds) toggleFavoriteOn(ds); }}
+                    aria-pressed={dataSource.favorite}
+                    title={dataSource.favorite ? 'Unmark favorite' : 'Mark favorite'}
+                  >
+                    <Icon icon={dataSource.favorite ? 'mdi:star' : 'mdi:star-outline'} class="w-5 h-5 text-yellow-500" aria-hidden="true" />
+                  </button>
+                  <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Favorite</span>
+                </div>
+
+                <div>
+                  <label for={`ds-${i}-description`} class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Description</label>
+                  <input
+                    id={`ds-${i}-description`}
+                    type="text"
+                    bind:value={dataSource.description}
+                    placeholder="Optional note about this data source"
+                    class="w-full rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    onclick={(e) => { e.stopPropagation(); }}
+                  />
+                </div>
+
+                <div>
+                  <label for={`ds-${i}-tags`} class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Tags</label>
+                  <TagEditor
+                    tags={dataSource.tags}
+                    onAdd={(t) => { const ds = configData.dataSources[i]; if (ds) addTagTo(ds, t); }}
+                    onRemove={(idx) => { const ds = configData.dataSources[i]; if (ds) removeTagFrom(ds, idx); }}
+                    suggestions={getAllTags().filter(t => !((dataSource.tags || []).includes(t)))}
+                    placeholder="Add tag and press Enter"
+                  />
+                </div>
+              </div>
+            </div>
           </div>
         {/if}
       </div>
     {/each}
   </div>
 </div>
+
