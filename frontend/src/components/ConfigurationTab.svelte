@@ -5,6 +5,7 @@
   import IndicoConfig from './IndicoConfig.svelte';
   import ApiTokens from './ApiTokens.svelte';
   import ConfirmDialog from './ConfirmDialog.svelte';
+  import { collectAllTags } from '../utils/dataSourceUtils.js';
   import Icon from '@iconify/svelte';
 
   let configData = $state(null);
@@ -20,6 +21,8 @@
 
   // exposed list of API tokens (from configData.APITokens)
   let apiTokens = $derived(configData && configData.apiTokens ? configData.apiTokens : []);
+  // existing tags aggregated from current data sources (for suggestions)
+  let existingTags = $derived(configData && configData.dataSources ? collectAllTags(configData.dataSources) : []);
 
   async function showToastMsg(msg, type = 'success', duration = 3500) {
     // clear previous timeout
@@ -674,6 +677,7 @@
 <IndicoConfig
   bind:open={indicoDialogOpen}
   existingNames={(configData?.dataSources || []).map((ds) => ds.name)}
+  existingTags={existingTags}
   placeholders={indicoDataSourcePlaceholders}
   saving={applying}
   {apiTokens}
