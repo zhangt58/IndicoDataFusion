@@ -62,22 +62,10 @@
   // name validation errors keyed by data-source index
   let nameErrors = $state({});
 
-  let indicoDataSourcePlaceholders = {
-    confName: 'Conference name, e.g. IPAC25',
-    baseUrl: 'https://indico.jacow.org',
-    eventId: '123',
-    timeout: '60s',
-  };
-
-  let testDataSourcePlaceholders = {
-    dataDir: './testdata',
-    eventInfo: 'info.json',
-    abstracts: 'abstracts.json',
-    contribs: 'contribs.json',
-  };
-
   // -- Indico dialog integration: we use the extracted component --
   let indicoDialogOpen = $state(false);
+  // snapshot of last-applied (committed) base URLs; used for suggestions so edits don't change suggestions until Apply
+  let committedBaseUrls = $state([]);
 
   function openAddIndicoDialog() {
     // Do not prefill a suggested name here; leave the dialog name empty so placeholder is visible
@@ -214,6 +202,8 @@
   async function loadConfig() {
     try {
       configData = await GetStructuredConfigUI();
+      // initialize committedBaseUrls snapshot from the loaded configuration and store on placeholders
+      committedBaseUrls = collectAllBaseUrls(configData && configData.dataSources ? configData.dataSources : []);
       // Initialize cache config with defaults if not present
       if (!configData.cache) {
         configData.cache = {
@@ -298,6 +288,8 @@
       applySuccess = 'Configuration applied successfully';
       // show a transient toast for success
       showToastMsg(applySuccess, 'success');
+      // update committed snapshot so suggestion lists reflect the applied state (store on placeholders)
+      committedBaseUrls = collectAllBaseUrls(configData && configData.dataSources ? configData.dataSources : []);
       return true;
     } catch (e) {
       applyError = `Failed to apply configuration: ${e}`;
@@ -423,8 +415,7 @@
       {configData}
       {expandedSources}
       {nameErrors}
-      {indicoDataSourcePlaceholders}
-      {testDataSourcePlaceholders}
+      {committedBaseUrls}
       {loading}
       {applying}
       {validateNames}
@@ -681,7 +672,6 @@
   existingNames={(configData?.dataSources || []).map((ds) => ds.name)}
   existingTags={existingTags}
   existingBaseUrls={existingBaseUrls}
-  placeholders={indicoDataSourcePlaceholders}
   saving={applying}
   {apiTokens}
   onCreate={handleCreateIndico}

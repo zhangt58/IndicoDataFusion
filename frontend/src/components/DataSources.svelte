@@ -1,13 +1,18 @@
 <script>
   import Icon from '@iconify/svelte';
-  import { addTagTo, removeTagFrom, toggleFavoriteOn, collectAllTags } from '../utils/dataSourceUtils.js';
+  import {
+    addTagTo,
+    removeTagFrom,
+    toggleFavoriteOn,
+    collectAllTags
+  } from '../utils/dataSourceUtils.js';
+  import BaseUrlInput from './BaseUrlInput.svelte';
   import TagEditor from './TagEditor.svelte';
   let {
     configData = { dataSources: [] },
     expandedSources = {},
     nameErrors = {},
-    indicoDataSourcePlaceholders = {},
-    testDataSourcePlaceholders = {},
+    committedBaseUrls = [],
     loading = false,
     applying = false,
     validateNames = () => {},
@@ -17,6 +22,19 @@
     onDelete = (_index) => {},
     onToggle = (_index) => {},
   } = $props();
+
+  let indicoDataSourcePlaceholders = $state({
+      baseUrl: 'https://indico.jacow.org',
+      eventId: '12345',
+      timeout: '60s',
+  });
+
+  let testDataSourcePlaceholders = $state({
+    dataDir: './testdata',
+    eventInfo: 'info.json',
+    abstracts: 'abstracts.json',
+    contribs: 'contribs.json',
+  });
 
   // Collect all existing tags across data sources (for suggestions)
   function getAllTags() {
@@ -129,12 +147,12 @@
                     class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
                     >Base URL</label
                   >
-                  <input
+                  <BaseUrlInput
                     id={`ds-${i}-baseUrl`}
-                    type="text"
-                    bind:value={dataSource.indico.baseUrl}
+                    value={dataSource.indico.baseUrl}
+                    onChange={(v) => { dataSource.indico.baseUrl = v; }}
                     placeholder={indicoDataSourcePlaceholders.baseUrl}
-                    class="w-full rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 subtle-placeholder"
+                    suggestions={committedBaseUrls}
                   />
                 </div>
                 <div>
@@ -174,7 +192,6 @@
                       id={`ds-${i}-apiTokenName`}
                       type="text"
                       bind:value={dataSource.indico.apiTokenName}
-                      placeholder={indicoDataSourcePlaceholders.apiToken}
                       class="w-full rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-indigo-500 subtle-placeholder"
                     />
                   {/if}
