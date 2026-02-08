@@ -71,7 +71,7 @@
               placeholder="Data source name"
               title="Edit data source name"
               aria-label={`Data source name ${i}`}
-              class="text-md font-semibold text-gray-900 dark:text-gray-100 bg-transparent border-b-2 border-transparent focus:border-indigo-500 px-1 py-0.5 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-sm transition-colors placeholder-gray-400 cursor-text"
+              class="text-md font-semibold text-gray-900 dark:text-gray-100 bg-transparent border-b-2 border-transparent focus:border-indigo-500 px-1 py-0.5 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-sm transition-colors cursor-text subtle-placeholder"
             />
             {#if nameErrors[i]}
               <span class="ml-2 text-red-500 text-xs font-medium" title={nameErrors[i]}
@@ -134,7 +134,7 @@
                     type="text"
                     bind:value={dataSource.indico.baseUrl}
                     placeholder={indicoDataSourcePlaceholders.baseUrl}
-                    class="w-full rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    class="w-full rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 subtle-placeholder"
                   />
                 </div>
                 <div>
@@ -148,7 +148,7 @@
                     type="number"
                     bind:value={dataSource.indico.eventId}
                     placeholder={indicoDataSourcePlaceholders.eventId}
-                    class="w-full rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    class="w-full rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 subtle-placeholder"
                   />
                 </div>
                 <div class="md:col-span-2">
@@ -161,7 +161,7 @@
                     <select
                       id={`ds-${i}-apiTokenName`}
                       bind:value={dataSource.indico.apiTokenName}
-                      class="w-full rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                      class="w-full rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-indigo-500 subtle-placeholder"
                     >
                       {#each apiTokens as t}
                         <option value={t.name}
@@ -175,7 +175,7 @@
                       type="text"
                       bind:value={dataSource.indico.apiTokenName}
                       placeholder={indicoDataSourcePlaceholders.apiToken}
-                      class="w-full rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                      class="w-full rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-indigo-500 subtle-placeholder"
                     />
                   {/if}
                 </div>
@@ -190,7 +190,7 @@
                     type="text"
                     bind:value={dataSource.indico.timeout}
                     placeholder={indicoDataSourcePlaceholders.timeout}
-                    class="w-full rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    class="w-full rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 subtle-placeholder"
                   />
                   <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">e.g., 15s, 1m, 500ms</p>
                 </div>
@@ -209,7 +209,7 @@
                     type="text"
                     bind:value={dataSource.test.dataDir}
                     placeholder={testDataSourcePlaceholders.dataDir}
-                    class="w-full rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    class="w-full rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 subtle-placeholder"
                   />
                 </div>
                 <div>
@@ -223,7 +223,7 @@
                     type="text"
                     bind:value={dataSource.test.eventInfo}
                     placeholder={testDataSourcePlaceholders.eventInfo}
-                    class="w-full rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    class="w-full rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 subtle-placeholder"
                   />
                 </div>
                 <div>
@@ -237,7 +237,7 @@
                     type="text"
                     bind:value={dataSource.test.abstracts}
                     placeholder={testDataSourcePlaceholders.abstracts}
-                    class="w-full rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    class="w-full rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 subtle-placeholder"
                   />
                 </div>
                 <div>
@@ -251,7 +251,7 @@
                     type="text"
                     bind:value={dataSource.test.contribs}
                     placeholder={testDataSourcePlaceholders.contribs}
-                    class="w-full rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    class="w-full rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 subtle-placeholder"
                   />
                 </div>
               </div>
@@ -280,7 +280,7 @@
                     type="text"
                     bind:value={dataSource.description}
                     placeholder="Optional note about this data source"
-                    class="w-full rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    class="w-full rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 subtle-placeholder"
                     onclick={(e) => { e.stopPropagation(); }}
                   />
                 </div>

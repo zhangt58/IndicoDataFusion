@@ -122,3 +122,10 @@
     @apply text-indigo-200;
   }
 }
+
+@layer utilities {
+  /* Shared subtle placeholder utility for inputs/selects */
+  .subtle-placeholder {
+    @apply placeholder:text-gray-500 placeholder:opacity-75 dark:placeholder:text-gray-400 dark:placeholder:opacity-60;
+  }
+}

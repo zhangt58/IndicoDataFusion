@@ -25,7 +25,7 @@
   let toastType = $state('success'); // 'success' | 'error' | 'info'
   let toastTimeoutId = null;
 
-  async function showToastMsg(msg, type = 'success', duration = 3500, placement = 'auto') {
+  async function showToastMsg(msg, type = 'success', duration = 3500) {
     if (toastTimeoutId) {
       clearTimeout(toastTimeoutId);
       toastTimeoutId = null;
@@ -337,7 +337,7 @@
               id="api-token-name"
               type="text"
               bind:value={token.name}
-              class="w-full rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm"
+              class="w-full rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm subtle-placeholder"
             />
           </div>
           <div>
@@ -350,7 +350,7 @@
               id="api-token-baseurl"
               type="text"
               bind:value={token.baseUrl}
-              class="w-full rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm"
+              class="w-full rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm subtle-placeholder"
               list="baseUrl-suggestions"
             />
             <datalist id="baseUrl-suggestions">
@@ -368,7 +368,7 @@
               id="api-token-username"
               type="text"
               bind:value={token.username}
-              class="w-full rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm"
+              class="w-full rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm subtle-placeholder"
             />
           </div>
           <div>
@@ -381,7 +381,7 @@
               id="api-token-token"
               type="password"
               bind:value={token.token}
-              class="w-full rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm font-mono"
+              class="w-full rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm font-mono subtle-placeholder"
             />
           </div>
         </div>
