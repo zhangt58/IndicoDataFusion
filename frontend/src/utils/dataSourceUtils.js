@@ -43,3 +43,15 @@ export function collectAllTags(dataSources) {
   return Array.from(s).sort();
 }
 
+// Collect all unique base URLs from data sources (for Indico type entries)
+export function collectAllBaseUrls(dataSources) {
+  const s = new Set();
+  if (!dataSources) return [];
+  for (const ds of dataSources) {
+    if (ds && ds.type === 'indico' && ds.indico && ds.indico.baseUrl) {
+      const b = String(ds.indico.baseUrl || '').trim();
+      if (b) s.add(b);
+    }
+  }
+  return Array.from(s).sort();
+}

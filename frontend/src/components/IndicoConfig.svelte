@@ -2,10 +2,12 @@
   import Icon from '@iconify/svelte';
   import { addTagTo, removeTagFrom, toggleFavoriteOn } from '../utils/dataSourceUtils.js';
   import TagEditor from './TagEditor.svelte';
+  import BaseUrlInput from './BaseUrlInput.svelte';
   let {
     open = $bindable(false),
     existingNames = [],
     existingTags = [],
+    existingBaseUrls = [],
     placeholders = {
       confName: 'Conference name, e.g. IPAC25',
       baseUrl: 'https://indico.jacow.org',
@@ -183,18 +185,13 @@
               for="new-indico-baseUrl"
               class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Base URL</label
             >
-            <input
+            <BaseUrlInput
               id="new-indico-baseUrl"
-              type="text"
-              bind:value={newIndico.baseUrl}
-              class="w-full rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm subtle-placeholder"
+              value={newIndico.baseUrl}
+              onChange={(v) => (newIndico.baseUrl = v)}
               placeholder={placeholders.baseUrl}
-              list="baseUrl-suggestions"
+              suggestions={Array.from(new Set([...(placeholders.baseUrl ? [placeholders.baseUrl] : []), ...(existingBaseUrls || [])]))}
             />
-            <datalist id="baseUrl-suggestions">
-              <option value="https://indico.jacow.org">https://indico.jacow.org</option>
-              <option value="https://indico.global">https://indico.global</option>
-            </datalist>
             {#if newIndicoErrors.baseUrl}
               <p class="text-xs text-red-500 mt-1">{newIndicoErrors.baseUrl}</p>
             {/if}
