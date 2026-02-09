@@ -72,17 +72,6 @@
         e.stopPropagation();
       }}
     />
-    <button
-      type="button"
-      class="px-3 py-2 rounded bg-indigo-600 text-white text-sm hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-300"
-      onclick={(e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        add();
-      }}
-    >
-      Add
-    </button>
   </div>
 
   {#if suggestions && suggestions.length}
