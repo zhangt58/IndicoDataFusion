@@ -21,6 +21,7 @@
     onAddIndico = () => {},
     onDelete = (_index) => {},
     onToggle = (_index) => {},
+    onActivate = (_index) => {},
   } = $props();
 
   let indicoDataSourcePlaceholders = $state({
@@ -113,6 +114,28 @@
             {/if}
           </span>
           <div class="flex items-center gap-2">
+            <!-- Activate button: sets this source as the selected active source -->
+            <button
+              type="button"
+              class="p-1 rounded focus:outline-none focus:ring-2 focus:ring-indigo-300"
+              onclick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                if (typeof onActivate === 'function') onActivate(i);
+              }}
+              aria-pressed={currentActiveIndex === i}
+              title={currentActiveIndex === i ? 'Active data source' : 'Set as active'}
+              aria-label={`Activate data source ${dataSource.name || i}`}
+            >
+              <Icon
+                icon={currentActiveIndex === i
+                  ? 'mdi:checkbox-marked-circle'
+                  : 'mdi:checkbox-blank-circle-outline'}
+                class="w-5 h-5 text-indigo-500"
+                aria-hidden="true"
+              />
+            </button>
+
             <!-- Favorite toggle button -->
             <button
               type="button"

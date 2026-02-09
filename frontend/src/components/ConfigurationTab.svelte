@@ -248,6 +248,17 @@
     expandedSources[index] = !expandedSources[index];
   }
 
+  // Activation handler: update selected index and immediately persist by calling apply()
+  async function handleActivate(index) {
+    if (applying) return;
+    selectedActiveIndex = index;
+    try {
+      await apply();
+    } catch (e) {
+      console.error('Activation apply failed', e);
+    }
+  }
+
   async function apply() {
     applyError = '';
     applySuccess = '';
@@ -432,6 +443,7 @@
       onAddIndico={openAddIndicoDialog}
       onDelete={(index) => openDeleteConfirm(index)}
       onToggle={(index) => toggleSource(index)}
+      onActivate={handleActivate}
     />
 
     <ConfirmDialog
