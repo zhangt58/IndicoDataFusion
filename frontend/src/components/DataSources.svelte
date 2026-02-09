@@ -76,7 +76,7 @@
 </script>
 
 <div
-  class="relative bg-gray-50 dark:bg-gray-800 rounded-lg shadow p-4 border border-gray-200 dark:border-gray-700"
+  class="bg-gray-50 dark:bg-gray-800 rounded-lg shadow p-4 border border-gray-200 dark:border-gray-700"
 >
   <div class="flex items-center justify-between mb-2">
     <div class="flex items-center gap-2">
@@ -93,15 +93,10 @@
         <Icon icon="mdi:grid" class="w-4 h-4" />
       </button>
     </div>
-    <!-- right side kept for spacing/controls (e.g., add button absolute positioned) -->
-    <div aria-hidden="true"></div>
-  </div>
 
-  <!-- Add Indico Source button: moved out of the header and positioned top-right -->
-  <div class="absolute top-2.5 right-2.5">
     <button
       type="button"
-      class="w-7 h-7 flex items-center justify-center gap-2 rounded-full bg-gray-500 text-white text-sm font-medium hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed dark:bg-gray-600 dark:hover:bg-gray-700 border border-transparent focus:outline-none focus:ring-2 focus:ring-gray-400 px-0 py-0"
+      class="w-6 h-6 flex items-center justify-center gap-2 rounded-full bg-gray-500 text-white text-sm font-medium hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed dark:bg-gray-600 dark:hover:bg-gray-700 border border-transparent focus:outline-none focus:ring-2 focus:ring-gray-400 px-0 py-0"
       onclick={() => onAddIndico()}
       disabled={loading || applying}
       aria-label="Add Indico Source"
