@@ -387,6 +387,18 @@
       configData.apiTokens.splice(idx, 1);
     }
   }
+
+  // Inline name edit handler used by DataSourcesTableView
+  function handleEditName(index, newName) {
+    if (!configData || !Array.isArray(configData.dataSources)) return;
+    if (index >= 0 && index < configData.dataSources.length) {
+      configData.dataSources[index].name = newName;
+      // run validation so inline edits show immediate errors
+      validateNames();
+    }
+  }
+
+  let viewMode = $state('list');
 </script>
 
 <div class="p-2 space-y-2 max-w-5xl mx-auto">
@@ -444,6 +456,7 @@
       onDelete={(index) => openDeleteConfirm(index)}
       onToggle={(index) => toggleSource(index)}
       onActivate={handleActivate}
+      onEditName={handleEditName}
     />
 
     <ConfirmDialog

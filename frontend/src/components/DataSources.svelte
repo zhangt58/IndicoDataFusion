@@ -1,5 +1,6 @@
 <script>
   import Icon from '@iconify/svelte';
+  import { Modal } from 'flowbite-svelte';
   import {
     addTagTo,
     removeTagFrom,
@@ -8,6 +9,7 @@
   } from '../utils/dataSourceUtils.js';
   import BaseUrlInput from './BaseUrlInput.svelte';
   import TagEditor from './TagEditor.svelte';
+  import DataSourcesTableView from './DataSourcesTableView.svelte';
   let {
     configData = { dataSources: [] },
     expandedSources = {},
@@ -22,7 +24,11 @@
     onDelete = (_index) => {},
     onToggle = (_index) => {},
     onActivate = (_index) => {},
+    onEditName = (_i, _v) => {},
   } = $props();
+
+  // Local dialog state for table view
+  let showTableDialog = $state(false);
 
   let indicoDataSourcePlaceholders = $state({
     baseUrl: 'https://indico.jacow.org',
@@ -41,13 +47,54 @@
   function getAllTags() {
     return collectAllTags(configData && configData.dataSources ? configData.dataSources : []);
   }
+
+  // Collect all existing base URLs for suggestions
+  function getAllBaseUrls() {
+    const urls = new Set();
+    (configData?.dataSources || []).forEach((ds) => {
+      if (ds.indico?.baseUrl) urls.add(ds.indico.baseUrl);
+    });
+    return Array.from(urls);
+  }
+
+  // Get all existing names for validation
+  function getAllNames() {
+    return (configData?.dataSources || []).map((ds) => ds.name || '');
+  }
+
+  function openTableView() {
+    showTableDialog = true;
+  }
+
+  function handleUpdate(index, updatedSource) {
+    if (!configData || !Array.isArray(configData.dataSources)) return;
+    if (index >= 0 && index < configData.dataSources.length) {
+      configData.dataSources[index] = updatedSource;
+      validateNames();
+    }
+  }
 </script>
 
 <div
   class="relative bg-gray-50 dark:bg-gray-800 rounded-lg shadow p-4 border border-gray-200 dark:border-gray-700"
 >
-  <div class="flex items-center justify-between">
-    <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">Data Sources</h3>
+  <div class="flex items-center justify-between mb-2">
+    <div class="flex items-center gap-2">
+      <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100 h-8 flex items-center">
+        Data Sources
+      </h3>
+      <button
+        type="button"
+        class="h-8 px-2 rounded bg-gray-100 dark:bg-gray-900 hover:bg-gray-200 dark:hover:bg-gray-800 text-sm flex items-center justify-center"
+        onclick={openTableView}
+        title="Open table view"
+        aria-label="Open table view"
+      >
+        <Icon icon="mdi:grid" class="w-4 h-4" />
+      </button>
+    </div>
+    <!-- right side kept for spacing/controls (e.g., add button absolute positioned) -->
+    <div aria-hidden="true"></div>
   </div>
 
   <!-- Add Indico Source button: moved out of the header and positioned top-right -->
@@ -370,4 +417,26 @@
       </div>
     {/each}
   </div>
+
+  <Modal
+    bind:open={showTableDialog}
+    size="xl"
+    title="Data Sources — Table View"
+    dismissable
+    outsideclose
+  >
+    <DataSourcesTableView
+      dataSources={configData.dataSources}
+      {currentActiveIndex}
+      {apiTokens}
+      existingNames={getAllNames()}
+      existingTags={getAllTags()}
+      existingBaseUrls={getAllBaseUrls()}
+      {onActivate}
+      {onDelete}
+      onToggleFavorite={toggleFavoriteOn}
+      {onEditName}
+      onUpdate={handleUpdate}
+    />
+  </Modal>
 </div>
