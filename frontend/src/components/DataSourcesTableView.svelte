@@ -13,7 +13,6 @@
     onActivate = () => {},
     onDelete = () => {},
     onToggleFavorite = () => {},
-    onEditName = () => {},
     onUpdate = () => {},
   } = $props();
 
@@ -277,17 +276,10 @@
             <Icon icon="mdi:pencil" class="w-5 h-5" />
           </button>
         {:else if col.id === 'Name'}
-          <input
-            type="text"
-            value={item.Name}
-            oninput={(e) => {
-              const target = e.target;
-              if (target && 'value' in target) {
-                onEditName(item._index, target.value);
-              }
-            }}
+          <span
             class="w-full bg-transparent border-b border-transparent focus:border-indigo-400 px-1 py-0.5 text-sm"
-          />
+            >{item.Name}</span
+          >
         {:else if col.id === 'Type'}
           <span
             class="px-2 py-0.5 text-xs rounded-full bg-gray-100 dark:bg-gray-900 text-gray-800 dark:text-gray-200"
@@ -318,7 +310,8 @@
             class="p-1 rounded focus:outline-none"
             onclick={(e) => {
               e.stopPropagation();
-              onToggleFavorite(item._raw);
+              // pass both the raw data source and its index so parent handlers can persist (or accept single-arg fallback)
+              onToggleFavorite(item._raw, item._index);
             }}
             aria-pressed={item.Favorite}
             title={item.Favorite ? 'Unmark favorite' : 'Mark favorite'}

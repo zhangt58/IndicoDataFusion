@@ -5,7 +5,11 @@
   import IndicoConfig from './IndicoConfig.svelte';
   import ApiTokens from './ApiTokens.svelte';
   import ConfirmDialog from './ConfirmDialog.svelte';
-  import { collectAllTags, collectAllBaseUrls } from '../utils/dataSourceUtils.js';
+  import {
+    collectAllTags,
+    collectAllBaseUrls,
+    toggleFavoriteOn,
+  } from '../utils/dataSourceUtils.js';
   import Icon from '@iconify/svelte';
 
   let configData = $state(null);
@@ -398,7 +402,21 @@
     }
   }
 
-  let viewMode = $state('list');
+  // New wrapper: toggle favorite flag and persist by calling apply(). Revert if apply fails.
+  async function handleToggleFavorite(ds) {
+    if (!ds) return;
+    const prev = !!ds.favorite;
+    // toggle locally
+    toggleFavoriteOn(ds);
+
+    // try to persist change; if apply fails, revert local change so UI stays consistent
+    const ok = await apply();
+    if (!ok) {
+      // revert
+      ds.favorite = prev;
+      // apply() will have already shown an error toast
+    }
+  }
 </script>
 
 <div class="p-2 space-y-2 max-w-5xl mx-auto">
@@ -457,6 +475,7 @@
       onToggle={(index) => toggleSource(index)}
       onActivate={handleActivate}
       onEditName={handleEditName}
+      onToggleFavorite={handleToggleFavorite}
     />
 
     <ConfirmDialog

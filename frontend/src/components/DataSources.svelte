@@ -4,8 +4,8 @@
   import {
     addTagTo,
     removeTagFrom,
-    toggleFavoriteOn,
     collectAllTags,
+    toggleFavoriteOn,
   } from '../utils/dataSourceUtils.js';
   import BaseUrlInput from './BaseUrlInput.svelte';
   import TagEditor from './TagEditor.svelte';
@@ -24,7 +24,7 @@
     onDelete = (_index) => {},
     onToggle = (_index) => {},
     onActivate = (_index) => {},
-    onEditName = (_i, _v) => {},
+    onToggleFavorite = null,
   } = $props();
 
   // Local dialog state for table view
@@ -193,7 +193,14 @@
                 e.preventDefault();
                 e.stopPropagation();
                 const ds = configData.dataSources[i];
-                if (ds) toggleFavoriteOn(ds);
+                if (!ds) return;
+                // if parent provided an onToggleFavorite handler, call it so the parent can persist changes
+                if (onToggleFavorite && typeof onToggleFavorite === 'function') {
+                  onToggleFavorite(ds, i);
+                } else {
+                  // fallback to local util for backwards compatibility
+                  toggleFavoriteOn(ds);
+                }
               }}
               aria-pressed={dataSource.favorite}
               title={dataSource.favorite ? 'Unmark favorite' : 'Mark favorite'}
@@ -434,8 +441,7 @@
       existingBaseUrls={getAllBaseUrls()}
       {onActivate}
       {onDelete}
-      onToggleFavorite={toggleFavoriteOn}
-      {onEditName}
+      onToggleFavorite={onToggleFavorite || toggleFavoriteOn}
       onUpdate={handleUpdate}
     />
   </Modal>
