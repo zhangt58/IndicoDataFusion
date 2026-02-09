@@ -113,6 +113,18 @@
             {/if}
           </span>
           <div class="flex items-center gap-2">
+
+            <!-- Favorite toggle button -->
+            <button
+                    type="button"
+                    class="p-1 rounded focus:outline-none focus:ring-2 focus:ring-indigo-300"
+                    onclick={(e) => { e.preventDefault(); e.stopPropagation(); const ds = configData.dataSources[i]; if (ds) toggleFavoriteOn(ds); }}
+                    aria-pressed={dataSource.favorite}
+                    title={dataSource.favorite ? 'Unmark favorite' : 'Mark favorite'}
+            >
+              <Icon icon={dataSource.favorite ? 'mdi:star' : 'mdi:star-outline'} class="w-5 h-5 text-yellow-500" aria-hidden="true" />
+            </button>
+
             <!-- Delete button: stop propagation so header click doesn't toggle -->
             <button
               type="button"
@@ -125,8 +137,7 @@
               aria-label={`Delete data source ${dataSource.name || i}`}
               title="Delete data source"
             >
-              <!-- reuse icon payload (parent uses flowbite variant) -->
-              🗑
+              <Icon icon="mdi:delete" class="w-5 h-5" aria-hidden="true" />
             </button>
             <Icon
               icon="mdi:chevron-down"
@@ -140,7 +151,7 @@
           <div class="px-4 pb-4 pt-2 border-t border-gray-200 dark:border-gray-700 space-y-2">
             {#if dataSource.type === 'indico' && dataSource.indico}
               <!-- Indico API Configuration -->
-              <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
+              <div class="grid grid-cols-1 md:grid-cols-[2fr_1fr] gap-2">
                 <div>
                   <label
                     for={`ds-${i}-baseUrl`}
@@ -169,7 +180,9 @@
                     class="w-full rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 subtle-placeholder"
                   />
                 </div>
-                <div class="md:col-span-2">
+              </div>
+               <div class="grid grid-cols-1 md:grid-cols-[2fr_1fr] gap-2">
+                <div>
                   <label
                     for={`ds-${i}-apiTokenName`}
                     class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
@@ -211,7 +224,7 @@
                   />
                   <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">e.g., 15s, 1m, 500ms</p>
                 </div>
-              </div>
+               </div>
             {:else if dataSource.type === 'test' && dataSource.test}
               <!-- Test Data Configuration -->
               <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
@@ -277,19 +290,6 @@
             <!-- New: Favorite / Description / Tags -->
             <div class="pt-2 border-t border-gray-100 dark:border-gray-800">
               <div class="grid grid-cols-1 gap-2">
-                <div class="flex items-center gap-2">
-                  <button
-                    type="button"
-                    class="p-1 rounded focus:outline-none focus:ring-2 focus:ring-indigo-300"
-                    onclick={(e) => { e.preventDefault(); e.stopPropagation(); const ds = configData.dataSources[i]; if (ds) toggleFavoriteOn(ds); }}
-                    aria-pressed={dataSource.favorite}
-                    title={dataSource.favorite ? 'Unmark favorite' : 'Mark favorite'}
-                  >
-                    <Icon icon={dataSource.favorite ? 'mdi:star' : 'mdi:star-outline'} class="w-5 h-5 text-yellow-500" aria-hidden="true" />
-                  </button>
-                  <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Favorite</span>
-                </div>
-
                 <div>
                   <label for={`ds-${i}-description`} class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Description</label>
                   <input
