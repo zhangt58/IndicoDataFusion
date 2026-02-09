@@ -142,11 +142,13 @@
 
   // Sort items
   let sortedItems = $derived.by(() => {
-    if (!sortKey) return filteredItems;
+    const sortColumnId = columns.find((c) => c.title === sortKey || c.id === sortKey)?.id ?? null;
+
+    if (!sortColumnId) return filteredItems;
 
     const sorted = [...filteredItems].sort((a, b) => {
-      const va = a[sortKey] ?? '';
-      const vb = b[sortKey] ?? '';
+      const va = a[sortColumnId] ?? '';
+      const vb = b[sortColumnId] ?? '';
       if (typeof va === 'string' && typeof vb === 'string') return va.localeCompare(vb);
       return va < vb ? -1 : va > vb ? 1 : 0;
     });
