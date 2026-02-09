@@ -392,16 +392,6 @@
     }
   }
 
-  // Inline name edit handler used by DataSourcesTableView
-  function handleEditName(index, newName) {
-    if (!configData || !Array.isArray(configData.dataSources)) return;
-    if (index >= 0 && index < configData.dataSources.length) {
-      configData.dataSources[index].name = newName;
-      // run validation so inline edits show immediate errors
-      validateNames();
-    }
-  }
-
   // New wrapper: toggle favorite flag and persist by calling apply(). Revert if apply fails.
   async function handleToggleFavorite(ds) {
     if (!ds) return;
@@ -461,7 +451,7 @@
 
     <!-- Data Sources -->
     <DataSources
-      {configData}
+      bind:configData
       {expandedSources}
       {nameErrors}
       {committedBaseUrls}
@@ -474,7 +464,6 @@
       onDelete={(index) => openDeleteConfirm(index)}
       onToggle={(index) => toggleSource(index)}
       onActivate={handleActivate}
-      onEditName={handleEditName}
       onToggleFavorite={handleToggleFavorite}
     />
 

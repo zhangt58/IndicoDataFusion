@@ -11,7 +11,7 @@
   import TagEditor from './TagEditor.svelte';
   import DataSourcesTableView from './DataSourcesTableView.svelte';
   let {
-    configData = { dataSources: [] },
+    configData = $bindable({ dataSources: [] }),
     expandedSources = {},
     nameErrors = {},
     committedBaseUrls = [],
