@@ -8,6 +8,7 @@
     existingNames = [],
     existingTags = [],
     existingBaseUrls = [],
+    initialData = null,
     placeholders = {
       confName: 'Conference name, e.g. IPAC25',
       baseUrl: 'https://indico.jacow.org',
@@ -42,17 +43,28 @@
   });
 
   function initialize() {
-    newIndico.name = '';
-    newIndico.baseUrl = placeholders.baseUrl || 'https://';
-    newIndico.eventId = parseInt(String(placeholders.eventId || '0'), 10) || 0;
-    // If there are apiTokens available, default to the first name; otherwise, use placeholder
-    newIndico.apiTokenName = apiTokens && apiTokens.length > 0 ? apiTokens[0].name || '' : '';
-    newIndico.timeout = placeholders.timeout || '60s';
+    if (initialData) {
+      // Edit mode - populate with existing data
+      newIndico.name = initialData.name || '';
+      newIndico.baseUrl = initialData.baseUrl || 'https://';
+      newIndico.eventId = parseInt(String(initialData.eventId || '0'), 10) || 0;
+      newIndico.apiTokenName = initialData.apiTokenName || initialData.apiToken || '';
+      newIndico.timeout = initialData.timeout || '60s';
+      newIndico.favorite = initialData.favorite || false;
+      newIndico.description = initialData.description || '';
+      newIndico.tags = initialData.tags || [];
+    } else {
+      // Create mode - use defaults
+      newIndico.name = '';
+      newIndico.baseUrl = placeholders.baseUrl || 'https://';
+      newIndico.eventId = parseInt(String(placeholders.eventId || '0'), 10) || 0;
+      newIndico.apiTokenName = apiTokens && apiTokens.length > 0 ? apiTokens[0].name || '' : '';
+      newIndico.timeout = placeholders.timeout || '60s';
+      newIndico.favorite = false;
+      newIndico.description = '';
+      newIndico.tags = [];
+    }
     newIndicoErrors = { name: '', baseUrl: '', eventId: '', timeout: '' };
-    // initialize new fields
-    newIndico.favorite = false;
-    newIndico.description = '';
-    newIndico.tags = [];
   }
 
   function validateNewIndico() {
