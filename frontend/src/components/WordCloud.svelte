@@ -37,15 +37,15 @@
     '#7f7f7f',
     '#bcbd22',
     '#17becf',
-  ]
+  ];
 
   let maxWordsOptions = [
-    { value: 100, name: "Show top 100 Words" },
-    { value: 200, name: "Show top 200 Words" },
-    { value: 300, name: "Show top 300 Words" },
-    { value: 400, name: "Show top 400 Words" },
-    { value: 500, name: "Show top 500 Words" },
-  ]
+    { value: 100, name: 'Show top 100 Words' },
+    { value: 200, name: 'Show top 200 Words' },
+    { value: 300, name: 'Show top 300 Words' },
+    { value: 400, name: 'Show top 400 Words' },
+    { value: 500, name: 'Show top 500 Words' },
+  ];
 
   // Extract text from abstracts array
   const extractedText = $derived(() => {
@@ -220,7 +220,9 @@
     </h3>
   {/if}
 
-  <div class="flex flex-row items-center justify-center w-full gap-10 shadow-sm py-1 px-2 rounded-md">
+  <div
+    class="flex flex-row items-center justify-center w-full gap-10 shadow-sm py-1 px-2 rounded-md"
+  >
     <div class="flex-1">
       <Select size="sm" bind:value={maxWords} items={maxWordsOptions} />
     </div>
@@ -246,7 +248,6 @@
       <div class="text-gray-500 dark:text-gray-400">No words to display</div>
     </div>
   {:else}
-    <svg bind:this={svgElement} width={actualWidth} height={actualHeight} class="block">
-    </svg>
+    <svg bind:this={svgElement} width={actualWidth} height={actualHeight} class="block"> </svg>
   {/if}
 </div>

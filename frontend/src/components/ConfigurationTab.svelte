@@ -22,9 +22,13 @@
   // exposed list of API tokens (from configData.APITokens)
   let apiTokens = $derived(configData && configData.apiTokens ? configData.apiTokens : []);
   // existing tags aggregated from current data sources (for suggestions)
-  let existingTags = $derived(configData && configData.dataSources ? collectAllTags(configData.dataSources) : []);
+  let existingTags = $derived(
+    configData && configData.dataSources ? collectAllTags(configData.dataSources) : [],
+  );
   // existing base URLs aggregated from current data sources (for suggestions)
-  let existingBaseUrls = $derived(configData && configData.dataSources ? collectAllBaseUrls(configData.dataSources) : []);
+  let existingBaseUrls = $derived(
+    configData && configData.dataSources ? collectAllBaseUrls(configData.dataSources) : [],
+  );
 
   async function showToastMsg(msg, type = 'success', duration = 3500) {
     // clear previous timeout
@@ -203,7 +207,9 @@
     try {
       configData = await GetStructuredConfigUI();
       // initialize committedBaseUrls snapshot from the loaded configuration and store on placeholders
-      committedBaseUrls = collectAllBaseUrls(configData && configData.dataSources ? configData.dataSources : []);
+      committedBaseUrls = collectAllBaseUrls(
+        configData && configData.dataSources ? configData.dataSources : [],
+      );
       // Initialize cache config with defaults if not present
       if (!configData.cache) {
         configData.cache = {
@@ -289,7 +295,9 @@
       // show a transient toast for success
       showToastMsg(applySuccess, 'success');
       // update committed snapshot so suggestion lists reflect the applied state (store on placeholders)
-      committedBaseUrls = collectAllBaseUrls(configData && configData.dataSources ? configData.dataSources : []);
+      committedBaseUrls = collectAllBaseUrls(
+        configData && configData.dataSources ? configData.dataSources : [],
+      );
       return true;
     } catch (e) {
       applyError = `Failed to apply configuration: ${e}`;
@@ -670,8 +678,8 @@
 <IndicoConfig
   bind:open={indicoDialogOpen}
   existingNames={(configData?.dataSources || []).map((ds) => ds.name)}
-  existingTags={existingTags}
-  existingBaseUrls={existingBaseUrls}
+  {existingTags}
+  {existingBaseUrls}
   saving={applying}
   {apiTokens}
   onCreate={handleCreateIndico}

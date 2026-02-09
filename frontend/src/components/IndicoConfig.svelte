@@ -157,7 +157,11 @@
             aria-pressed={newIndico.favorite}
             title={newIndico.favorite ? 'Unmark favorite' : 'Mark favorite'}
           >
-            <Icon icon={newIndico.favorite ? 'mdi:star' : 'mdi:star-outline'} class="w-8 h-8 text-yellow-500" aria-hidden="true" />
+            <Icon
+              icon={newIndico.favorite ? 'mdi:star' : 'mdi:star-outline'}
+              class="w-8 h-8 text-yellow-500"
+              aria-hidden="true"
+            />
             <span class="sr-only">Toggle favorite</span>
           </button>
         </div>
@@ -183,14 +187,20 @@
           <div>
             <label
               for="new-indico-baseUrl"
-              class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Base URL</label
+              class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+              >Base URL</label
             >
             <BaseUrlInput
               id="new-indico-baseUrl"
               value={newIndico.baseUrl}
               onChange={(v) => (newIndico.baseUrl = v)}
               placeholder={placeholders.baseUrl}
-              suggestions={Array.from(new Set([...(placeholders.baseUrl ? [placeholders.baseUrl] : []), ...(existingBaseUrls || [])]))}
+              suggestions={Array.from(
+                new Set([
+                  ...(placeholders.baseUrl ? [placeholders.baseUrl] : []),
+                  ...(existingBaseUrls || []),
+                ]),
+              )}
             />
             {#if newIndicoErrors.baseUrl}
               <p class="text-xs text-red-500 mt-1">{newIndicoErrors.baseUrl}</p>
@@ -199,7 +209,8 @@
           <div>
             <label
               for="new-indico-eventId"
-              class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Event ID</label
+              class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+              >Event ID</label
             >
             <input
               id="new-indico-eventId"
@@ -213,54 +224,58 @@
           </div>
         </div>
         <div class="grid grid-cols-1 sm:grid-cols-[2fr_1fr] gap-2">
-         <div>
-          <label
-            for="new-indico-apiTokenName"
-            class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">API Token</label
-          >
-          {#if apiTokens && apiTokens.length > 0}
-            <select
-              id="new-indico-apiTokenName"
-              bind:value={newIndico.apiTokenName}
-              class="w-full rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm font-mono subtle-placeholder"
+          <div>
+            <label
+              for="new-indico-apiTokenName"
+              class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+              >API Token</label
             >
-              {#each apiTokens as t}
-                <option value={t.name}>{t.name}{t.username ? ` — ${t.username}` : ''}</option>
-              {/each}
-            </select>
-          {:else}
-            <input
-              id="new-indico-apiTokenName"
-              type="text"
-              bind:value={newIndico.apiTokenName}
-              class="w-full rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm font-mono subtle-placeholder"
-            />
-          {/if}
-        </div>
-        <div>
-          <label
-                  for="new-indico-timeout"
-                  class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Timeout</label
-          >
-          <input
-                  id="new-indico-timeout"
-                  type="text"
-                  bind:value={newIndico.timeout}
-                  class="w-full rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm subtle-placeholder"
-                  placeholder={placeholders.timeout}
-          />
-          {#if newIndicoErrors.timeout}
-            <p class="text-xs text-red-500 mt-1">{newIndicoErrors.timeout}</p>
-          {/if}
-        </div>
+            {#if apiTokens && apiTokens.length > 0}
+              <select
+                id="new-indico-apiTokenName"
+                bind:value={newIndico.apiTokenName}
+                class="w-full rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm font-mono subtle-placeholder"
+              >
+                {#each apiTokens as t}
+                  <option value={t.name}>{t.name}{t.username ? ` — ${t.username}` : ''}</option>
+                {/each}
+              </select>
+            {:else}
+              <input
+                id="new-indico-apiTokenName"
+                type="text"
+                bind:value={newIndico.apiTokenName}
+                class="w-full rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm font-mono subtle-placeholder"
+              />
+            {/if}
           </div>
-
+          <div>
+            <label
+              for="new-indico-timeout"
+              class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Timeout</label
+            >
+            <input
+              id="new-indico-timeout"
+              type="text"
+              bind:value={newIndico.timeout}
+              class="w-full rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm subtle-placeholder"
+              placeholder={placeholders.timeout}
+            />
+            {#if newIndicoErrors.timeout}
+              <p class="text-xs text-red-500 mt-1">{newIndicoErrors.timeout}</p>
+            {/if}
+          </div>
+        </div>
 
         <!-- New fields: Description, Tags (Favorite moved to header) -->
         <div class="pt-2 border-t border-gray-100 dark:border-gray-800">
           <div class="grid grid-cols-1 gap-2">
             <div>
-              <label for="new-indico-description" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Description</label>
+              <label
+                for="new-indico-description"
+                class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+                >Description</label
+              >
               <input
                 id="new-indico-description"
                 type="text"
@@ -271,20 +286,22 @@
             </div>
 
             <div>
-              <label for="new-indico-tags" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Tags</label>
+              <label
+                for="new-indico-tags"
+                class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Tags</label
+              >
               <TagEditor
                 tags={newIndico.tags}
                 onAdd={(t) => addTagTo(newIndico, t)}
                 onRemove={(idx) => removeTagFrom(newIndico, idx)}
-                suggestions={existingTags ? existingTags.filter((t) => !(newIndico.tags || []).includes(t)) : []}
+                suggestions={existingTags
+                  ? existingTags.filter((t) => !(newIndico.tags || []).includes(t))
+                  : []}
                 placeholder="Add tag and press Enter"
               />
             </div>
           </div>
         </div>
-
-
-
       </div>
       <div class="mt-4 flex justify-end gap-2">
         <button
