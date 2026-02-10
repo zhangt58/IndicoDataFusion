@@ -288,7 +288,7 @@ type ConfigPathInfo struct {
 	Path string `json:"path"`
 }
 
-// ConfigDataUI napfrepresents the structured configuration for the UI.
+// ConfigDataUI represents the structured configuration for the UI.
 type ConfigDataUI struct {
 	ActiveDataSourceName string         `json:"activeDataSourceName"`
 	DataSources          []DataSource   `json:"dataSources"`
