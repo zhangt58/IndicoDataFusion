@@ -811,9 +811,9 @@
             showConfigFile = !showConfigFile;
           }
         }}
-        class="w-full flex items-center justify-between p-3 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+        class="w-full flex items-center justify-between p-1 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
       >
-        <h4 class="text-sm font-semibold text-gray-700 dark:text-gray-300">Configuration File</h4>
+        <h4 class="text-sm font-medium text-gray-700 dark:text-gray-300">Configuration File</h4>
         <svg
           class="w-5 h-5 text-gray-500 dark:text-gray-400 transform transition-transform"
           class:rotate-180={showConfigFile}
@@ -826,9 +826,9 @@
         </svg>
       </div>
       {#if showConfigFile}
-        <div class="px-4 pb-4 border-t border-gray-200 dark:border-gray-700 space-y-1">
-          <div class="flex flex-wrap items-center gap-2 text-sm pt-3">
-            <span class="font-medium text-gray-600 dark:text-gray-400">Path:</span>
+        <div class="px-2 pb-1 border-t border-gray-200 dark:border-gray-700 space-y-0.5">
+          <div class="flex flex-wrap items-center gap-2 text-sm pt-1">
+            <span class="text-gray-600 dark:text-gray-400">Path:</span>
             <span class="text-gray-800 dark:text-gray-200 font-mono text-xs break-all"
               >{configData.pathInfo?.path || configData.path || 'Not set'}</span
             >
