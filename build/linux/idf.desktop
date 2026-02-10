@@ -1,0 +1,8 @@
+[Desktop Entry]
+Name=IndicoDataFusion
+Comment=Aggregate Indico conference data into one desktop app
+Exec=idf
+Icon=idf
+Type=Application
+Categories=Utility;Office;
+Terminal=false
