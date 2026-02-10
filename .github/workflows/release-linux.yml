@@ -72,8 +72,8 @@ jobs:
           sudo apt-get update -qq
           sudo apt-get install -y libfuse2 file
           
-          # Download linuxdeploy and appimagetool
-          wget -q https://github.com/linuxdeploy/linuxdeploy/releases/download/continuous/linuxdeploy-x86_64.AppImage -O linuxdeploy
+          # Download linuxdeploy (pinned to version 1-alpha-20240109-1)
+          wget -q https://github.com/linuxdeploy/linuxdeploy/releases/download/1-alpha-20240109-1/linuxdeploy-x86_64.AppImage -O linuxdeploy
           chmod +x linuxdeploy
           
           # Create AppDir structure
@@ -81,7 +81,7 @@ jobs:
           mkdir -p AppDir/usr/share/applications
           mkdir -p AppDir/usr/share/icons/hicolor/512x512/apps
           
-          # Copy binary
+          # Copy binary (remove arch suffix for consistency within AppImage)
           cp ./build/bin/idf-${{ matrix.arch }} AppDir/usr/bin/idf
           chmod +x AppDir/usr/bin/idf
           
@@ -96,7 +96,14 @@ jobs:
           ./linuxdeploy --appdir AppDir --output appimage --desktop-file=./build/linux/idf.desktop --icon-file=./build/appicon.png
           
           # Rename AppImage to follow naming convention
-          mv idf-*.AppImage ./dist/IndicoDataFusion_${{ steps.pkginfo.outputs.pkg_version }}_linux_${{ matrix.arch }}.AppImage || true
+          # linuxdeploy creates idf-x86_64.AppImage, rename it to include version
+          if [ -f idf-x86_64.AppImage ]; then
+            mv idf-x86_64.AppImage ./dist/IndicoDataFusion_${{ steps.pkginfo.outputs.pkg_version }}_linux_${{ matrix.arch }}.AppImage
+          else
+            echo "Error: AppImage was not created" >&2
+            ls -lh idf*.AppImage || true
+            exit 1
+          fi
           ls -lh ./dist
 
       - name: Upload Linux tarball artifact
