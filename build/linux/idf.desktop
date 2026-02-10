@@ -1,0 +1,8 @@
+[Desktop Entry]
+Name=IndicoDataFusion
+Comment=Aggregate and browse Indico conference data from multiple instances
+Exec=idf
+Icon=idf
+Type=Application
+Categories=Utility;Office;
+Terminal=false

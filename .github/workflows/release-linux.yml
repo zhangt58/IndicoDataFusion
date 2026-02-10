@@ -64,21 +64,69 @@ jobs:
           tar -czf IndicoDataFusion_${{ steps.pkginfo.outputs.pkg_version }}_linux_${{ matrix.arch }}.tar.gz idf-${{ matrix.arch }}
           ls -lh
 
-      - name: Upload Linux artifact
+      - name: Build AppImage
+        shell: bash
+        run: |
+          set -e
+          # Install dependencies for AppImage creation
+          sudo apt-get update -qq
+          sudo apt-get install -y libfuse2 file
+          
+          # Download linuxdeploy and appimagetool
+          wget -q https://github.com/linuxdeploy/linuxdeploy/releases/download/continuous/linuxdeploy-x86_64.AppImage -O linuxdeploy
+          chmod +x linuxdeploy
+          
+          # Create AppDir structure
+          mkdir -p AppDir/usr/bin
+          mkdir -p AppDir/usr/share/applications
+          mkdir -p AppDir/usr/share/icons/hicolor/512x512/apps
+          
+          # Copy binary
+          cp ./build/bin/idf-${{ matrix.arch }} AppDir/usr/bin/idf
+          chmod +x AppDir/usr/bin/idf
+          
+          # Copy desktop file
+          cp ./build/linux/idf.desktop AppDir/usr/share/applications/
+          
+          # Copy and prepare icon
+          cp ./build/appicon.png AppDir/usr/share/icons/hicolor/512x512/apps/idf.png
+          cp ./build/appicon.png AppDir/idf.png
+          
+          # Run linuxdeploy to create AppImage
+          ./linuxdeploy --appdir AppDir --output appimage --desktop-file=./build/linux/idf.desktop --icon-file=./build/appicon.png
+          
+          # Rename AppImage to follow naming convention
+          mv idf-*.AppImage ./dist/IndicoDataFusion_${{ steps.pkginfo.outputs.pkg_version }}_linux_${{ matrix.arch }}.AppImage || true
+          ls -lh ./dist
+
+      - name: Upload Linux tarball artifact
         uses: actions/upload-artifact@v4
         with:
           name: linux-tarball-${{ matrix.arch }}
           path: ./dist/IndicoDataFusion_${{ steps.pkginfo.outputs.pkg_version }}_linux_${{ matrix.arch }}.tar.gz
           retention-days: 1
 
+      - name: Upload Linux AppImage artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-appimage-${{ matrix.arch }}
+          path: ./dist/IndicoDataFusion_${{ steps.pkginfo.outputs.pkg_version }}_linux_${{ matrix.arch }}.AppImage
+          retention-days: 1
+
   release:
     needs: build
     runs-on: ubuntu-latest
     steps:
-      - name: Download Artifacts (amd64)
+      - name: Download Artifacts (tarball amd64)
         uses: actions/download-artifact@v4
         with:
           name: linux-tarball-amd64
+          path: ./dist
+
+      - name: Download Artifacts (AppImage amd64)
+        uses: actions/download-artifact@v4
+        with:
+          name: linux-appimage-amd64
           path: ./dist
 
       - name: List downloaded files
@@ -90,4 +138,6 @@ jobs:
         uses: softprops/action-gh-release@v2
         if: startsWith(github.ref, 'refs/tags/')
         with:
-          files: ./dist/*.tar.gz
+          files: |
+            ./dist/*.tar.gz
+            ./dist/*.AppImage
