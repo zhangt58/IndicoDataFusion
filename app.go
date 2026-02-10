@@ -300,6 +300,68 @@ func (a *App) ApplyStructuredConfigUI(configData *config.ConfigDataUI) error {
 	return nil
 }
 
+// ExportConfig exports the current configuration with API tokens encrypted with a password.
+// Returns the encrypted JSON data as a base64-encoded string.
+func (a *App) ExportConfig(password string) (string, error) {
+	if a.configPath == "" {
+		return "", errors.Errorf("config path not set")
+	}
+
+	// Load current config
+	cfg, err := config.LoadConfig(a.configPath)
+	if err != nil {
+		return "", errors.Wrap(err, "failed to load config")
+	}
+
+	// Export with encryption, passing token retriever to fetch secrets from keyring
+	data, err := config.ExportConfig(cfg, password, utils.GetAPITokenSecret)
+	if err != nil {
+		return "", errors.Wrap(err, "failed to export config")
+	}
+
+	return string(data), nil
+}
+
+// ImportConfig imports and decrypts a configuration file, then applies it.
+// The data parameter should be the encrypted JSON export.
+func (a *App) ImportConfig(encryptedData string, password string) error {
+	if a.configPath == "" {
+		return errors.Errorf("config path not set")
+	}
+
+	// Decrypt and parse the config, passing token storer to save secrets to keyring
+	cfg, err := config.ImportConfig([]byte(encryptedData), password, utils.SetAPITokenSecret)
+	if err != nil {
+		return errors.Wrap(err, "failed to import config")
+	}
+
+	// Save the imported config (tokens are now in keyring, config has empty token fields)
+	if err := config.SaveConfig(a.configPath, cfg); err != nil {
+		return errors.Wrap(err, "failed to save imported config")
+	}
+
+	// Reload handler
+	h, err := data.NewDataSourceHandlerFromConfigFile(a.configPath)
+	if err != nil {
+		return errors.Wrap(err, "failed to reload handler after import")
+	}
+	a.handler = h
+	// Cache the active data source name after import
+	if a.handler != nil {
+		a.DataSourceName = a.handler.GetDataSourceName()
+	}
+
+	// Notify frontend of the active data source name after import
+	if a.handler != nil {
+		wailsruntime.EventsEmit(a.ctx, "app:datasource", a.DataSourceName)
+		// Emit init problems so UI can show token-related issues
+		wailsruntime.EventsEmit(a.ctx, "app:initproblems", a.GetInitProblems())
+	}
+
+	a.registerCacheCallbacks()
+	return nil
+}
+
 // RefreshCache invalidates and refreshes a specific cache entry
 func (a *App) RefreshCache(key string) error {
 	if a.handler == nil {

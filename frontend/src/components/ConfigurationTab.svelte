@@ -1,10 +1,21 @@
 <script>
   import { onMount, tick } from 'svelte';
-  import { GetStructuredConfigUI, ApplyStructuredConfigUI } from '../../wailsjs/go/main/App';
+  import {
+    GetStructuredConfigUI,
+    ApplyStructuredConfigUI,
+    ExportConfig,
+    ImportConfig,
+  } from '../../wailsjs/go/main/App';
   import DataSources from './DataSources.svelte';
   import IndicoConfig from './IndicoConfig.svelte';
   import ApiTokens from './ApiTokens.svelte';
   import ConfirmDialog from './ConfirmDialog.svelte';
+  import PasswordDialog from './PasswordDialog.svelte';
+  import {
+    collectAllTags,
+    collectAllBaseUrls,
+    toggleFavoriteOn,
+  } from '../utils/dataSourceUtils.js';
   import Icon from '@iconify/svelte';
 
   let configData = $state(null);
@@ -20,6 +31,14 @@
 
   // exposed list of API tokens (from configData.APITokens)
   let apiTokens = $derived(configData && configData.apiTokens ? configData.apiTokens : []);
+  // existing tags aggregated from current data sources (for suggestions)
+  let existingTags = $derived(
+    configData && configData.dataSources ? collectAllTags(configData.dataSources) : [],
+  );
+  // existing base URLs aggregated from current data sources (for suggestions)
+  let existingBaseUrls = $derived(
+    configData && configData.dataSources ? collectAllBaseUrls(configData.dataSources) : [],
+  );
 
   async function showToastMsg(msg, type = 'success', duration = 3500) {
     // clear previous timeout
@@ -57,22 +76,10 @@
   // name validation errors keyed by data-source index
   let nameErrors = $state({});
 
-  let indicoDataSourcePlaceholders = {
-    confName: 'Conference name, e.g. IPAC25',
-    baseUrl: 'https://indico.jacow.org',
-    eventId: '123',
-    timeout: '60s',
-  };
-
-  let testDataSourcePlaceholders = {
-    dataDir: './testdata',
-    eventInfo: 'info.json',
-    abstracts: 'abstracts.json',
-    contribs: 'contribs.json',
-  };
-
   // -- Indico dialog integration: we use the extracted component --
   let indicoDialogOpen = $state(false);
+  // snapshot of last-applied (committed) base URLs; used for suggestions so edits don't change suggestions until Apply
+  let committedBaseUrls = $state([]);
 
   function openAddIndicoDialog() {
     // Do not prefill a suggested name here; leave the dialog name empty so placeholder is visible
@@ -209,6 +216,10 @@
   async function loadConfig() {
     try {
       configData = await GetStructuredConfigUI();
+      // initialize committedBaseUrls snapshot from the loaded configuration and store on placeholders
+      committedBaseUrls = collectAllBaseUrls(
+        configData && configData.dataSources ? configData.dataSources : [],
+      );
       // Initialize cache config with defaults if not present
       if (!configData.cache) {
         configData.cache = {
@@ -245,6 +256,17 @@
 
   function toggleSource(index) {
     expandedSources[index] = !expandedSources[index];
+  }
+
+  // Activation handler: update selected index and immediately persist by calling apply()
+  async function handleActivate(index) {
+    if (applying) return;
+    selectedActiveIndex = index;
+    try {
+      await apply();
+    } catch (e) {
+      console.error('Activation apply failed', e);
+    }
   }
 
   async function apply() {
@@ -293,6 +315,10 @@
       applySuccess = 'Configuration applied successfully';
       // show a transient toast for success
       showToastMsg(applySuccess, 'success');
+      // update committed snapshot so suggestion lists reflect the applied state (store on placeholders)
+      committedBaseUrls = collectAllBaseUrls(
+        configData && configData.dataSources ? configData.dataSources : [],
+      );
       return true;
     } catch (e) {
       applyError = `Failed to apply configuration: ${e}`;
@@ -371,6 +397,113 @@
       configData.apiTokens.splice(idx, 1);
     }
   }
+
+  // New wrapper: toggle favorite flag and persist by calling apply(). Revert if apply fails.
+  async function handleToggleFavorite(ds) {
+    if (!ds) return;
+    const prev = !!ds.favorite;
+    // toggle locally
+    toggleFavoriteOn(ds);
+
+    // try to persist change; if apply fails, revert local change so UI stays consistent
+    const ok = await apply();
+    if (!ok) {
+      // revert
+      ds.favorite = prev;
+      // apply() will have already shown an error toast
+    }
+  }
+
+  // Export/Import state
+  let showExportPasswordDialog = $state(false);
+  let showImportPasswordDialog = $state(false);
+  let importFileData = $state('');
+  let fileInputRef = $state(null);
+  let exportingConfig = $state(false);
+  let importingConfig = $state(false);
+
+  // Export configuration
+  async function handleExport(password) {
+    exportingConfig = true;
+    try {
+      const encryptedData = await ExportConfig(password);
+
+      // Download the file
+      const blob = new Blob([encryptedData], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `idf-config-export-${new Date().toISOString().split('T')[0]}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+
+      showToastMsg('Configuration exported successfully', 'success');
+      showExportPasswordDialog = false;
+    } catch (e) {
+      throw new Error(`Export failed: ${e}`);
+    } finally {
+      exportingConfig = false;
+    }
+  }
+
+  // Import configuration
+  async function handleImport(password) {
+    if (!importFileData) {
+      throw new Error('No file selected');
+    }
+
+    importingConfig = true;
+    try {
+      await ImportConfig(importFileData, password);
+
+      // Reload the configuration from backend
+      await loadConfig();
+
+      showToastMsg('Configuration imported successfully', 'success');
+      showImportPasswordDialog = false;
+      importFileData = '';
+    } catch (e) {
+      throw new Error(`Import failed: ${e}`);
+    } finally {
+      importingConfig = false;
+    }
+  }
+
+  // Handle file selection for import
+  function handleFileSelect(event) {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const result = e.target?.result;
+      if (typeof result === 'string') {
+        importFileData = result;
+        showImportPasswordDialog = true;
+      }
+    };
+    reader.onerror = () => {
+      showToastMsg('Failed to read file', 'error');
+    };
+    reader.readAsText(file);
+
+    // Reset file input so the same file can be selected again
+    if (event.target) {
+      event.target.value = '';
+    }
+  }
+
+  function openExportDialog() {
+    showExportPasswordDialog = true;
+  }
+
+  function openImportDialog() {
+    if (fileInputRef) {
+      fileInputRef.click();
+    }
+  }
 </script>
 
 <div class="p-2 space-y-2 max-w-5xl mx-auto">
@@ -415,11 +548,10 @@
 
     <!-- Data Sources -->
     <DataSources
-      {configData}
+      bind:configData
       {expandedSources}
       {nameErrors}
-      {indicoDataSourcePlaceholders}
-      {testDataSourcePlaceholders}
+      {committedBaseUrls}
       {loading}
       {applying}
       {validateNames}
@@ -428,6 +560,8 @@
       onAddIndico={openAddIndicoDialog}
       onDelete={(index) => openDeleteConfirm(index)}
       onToggle={(index) => toggleSource(index)}
+      onActivate={handleActivate}
+      onToggleFavorite={handleToggleFavorite}
     />
 
     <ConfirmDialog
@@ -514,7 +648,7 @@
                         type="text"
                         bind:value={configData.cache.ttl}
                         placeholder="24h"
-                        class="w-full rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                        class="w-full rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 subtle-placeholder"
                       />
                       <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
                         e.g., 24h, 1h30m, 30m
@@ -536,7 +670,7 @@
                         type="text"
                         bind:value={configData.cache.maxSize}
                         placeholder="100MB"
-                        class="w-full rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                        class="w-full rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 subtle-placeholder"
                       />
                       <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
                         e.g., 100MB, 1GB, 500MB
@@ -557,7 +691,7 @@
                         type="text"
                         bind:value={configData.cache.cacheDir}
                         placeholder="~/.cache/IndicoDataFusion"
-                        class="w-full rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                        class="w-full rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-indigo-500 subtle-placeholder"
                       />
                       <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
                         Leave empty for default
@@ -581,50 +715,85 @@
       {/if}
     </div>
     <!-- CLOSE: Advanced container -->
-    <div class="flex items-center justify-end gap-2">
-      <!-- Toast (inline, left of Apply) -->
-      {#if showToast}
-        <div
-          class="transform transition-all duration-300 ease-out flex items-start gap-3 rounded-lg shadow-lg overflow-hidden px-3 py-2"
-          role="status"
-          aria-live={toastType === 'error' ? 'assertive' : 'polite'}
-        >
-          <div class="mt-0.5">
-            {#if toastType === 'success'}
-              <Icon icon="mdi:check" class="w-5 h-5 text-green-600" />
-            {:else if toastType === 'error'}
-              <Icon icon="mdi:close-circle" class="w-5 h-5 text-red-600" />
-            {:else}
-              <Icon icon="mdi:information" class="w-5 h-5 text-gray-600" />
-            {/if}
-          </div>
-          <div class="text-sm leading-tight">
-            <div class="font-medium text-gray-900 dark:text-gray-100">{toastMessage}</div>
-          </div>
-          <button
-            class="ml-2 text-xs text-gray-500 hover:text-gray-700"
-            onclick={() => {
-              showToast = false;
-              if (toastTimeoutId) {
-                clearTimeout(toastTimeoutId);
-                toastTimeoutId = null;
-              }
-            }}
-            aria-label="Dismiss toast">×</button
-          >
-        </div>
-      {/if}
-
-      <!-- Apply Button -->
-      <div>
+    <div class="flex items-center justify-between gap-2">
+      <!-- Export/Import buttons on the left -->
+      <div class="flex items-center gap-2">
         <button
           type="button"
-          class="px-2 py-1.5 rounded-lg bg-indigo-600 text-white font-medium hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed dark:bg-indigo-500 dark:hover:bg-indigo-600 focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:ring-offset-2 transition-colors"
-          onclick={apply}
-          disabled={applying || hasNameErrors}
+          class="px-2 py-1.5 rounded-lg bg-gray-600 text-white text-sm font-medium hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed dark:bg-gray-500 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-offset-2 transition-colors"
+          onclick={openExportDialog}
+          disabled={applying || exportingConfig}
+          title="Export configuration with encrypted API tokens"
         >
-          {applying ? 'Applying...' : 'Apply'}
+          <Icon icon="mdi:export" class="w-4 h-4 inline-block mr-1" />
+          Export
         </button>
+        <button
+          type="button"
+          class="px-2 py-1.5 rounded-lg bg-gray-600 text-white text-sm font-medium hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed dark:bg-gray-500 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-offset-2 transition-colors"
+          onclick={openImportDialog}
+          disabled={applying || importingConfig}
+          title="Import configuration from encrypted file"
+        >
+          <Icon icon="mdi:import" class="w-4 h-4 inline-block mr-1" />
+          Import
+        </button>
+        <!-- Hidden file input for import -->
+        <input
+          type="file"
+          bind:this={fileInputRef}
+          onchange={handleFileSelect}
+          accept=".json"
+          class="hidden"
+        />
+      </div>
+
+      <!-- Right side: Toast and Apply button -->
+      <div class="flex items-center gap-2">
+        <!-- Toast (inline, left of Apply) -->
+        {#if showToast}
+          <div
+            class="transform transition-all duration-300 ease-out flex items-start gap-3 rounded-lg shadow-lg overflow-hidden px-3 py-2"
+            role="status"
+            aria-live={toastType === 'error' ? 'assertive' : 'polite'}
+          >
+            <div class="mt-0.5">
+              {#if toastType === 'success'}
+                <Icon icon="mdi:check" class="w-5 h-5 text-green-600" />
+              {:else if toastType === 'error'}
+                <Icon icon="mdi:close-circle" class="w-5 h-5 text-red-600" />
+              {:else}
+                <Icon icon="mdi:information" class="w-5 h-5 text-gray-600" />
+              {/if}
+            </div>
+            <div class="text-sm leading-tight">
+              <div class="font-medium text-gray-900 dark:text-gray-100">{toastMessage}</div>
+            </div>
+            <button
+              class="ml-2 text-xs text-gray-500 hover:text-gray-700"
+              onclick={() => {
+                showToast = false;
+                if (toastTimeoutId) {
+                  clearTimeout(toastTimeoutId);
+                  toastTimeoutId = null;
+                }
+              }}
+              aria-label="Dismiss toast">×</button
+            >
+          </div>
+        {/if}
+
+        <!-- Apply Button -->
+        <div>
+          <button
+            type="button"
+            class="px-2 py-1.5 rounded-lg bg-indigo-600 text-white font-medium hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed dark:bg-indigo-500 dark:hover:bg-indigo-600 focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:ring-offset-2 transition-colors"
+            onclick={apply}
+            disabled={applying || hasNameErrors}
+          >
+            {applying ? 'Applying...' : 'Apply'}
+          </button>
+        </div>
       </div>
     </div>
 
@@ -642,9 +811,9 @@
             showConfigFile = !showConfigFile;
           }
         }}
-        class="w-full flex items-center justify-between p-3 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+        class="w-full flex items-center justify-between p-1 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
       >
-        <h4 class="text-sm font-semibold text-gray-700 dark:text-gray-300">Configuration File</h4>
+        <h4 class="text-sm font-medium text-gray-700 dark:text-gray-300">Configuration File</h4>
         <svg
           class="w-5 h-5 text-gray-500 dark:text-gray-400 transform transition-transform"
           class:rotate-180={showConfigFile}
@@ -657,9 +826,9 @@
         </svg>
       </div>
       {#if showConfigFile}
-        <div class="px-4 pb-4 border-t border-gray-200 dark:border-gray-700 space-y-1">
-          <div class="flex flex-wrap items-center gap-2 text-sm pt-3">
-            <span class="font-medium text-gray-600 dark:text-gray-400">Path:</span>
+        <div class="px-2 pb-1 border-t border-gray-200 dark:border-gray-700 space-y-0.5">
+          <div class="flex flex-wrap items-center gap-2 text-sm pt-1">
+            <span class="text-gray-600 dark:text-gray-400">Path:</span>
             <span class="text-gray-800 dark:text-gray-200 font-mono text-xs break-all"
               >{configData.pathInfo?.path || configData.path || 'Not set'}</span
             >
@@ -674,9 +843,39 @@
 <IndicoConfig
   bind:open={indicoDialogOpen}
   existingNames={(configData?.dataSources || []).map((ds) => ds.name)}
-  placeholders={indicoDataSourcePlaceholders}
+  {existingTags}
+  {existingBaseUrls}
   saving={applying}
   {apiTokens}
   onCreate={handleCreateIndico}
   onCancel={cancelCreateIndico}
+/>
+
+<!-- Export Password Dialog -->
+<PasswordDialog
+  bind:open={showExportPasswordDialog}
+  title="Export Configuration"
+  message="Enter a password to encrypt your configuration export. This password will be required to import the file."
+  confirmLabel="Export"
+  working={exportingConfig}
+  onConfirm={handleExport}
+  onCancel={() => {
+    showExportPasswordDialog = false;
+    exportingConfig = false;
+  }}
+/>
+
+<!-- Import Password Dialog -->
+<PasswordDialog
+  bind:open={showImportPasswordDialog}
+  title="Import Configuration"
+  message="Enter the password used to encrypt this configuration file."
+  confirmLabel="Import"
+  working={importingConfig}
+  onConfirm={handleImport}
+  onCancel={() => {
+    showImportPasswordDialog = false;
+    importingConfig = false;
+    importFileData = '';
+  }}
 />
