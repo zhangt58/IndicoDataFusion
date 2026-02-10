@@ -4,6 +4,9 @@ on:
   release:
     types:
       - created
+  push:
+    tags:
+      - '*'
 
 permissions:
   contents: write
@@ -83,4 +86,9 @@ jobs:
         uses: softprops/action-gh-release@v2
         if: startsWith(github.ref, 'refs/tags/')
         with:
+          tag_name: ${{ github.ref_name }}
+          name: Release v${{ github.ref_name }}
+          body: |
+            Override warning of the macOS pkg: `xattr -d com.apple.quarantine <file path of IndicoDataFusion_vX.Y.Z_macos_arm64.pkg>`
+          generate_release_notes: true
           files: ./dist/*.pkg
