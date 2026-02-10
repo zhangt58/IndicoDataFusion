@@ -65,8 +65,8 @@ jobs:
           mkdir -p AppDir/usr/share/applications
           mkdir -p AppDir/usr/share/icons/hicolor/512x512/apps
 
-          # Copy binary (remove arch suffix for consistency within AppImage)
-          cp ./build/bin/idf-${{ matrix.arch }} AppDir/usr/bin/idf
+          # Copy binary
+          cp ./build/bin/idf AppDir/usr/bin/idf
           chmod +x AppDir/usr/bin/idf
 
           # Copy desktop file
