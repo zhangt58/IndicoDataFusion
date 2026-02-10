@@ -1,6 +1,6 @@
 [Desktop Entry]
 Name=IndicoDataFusion
-Comment=Aggregate and browse Indico conference data from multiple instances
+Comment=Aggregate Indico conference data into one desktop app
 Exec=idf
 Icon=idf
 Type=Application
