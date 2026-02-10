@@ -63,13 +63,13 @@ func DetermineConfigPath(flagPath string, embeddedSample []byte) string {
 	}
 
 	// Ensure parent dir exists
-	if err := os.MkdirAll(filepath.Dir(target), 0500); err != nil {
+	if err := os.MkdirAll(filepath.Dir(target), 0755); err != nil {
 		log.Printf("Warning: failed to create config dir: %v", err)
 	}
 
 	// Prefer writing from embedded sample if available
 	if len(embeddedSample) > 0 {
-		if err := os.WriteFile(target, embeddedSample, 0400); err != nil {
+		if err := os.WriteFile(target, embeddedSample, 0600); err != nil {
 			log.Printf("Failed to write embedded default config to %s: %v", target, err)
 		} else {
 			log.Printf("Created default config at %s from embedded sample", target)
@@ -79,7 +79,7 @@ func DetermineConfigPath(flagPath string, embeddedSample []byte) string {
 		// Fallback: if for some reason embedding is not present, try file system sample
 		samplePath := "config/sample.yml"
 		if b, err := os.ReadFile(samplePath); err == nil {
-			if werr := os.WriteFile(target, b, 0400); werr != nil {
+			if werr := os.WriteFile(target, b, 0600); werr != nil {
 				log.Printf("Failed to write default config to %s: %v", target, werr)
 			} else {
 				log.Printf("Created default config at %s from sample file", target)
@@ -92,7 +92,7 @@ func DetermineConfigPath(flagPath string, embeddedSample []byte) string {
 
 	// If sample not available or write failed, write a placeholder
 	placeholder := []byte("# Indico Data Fusion default configuration\n")
-	if perr := os.WriteFile(target, placeholder, 0400); perr == nil {
+	if perr := os.WriteFile(target, placeholder, 0600); perr == nil {
 		log.Printf("Created placeholder config at %s", target)
 		return target
 	} else {
