@@ -159,7 +159,7 @@
     >
       <div class="flex items-center justify-between mb-3">
         <h4 class="text-lg font-semibold text-gray-900 dark:text-gray-100">
-          Add Indico Data Source
+          {initialData ? 'Edit Indico Data Source' : 'Add Indico Data Source'}
         </h4>
         <div>
           <button
