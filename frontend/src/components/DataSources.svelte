@@ -106,7 +106,7 @@
     </button>
   </div>
 
-  <div class="max-h-80 overflow-y-auto space-y-1 pr-3">
+  <div class="max-h-52 overflow-y-auto space-y-1 pr-3">
     {#each configData.dataSources as dataSource, i (i)}
       <div
         class="bg-gray-50 dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden"
