@@ -1,10 +1,16 @@
 <script>
   import { onMount, tick } from 'svelte';
-  import { GetStructuredConfigUI, ApplyStructuredConfigUI } from '../../wailsjs/go/main/App';
+  import {
+    GetStructuredConfigUI,
+    ApplyStructuredConfigUI,
+    ExportConfig,
+    ImportConfig,
+  } from '../../wailsjs/go/main/App';
   import DataSources from './DataSources.svelte';
   import IndicoConfig from './IndicoConfig.svelte';
   import ApiTokens from './ApiTokens.svelte';
   import ConfirmDialog from './ConfirmDialog.svelte';
+  import PasswordDialog from './PasswordDialog.svelte';
   import {
     collectAllTags,
     collectAllBaseUrls,
@@ -407,6 +413,97 @@
       // apply() will have already shown an error toast
     }
   }
+
+  // Export/Import state
+  let showExportPasswordDialog = $state(false);
+  let showImportPasswordDialog = $state(false);
+  let importFileData = $state('');
+  let fileInputRef = $state(null);
+  let exportingConfig = $state(false);
+  let importingConfig = $state(false);
+
+  // Export configuration
+  async function handleExport(password) {
+    exportingConfig = true;
+    try {
+      const encryptedData = await ExportConfig(password);
+
+      // Download the file
+      const blob = new Blob([encryptedData], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `idf-config-export-${new Date().toISOString().split('T')[0]}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+
+      showToastMsg('Configuration exported successfully', 'success');
+      showExportPasswordDialog = false;
+    } catch (e) {
+      throw new Error(`Export failed: ${e}`);
+    } finally {
+      exportingConfig = false;
+    }
+  }
+
+  // Import configuration
+  async function handleImport(password) {
+    if (!importFileData) {
+      throw new Error('No file selected');
+    }
+
+    importingConfig = true;
+    try {
+      await ImportConfig(importFileData, password);
+
+      // Reload the configuration from backend
+      await loadConfig();
+
+      showToastMsg('Configuration imported successfully', 'success');
+      showImportPasswordDialog = false;
+      importFileData = '';
+    } catch (e) {
+      throw new Error(`Import failed: ${e}`);
+    } finally {
+      importingConfig = false;
+    }
+  }
+
+  // Handle file selection for import
+  function handleFileSelect(event) {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const result = e.target?.result;
+      if (typeof result === 'string') {
+        importFileData = result;
+        showImportPasswordDialog = true;
+      }
+    };
+    reader.onerror = () => {
+      showToastMsg('Failed to read file', 'error');
+    };
+    reader.readAsText(file);
+
+    // Reset file input so the same file can be selected again
+    if (event.target) {
+      event.target.value = '';
+    }
+  }
+
+  function openExportDialog() {
+    showExportPasswordDialog = true;
+  }
+
+  function openImportDialog() {
+    if (fileInputRef) {
+      fileInputRef.click();
+    }
+  }
 </script>
 
 <div class="p-2 space-y-2 max-w-5xl mx-auto">
@@ -618,50 +715,85 @@
       {/if}
     </div>
     <!-- CLOSE: Advanced container -->
-    <div class="flex items-center justify-end gap-2">
-      <!-- Toast (inline, left of Apply) -->
-      {#if showToast}
-        <div
-          class="transform transition-all duration-300 ease-out flex items-start gap-3 rounded-lg shadow-lg overflow-hidden px-3 py-2"
-          role="status"
-          aria-live={toastType === 'error' ? 'assertive' : 'polite'}
-        >
-          <div class="mt-0.5">
-            {#if toastType === 'success'}
-              <Icon icon="mdi:check" class="w-5 h-5 text-green-600" />
-            {:else if toastType === 'error'}
-              <Icon icon="mdi:close-circle" class="w-5 h-5 text-red-600" />
-            {:else}
-              <Icon icon="mdi:information" class="w-5 h-5 text-gray-600" />
-            {/if}
-          </div>
-          <div class="text-sm leading-tight">
-            <div class="font-medium text-gray-900 dark:text-gray-100">{toastMessage}</div>
-          </div>
-          <button
-            class="ml-2 text-xs text-gray-500 hover:text-gray-700"
-            onclick={() => {
-              showToast = false;
-              if (toastTimeoutId) {
-                clearTimeout(toastTimeoutId);
-                toastTimeoutId = null;
-              }
-            }}
-            aria-label="Dismiss toast">×</button
-          >
-        </div>
-      {/if}
-
-      <!-- Apply Button -->
-      <div>
+    <div class="flex items-center justify-between gap-2">
+      <!-- Export/Import buttons on the left -->
+      <div class="flex items-center gap-2">
         <button
           type="button"
-          class="px-2 py-1.5 rounded-lg bg-indigo-600 text-white font-medium hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed dark:bg-indigo-500 dark:hover:bg-indigo-600 focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:ring-offset-2 transition-colors"
-          onclick={apply}
-          disabled={applying || hasNameErrors}
+          class="px-2 py-1.5 rounded-lg bg-gray-600 text-white text-sm font-medium hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed dark:bg-gray-500 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-offset-2 transition-colors"
+          onclick={openExportDialog}
+          disabled={applying || exportingConfig}
+          title="Export configuration with encrypted API tokens"
         >
-          {applying ? 'Applying...' : 'Apply'}
+          <Icon icon="mdi:export" class="w-4 h-4 inline-block mr-1" />
+          Export
         </button>
+        <button
+          type="button"
+          class="px-2 py-1.5 rounded-lg bg-gray-600 text-white text-sm font-medium hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed dark:bg-gray-500 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-offset-2 transition-colors"
+          onclick={openImportDialog}
+          disabled={applying || importingConfig}
+          title="Import configuration from encrypted file"
+        >
+          <Icon icon="mdi:import" class="w-4 h-4 inline-block mr-1" />
+          Import
+        </button>
+        <!-- Hidden file input for import -->
+        <input
+          type="file"
+          bind:this={fileInputRef}
+          onchange={handleFileSelect}
+          accept=".json"
+          class="hidden"
+        />
+      </div>
+
+      <!-- Right side: Toast and Apply button -->
+      <div class="flex items-center gap-2">
+        <!-- Toast (inline, left of Apply) -->
+        {#if showToast}
+          <div
+            class="transform transition-all duration-300 ease-out flex items-start gap-3 rounded-lg shadow-lg overflow-hidden px-3 py-2"
+            role="status"
+            aria-live={toastType === 'error' ? 'assertive' : 'polite'}
+          >
+            <div class="mt-0.5">
+              {#if toastType === 'success'}
+                <Icon icon="mdi:check" class="w-5 h-5 text-green-600" />
+              {:else if toastType === 'error'}
+                <Icon icon="mdi:close-circle" class="w-5 h-5 text-red-600" />
+              {:else}
+                <Icon icon="mdi:information" class="w-5 h-5 text-gray-600" />
+              {/if}
+            </div>
+            <div class="text-sm leading-tight">
+              <div class="font-medium text-gray-900 dark:text-gray-100">{toastMessage}</div>
+            </div>
+            <button
+              class="ml-2 text-xs text-gray-500 hover:text-gray-700"
+              onclick={() => {
+                showToast = false;
+                if (toastTimeoutId) {
+                  clearTimeout(toastTimeoutId);
+                  toastTimeoutId = null;
+                }
+              }}
+              aria-label="Dismiss toast">×</button
+            >
+          </div>
+        {/if}
+
+        <!-- Apply Button -->
+        <div>
+          <button
+            type="button"
+            class="px-2 py-1.5 rounded-lg bg-indigo-600 text-white font-medium hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed dark:bg-indigo-500 dark:hover:bg-indigo-600 focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:ring-offset-2 transition-colors"
+            onclick={apply}
+            disabled={applying || hasNameErrors}
+          >
+            {applying ? 'Applying...' : 'Apply'}
+          </button>
+        </div>
       </div>
     </div>
 
@@ -717,4 +849,33 @@
   {apiTokens}
   onCreate={handleCreateIndico}
   onCancel={cancelCreateIndico}
+/>
+
+<!-- Export Password Dialog -->
+<PasswordDialog
+  bind:open={showExportPasswordDialog}
+  title="Export Configuration"
+  message="Enter a password to encrypt your configuration export. This password will be required to import the file."
+  confirmLabel="Export"
+  working={exportingConfig}
+  onConfirm={handleExport}
+  onCancel={() => {
+    showExportPasswordDialog = false;
+    exportingConfig = false;
+  }}
+/>
+
+<!-- Import Password Dialog -->
+<PasswordDialog
+  bind:open={showImportPasswordDialog}
+  title="Import Configuration"
+  message="Enter the password used to encrypt this configuration file."
+  confirmLabel="Import"
+  working={importingConfig}
+  onConfirm={handleImport}
+  onCancel={() => {
+    showImportPasswordDialog = false;
+    importingConfig = false;
+    importFileData = '';
+  }}
 />
