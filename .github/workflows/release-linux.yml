@@ -17,7 +17,8 @@ env:
 jobs:
   build:
     name: Build and package (linux)
-    runs-on: ubuntu-22.04
+    # ubuntu 24.04
+    runs-on: ubuntu-latest
     strategy:
       matrix:
         arch: [amd64]
