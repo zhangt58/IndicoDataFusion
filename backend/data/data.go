@@ -493,6 +493,8 @@ func (h *DataSourceHandler) getAbstractsFromAPI(ctx context.Context) ([]indico.A
 		for i := range response.Abstracts {
 			response.Abstracts[i].IsMyReview = myReviewIDsSet[response.Abstracts[i].FriendlyID]
 			response.Abstracts[i].ReviewURL = fmt.Sprintf("%s/event/%d/abstracts/%d", h.client.BaseURL, h.client.EventID, response.Abstracts[i].ID)
+
+			populateMyReview(h, &response.Abstracts[i])
 		}
 	}
 
@@ -690,6 +692,30 @@ func getReviewIDsSet(h *DataSourceHandler, ctx context.Context) map[int]bool {
 	return nil
 }
 
+// populateMyReview finds and sets the current user's review in the abstract.
+// It matches reviews by comparing the review user's ID with the current user's ID.
+func populateMyReview(h *DataSourceHandler, abstract *indico.AbstractData) {
+	// Sync user ID from client if available
+	if h.client != nil && h.client.UserID > 0 {
+		h.userID = h.client.UserID
+	}
+
+	if h.userID == 0 {
+		// No user ID available, cannot match reviews
+		return
+	}
+
+	// Match reviews by user ID
+	for i := range abstract.Reviews {
+		if abstract.Reviews[i].User.ID == h.userID {
+			// Create a copy of the review
+			reviewCopy := abstract.Reviews[i]
+			abstract.MyReview = &reviewCopy
+			return
+		}
+	}
+}
+
 // RefreshAbstractByID fetches fresh data for a single abstract from the API.
 // This bypasses the cache and always fetches from the live API.
 func (h *DataSourceHandler) RefreshAbstractByID(ctx context.Context, id int) (*indico.AbstractData, error) {
@@ -760,6 +786,8 @@ func (h *DataSourceHandler) RefreshAbstractByID(ctx context.Context, id int) (*i
 	if myReviewIDsSet != nil {
 		abstract.IsMyReview = myReviewIDsSet[abstract.FriendlyID]
 		abstract.ReviewURL = fmt.Sprintf("%s/event/%d/abstracts/%d", h.client.BaseURL, h.client.EventID, abstract.ID)
+
+		populateMyReview(h, abstract)
 	}
 
 	// Ensure avatar URLs are absolute for single-abstract refresh as well
