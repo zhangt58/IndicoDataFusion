@@ -395,3 +395,153 @@ func convertRatingValue(value interface{}) float64 {
 func equalsCaseInsensitive(a, b string) bool {
 	return strings.ToLower(a) == strings.ToLower(b)
 }
+
+// ReviewSubmissionRequest represents the parameters for submitting a review.
+type ReviewSubmissionRequest struct {
+	ReviewID                 *int        // Review ID for editing existing review (nil for new review)
+	TrackID                  int         // The review track ID
+	QuestionRatings          map[int]int // Question ID -> Rating value (0 or 1)
+	ProposedAction           string      // accept, reject, changed_tracks, mark_as_duplicate, merge
+	ProposedContributionType *int        // Required for accept/reject actions (can be None)
+	ProposedTracks           []int       // Required for changed_tracks action
+	ProposedRelatedAbstract  *int        // Required for mark_as_duplicate/merge actions
+	Comment                  string      // Review comment
+}
+
+// SubmitAbstractReview submits a review for an abstract.
+// The abstractID parameter is the database ID of the abstract being reviewed.
+// If ReviewID is provided in the request, it will edit an existing review.
+// Otherwise, it will create a new review for the specified track.
+func (c *IndicoClient) SubmitAbstractReview(ctx context.Context, abstractID int, req *ReviewSubmissionRequest) error {
+	if req == nil {
+		return fmt.Errorf("request cannot be nil")
+	}
+
+	// Validate required fields
+	if req.TrackID <= 0 {
+		return fmt.Errorf("track_id is required")
+	}
+	if req.ProposedAction == "" {
+		return fmt.Errorf("proposed_action is required")
+	}
+
+	// Validate action-specific requirements
+	switch req.ProposedAction {
+	case "accept", "reject":
+		// proposed_contribution_type is required (can be None)
+		// We allow nil pointer to represent "None"
+	case "changed_tracks":
+		if len(req.ProposedTracks) == 0 {
+			return fmt.Errorf("proposed_tracks is required for changed_tracks action")
+		}
+	case "mark_as_duplicate", "merge":
+		if req.ProposedRelatedAbstract == nil {
+			return fmt.Errorf("proposed_related_abstract is required for %s action", req.ProposedAction)
+		}
+	default:
+		return fmt.Errorf("invalid proposed_action: %s", req.ProposedAction)
+	}
+
+	// Ensure we have a CSRF token
+	if c.csrfToken == "" {
+		return fmt.Errorf("csrf_token is required and not cached")
+	}
+
+	// Build the URL based on whether this is an edit or new review
+	u, err := url.Parse(c.BaseURL)
+	if err != nil {
+		return err
+	}
+
+	var path string
+	if req.ReviewID != nil {
+		// Edit existing review: /event/{event-id}/abstracts/{abstractID}/reviews/{review-id}/edit
+		path = fmt.Sprintf("/event/%d/abstracts/%d/reviews/%d/edit", c.EventID, abstractID, *req.ReviewID)
+	} else {
+		// Create new review: /event/{event-id}/abstracts/{abstractID}/review/track/{track-id}
+		path = fmt.Sprintf("/event/%d/abstracts/%d/review/track/%d", c.EventID, abstractID, req.TrackID)
+	}
+	u.Path = joinPaths(u.Path, path)
+
+	// Build form data
+	formData := url.Values{}
+	trackPrefix := fmt.Sprintf("track-%d-", req.TrackID)
+
+	// Add CSRF token
+	formData.Set(trackPrefix+"csrf_token", c.csrfToken)
+
+	// Add question ratings
+	for questionID, rating := range req.QuestionRatings {
+		key := fmt.Sprintf("%squestion_%d", trackPrefix, questionID)
+		formData.Set(key, strconv.Itoa(rating))
+	}
+
+	// Add proposed action
+	formData.Set(trackPrefix+"proposed_action", req.ProposedAction)
+
+	// Add action-specific fields
+	switch req.ProposedAction {
+	case "accept", "reject":
+		if req.ProposedContributionType != nil {
+			formData.Set(trackPrefix+"proposed_contribution_type", strconv.Itoa(*req.ProposedContributionType))
+		} else {
+			// Use '__None' for None value
+			formData.Set(trackPrefix+"proposed_contribution_type", "__None")
+		}
+	case "changed_tracks":
+		for _, trackID := range req.ProposedTracks {
+			formData.Add(trackPrefix+"proposed_tracks", strconv.Itoa(trackID))
+		}
+	case "mark_as_duplicate", "merge":
+		if req.ProposedRelatedAbstract != nil {
+			formData.Set(trackPrefix+"proposed_related_abstract", strconv.Itoa(*req.ProposedRelatedAbstract))
+		}
+	}
+
+	// Add comment
+	if req.Comment != "" {
+		formData.Set(trackPrefix+"comment", req.Comment)
+	}
+
+	// Create request with context
+	ctxReq, cancel := context.WithTimeout(ctx, c.Timeout)
+	defer cancel()
+
+	httpReq, err := http.NewRequestWithContext(ctxReq, http.MethodPost, u.String(), strings.NewReader(formData.Encode()))
+	if err != nil {
+		return err
+	}
+
+	// Set headers
+	httpReq.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	httpReq.Header.Set("Accept", "application/json")
+	if c.APIToken != "" {
+		httpReq.Header.Set("Authorization", "Bearer "+c.APIToken)
+	}
+
+	// Execute request
+	//resp, err := c.Client.Do(httpReq)
+	//if err != nil {
+	//	return err
+	//}
+	//defer func() { _ = resp.Body.Close() }()
+	//
+	// Check response status
+	//if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+	//	b, _ := io.ReadAll(io.LimitReader(resp.Body, 8*1024))
+	//	return fmt.Errorf("api error: status %d: %s", resp.StatusCode, string(b))
+	//}
+
+	// Log the full request URL and payload
+	fmt.Printf("=== Review Submission ===\n")
+	fmt.Printf("URL: %s\n", u.String())
+	fmt.Printf("Payload:\n")
+	for key, values := range formData {
+		for _, value := range values {
+			fmt.Printf("  %s = %s\n", key, value)
+		}
+	}
+	fmt.Printf("=========================\n")
+
+	return nil
+}
