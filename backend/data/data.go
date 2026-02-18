@@ -18,6 +18,10 @@ import (
 	"IndicoDataFusion/backend/config"
 )
 
+// questionMap is a shared map of question ID to question details,
+// used to enrich ratings with question info.
+var questionMap = make(map[int]*indico.QuestionData)
+
 // DataSourceHandler provides a high-level interface for accessing event data
 // from different sources (Indico API or local test files).
 type DataSourceHandler struct {
@@ -385,7 +389,6 @@ func (h *DataSourceHandler) getAbstractsFromFile() ([]indico.AbstractData, error
 	}
 
 	// Build question lookup map
-	questionMap := make(map[int]*indico.QuestionData)
 	for i := range response.Questions {
 		q := &response.Questions[i]
 		questionMap[q.ID] = q
@@ -393,6 +396,9 @@ func (h *DataSourceHandler) getAbstractsFromFile() ([]indico.AbstractData, error
 
 	// Expand question details in reviews
 	for i := range response.Abstracts {
+		// Set the shared question map for this abstract
+		response.Abstracts[i].Questions = questionMap
+
 		for j := range response.Abstracts[i].Reviews {
 			for k := range response.Abstracts[i].Reviews[j].Ratings {
 				rating := &response.Abstracts[i].Reviews[j].Ratings[k]
@@ -458,14 +464,16 @@ func (h *DataSourceHandler) getAbstractsFromAPI(ctx context.Context) ([]indico.A
 	}
 
 	// Build question lookup map
-	questionMap := make(map[int]*indico.QuestionData)
 	for i := range response.Questions {
 		q := &response.Questions[i]
 		questionMap[q.ID] = q
 	}
 
-	// Expand question details in reviews
+	// Expand question details in reviews and populate Questions field
 	for i := range response.Abstracts {
+		// Set the shared question map
+		response.Abstracts[i].Questions = questionMap
+
 		for j := range response.Abstracts[i].Reviews {
 			for k := range response.Abstracts[i].Reviews[j].Ratings {
 				rating := &response.Abstracts[i].Reviews[j].Ratings[k]
@@ -725,7 +733,6 @@ func (h *DataSourceHandler) RefreshAbstractByID(ctx context.Context, id int) (*i
 	}
 
 	// Build question lookup map
-	questionMap := make(map[int]*indico.QuestionData)
 	for i := range response.Questions {
 		q := &response.Questions[i]
 		questionMap[q.ID] = q
@@ -733,6 +740,9 @@ func (h *DataSourceHandler) RefreshAbstractByID(ctx context.Context, id int) (*i
 
 	// Expand question details in reviews for the single abstract
 	abstract := &response.Abstracts[0]
+	// Set the shared question map for this abstract
+	abstract.Questions = questionMap
+
 	for j := range abstract.Reviews {
 		for k := range abstract.Reviews[j].Ratings {
 			rating := &abstract.Reviews[j].Ratings[k]
