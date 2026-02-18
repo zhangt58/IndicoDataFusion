@@ -122,6 +122,7 @@ func NewDataSourceHandler(ds *config.DataSource, cacheConfig *config.CacheConfig
 
 		// Prefer token in config entry
 		apiToken = matched.Token
+
 		// If token is empty in config, try keyring
 		if apiToken == "" {
 			if secret, err := utils.GetAPITokenSecret(matched.Name); err == nil {
@@ -230,6 +231,12 @@ func (h *DataSourceHandler) Shutdown(ctx context.Context) error {
 		return h.cache.Shutdown(ctx)
 	}
 	return nil
+}
+
+// GetClient returns the Indico client for direct API access.
+// Returns nil if in test mode or client is not initialized.
+func (h *DataSourceHandler) GetClient() *indico.IndicoClient {
+	return h.client
 }
 
 // GetInfo retrieves event information from the configured data source.
