@@ -1,5 +1,9 @@
 package indico
 
+import (
+	"strings"
+)
+
 // Track represents a conference track
 type Track struct {
 	Code  string `json:"code"`
@@ -101,8 +105,17 @@ type AbstractData struct {
 	Files             []interface{} `json:"files"` // generic for now
 
 	// if this abstract to be reviewed by the current user
-	IsMyReview bool   `json:"is_my_review"`
-	ReviewURL  string `json:"review_url"`
+	IsMyReview bool `json:"is_my_review"`
+	// review URL is the original Indico URL to review this abstract
+	// review is available only if the current user is a reviewer for this abstract
+	ReviewURL string `json:"review_url"`
+
+	// MyReview is the current user's review for this abstract (nil if not reviewed yet)
+	MyReview *Review `json:"my_review,omitempty"`
+
+	// Questions is a pointer to the shared question map for this event
+	// Key: question ID, Value: question details
+	Questions map[int]*QuestionData `json:"questions,omitempty"`
 
 	// Aggregated Ratings (computed fields for frontend convenience)
 	FirstPriority  float64 `json:"first_priority"`
@@ -114,4 +127,38 @@ type AbstractsResponse struct {
 	Abstracts []AbstractData `json:"abstracts"`
 	Questions []QuestionData `json:"questions"`
 	Version   int            `json:"version,omitempty"`
+}
+
+// FindQuestionIDByTitle searches for a question ID by its title (case-insensitive).
+// Returns the question ID and true if found, 0 and false otherwise.
+func (a *AbstractData) FindQuestionIDByTitle(title string) (int, bool) {
+	if a.Questions == nil {
+		return 0, false
+	}
+
+	lowerTitle := strings.ToLower(title)
+	for id, q := range a.Questions {
+		if strings.ToLower(q.Title) == lowerTitle {
+			return id, true
+		}
+	}
+	return 0, false
+}
+
+// GetFirstPriorityQuestionID returns the question ID for "First priority".
+// Returns 0 if not found.
+func (a *AbstractData) GetFirstPriorityQuestionID() int {
+	if id, ok := a.FindQuestionIDByTitle("First priority"); ok {
+		return id
+	}
+	return 0
+}
+
+// GetSecondPriorityQuestionID returns the question ID for "Second priority".
+// Returns 0 if not found.
+func (a *AbstractData) GetSecondPriorityQuestionID() int {
+	if id, ok := a.FindQuestionIDByTitle("Second priority"); ok {
+		return id
+	}
+	return 0
 }
