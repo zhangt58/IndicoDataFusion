@@ -22,6 +22,10 @@ import (
 // used to enrich ratings with question info.
 var questionMap = make(map[int]*indico.QuestionData)
 
+// contribTypes is a shared map of contribution types, populated when fetching abstracts
+// Key: contrib type name, Value: contribution type ID
+var contribTypesMap = make(map[string]int)
+
 // DataSourceHandler provides a high-level interface for accessing event data
 // from different sources (Indico API or local test files).
 type DataSourceHandler struct {
@@ -394,10 +398,29 @@ func (h *DataSourceHandler) getAbstractsFromFile() ([]indico.AbstractData, error
 		questionMap[q.ID] = q
 	}
 
-	// Expand question details in reviews
+	// Build contribution types map from abstracts
+	for i := range response.Abstracts {
+		// Collect from accepted, submitted contrib types
+		if ct := response.Abstracts[i].AcceptedContribType; ct != nil {
+			contribTypesMap[ct.Name] = ct.ID
+		}
+		if ct := response.Abstracts[i].SubmittedContribType; ct != nil {
+			contribTypesMap[ct.Name] = ct.ID
+		}
+		// Also from reviews
+		for j := range response.Abstracts[i].Reviews {
+			if ct := response.Abstracts[i].Reviews[j].ProposedContribType; ct != nil {
+				contribTypesMap[ct.Name] = ct.ID
+			}
+		}
+	}
+
+	// Expand question details in reviews and populate shared maps
 	for i := range response.Abstracts {
 		// Set the shared question map for this abstract
 		response.Abstracts[i].Questions = questionMap
+		// Set the shared contrib types map
+		response.Abstracts[i].ContribTypesMap = &contribTypesMap
 
 		for j := range response.Abstracts[i].Reviews {
 			for k := range response.Abstracts[i].Reviews[j].Ratings {
@@ -469,10 +492,26 @@ func (h *DataSourceHandler) getAbstractsFromAPI(ctx context.Context) ([]indico.A
 		questionMap[q.ID] = q
 	}
 
-	// Expand question details in reviews and populate Questions field
+	// Build contribution types map from abstracts
+	for i := range response.Abstracts {
+		if ct := response.Abstracts[i].AcceptedContribType; ct != nil {
+			contribTypesMap[ct.Name] = ct.ID
+		}
+		if ct := response.Abstracts[i].SubmittedContribType; ct != nil {
+			contribTypesMap[ct.Name] = ct.ID
+		}
+		for j := range response.Abstracts[i].Reviews {
+			if ct := response.Abstracts[i].Reviews[j].ProposedContribType; ct != nil {
+				contribTypesMap[ct.Name] = ct.ID
+			}
+		}
+	}
+	// Expand question details in reviews and populate shared maps
 	for i := range response.Abstracts {
 		// Set the shared question map
 		response.Abstracts[i].Questions = questionMap
+		// Set the shared contrib types map
+		response.Abstracts[i].ContribTypesMap = &contribTypesMap
 
 		for j := range response.Abstracts[i].Reviews {
 			for k := range response.Abstracts[i].Reviews[j].Ratings {
