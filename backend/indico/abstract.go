@@ -1,6 +1,8 @@
 package indico
 
 import (
+	"context"
+	"fmt"
 	"strings"
 )
 
@@ -161,4 +163,102 @@ func (a *AbstractData) GetSecondPriorityQuestionID() int {
 		return id
 	}
 	return 0
+}
+
+// buildReviewRequest is a helper method that builds a ReviewSubmissionRequest from the review data.
+// It consolidates the shared logic between SubmitNewReview and UpdateReview.
+func (r *Review) buildReviewRequest(firstPriorityQuestionID, firstPriorityValue,
+	secondPriorityQuestionID, secondPriorityValue int,
+	comment string, reviewID *int) *ReviewSubmissionRequest {
+	// Build question ratings map for first_priority and second_priority
+	questionRatings := map[int]int{}
+
+	if firstPriorityQuestionID > 0 {
+		questionRatings[firstPriorityQuestionID] = firstPriorityValue
+	}
+	if secondPriorityQuestionID > 0 {
+		questionRatings[secondPriorityQuestionID] = secondPriorityValue
+	}
+
+	// Determine proposed contribution type
+	var contribTypeID *int
+	if r.ProposedContribType != nil {
+		contribTypeID = &r.ProposedContribType.ID
+	}
+
+	// Build proposed tracks
+	var proposedTracks []int
+	for _, track := range r.ProposedTracks {
+		proposedTracks = append(proposedTracks, track.ID)
+	}
+
+	// Build proposed related abstract
+	var relatedAbstractID *int
+	if r.ProposedRelatedAbstract != nil {
+		relatedAbstractID = &r.ProposedRelatedAbstract.ID
+	}
+
+	return &ReviewSubmissionRequest{
+		ReviewID:                 reviewID,
+		TrackID:                  r.Track.ID,
+		QuestionRatings:          questionRatings,
+		ProposedAction:           r.ProposedAction,
+		ProposedContributionType: contribTypeID,
+		ProposedTracks:           proposedTracks,
+		ProposedRelatedAbstract:  relatedAbstractID,
+		Comment:                  comment,
+	}
+}
+
+// SubmitNewReview creates a new review for an abstract using the SubmitAbstractReview API.
+// Parameters:
+//   - ctx: context for the request
+//   - client: IndicoClient to use for submission
+//   - abstract: the AbstractData containing question information
+//   - firstPriorityValue: rating value (0 or 1) for first priority
+//   - secondPriorityValue: rating value (0 or 1) for second priority
+//   - comment: review comment
+//
+// Returns error if submission fails.
+func (r *Review) SubmitNewReview(ctx context.Context, client *IndicoClient, abstract *AbstractData,
+	firstPriorityValue, secondPriorityValue int, comment string) error {
+
+	if r.Track.ID == 0 {
+		return fmt.Errorf("track ID is required in review")
+	}
+
+	// Get question IDs from abstract
+	firstPriorityQuestionID := abstract.GetFirstPriorityQuestionID()
+	secondPriorityQuestionID := abstract.GetSecondPriorityQuestionID()
+
+	req := r.buildReviewRequest(firstPriorityQuestionID, firstPriorityValue,
+		secondPriorityQuestionID, secondPriorityValue, comment, nil)
+	return client.SubmitAbstractReview(ctx, abstract.ID, req)
+}
+
+// UpdateReview updates an existing review using the SubmitAbstractReview API.
+// Parameters:
+//   - ctx: context for the request
+//   - client: IndicoClient to use for submission
+//   - abstract: the AbstractData containing question information
+//   - firstPriorityValue: rating value (0 or 1) for first priority
+//   - secondPriorityValue: rating value (0 or 1) for second priority
+//   - comment: review comment
+//
+// Returns error if submission fails.
+func (r *Review) UpdateReview(ctx context.Context, client *IndicoClient, abstract *AbstractData,
+	firstPriorityValue, secondPriorityValue int, comment string) error {
+
+	if r.ID == 0 {
+		return fmt.Errorf("review ID is required for update - use SubmitNewReview for new reviews")
+	}
+
+	// Get question IDs from abstract
+	firstPriorityQuestionID := abstract.GetFirstPriorityQuestionID()
+	secondPriorityQuestionID := abstract.GetSecondPriorityQuestionID()
+
+	reviewID := r.ID
+	req := r.buildReviewRequest(firstPriorityQuestionID, firstPriorityValue,
+		secondPriorityQuestionID, secondPriorityValue, comment, &reviewID)
+	return client.SubmitAbstractReview(ctx, abstract.ID, req)
 }
