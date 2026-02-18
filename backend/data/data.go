@@ -28,6 +28,8 @@ type DataSourceHandler struct {
 	cache      *cache.Cache
 	// initProblems collects non-fatal initialization issues (e.g., missing API token)
 	initProblems []string
+	// userID is the ID of the current user, populated from the Indico client after fetching review tracks
+	userID int
 }
 
 // NewDataSourceHandler creates a new data source handler with optional cache config

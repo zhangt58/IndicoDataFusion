@@ -28,6 +28,7 @@ type IndicoClient struct {
 	Client    HTTPClient
 	Timeout   time.Duration
 	csrfToken string // Cached CSRF token for authenticated requests
+	UserID    int    // Current user's ID from data-user-id attribute
 }
 
 // NewIndicoClient constructs a client with a sensible default http.Client.

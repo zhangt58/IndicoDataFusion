@@ -83,6 +83,28 @@ func (c *IndicoClient) GetReviewTracks(ctx context.Context) (*ReviewTracks, erro
 		return ""
 	}
 
+	// Extract user ID from body tag's data-user-id attribute
+	var findBody func(*xhtml.Node) *xhtml.Node
+	findBody = func(n *xhtml.Node) *xhtml.Node {
+		if n.Type == xhtml.ElementNode && strings.EqualFold(n.Data, "body") {
+			return n
+		}
+		for c := n.FirstChild; c != nil; c = c.NextSibling {
+			if result := findBody(c); result != nil {
+				return result
+			}
+		}
+		return nil
+	}
+
+	if bodyNode := findBody(doc); bodyNode != nil {
+		if userIDStr := getAttr(bodyNode.Attr, "data-user-id"); userIDStr != "" {
+			if userID, err := strconv.Atoi(userIDStr); err == nil {
+				c.UserID = userID
+			}
+		}
+	}
+
 	// findNodesByClass searches the subtree rooted at n for elements with the
 	// optional tag (empty means any tag) and a class token matching classToken.
 	findNodesByClass := func(n *xhtml.Node, tag, classToken string) []*xhtml.Node {
