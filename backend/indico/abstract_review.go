@@ -410,7 +410,7 @@ type ReviewSubmissionRequest struct {
 
 // SubmitAbstractReview submits a review for an abstract.
 // The abstractID parameter is the database ID of the abstract being reviewed.
-// If ReviewID is provided in the request, it will edit an existing review.
+// If ReviewID is provided in the request, it will edit an existing review, track id is not required in this case,
 // Otherwise, it will create a new review for the specified track.
 func (c *IndicoClient) SubmitAbstractReview(ctx context.Context, abstractID int, req *ReviewSubmissionRequest) error {
 	if req == nil {
@@ -430,7 +430,7 @@ func (c *IndicoClient) SubmitAbstractReview(ctx context.Context, abstractID int,
 	case "accept", "reject":
 		// proposed_contribution_type is required (can be None)
 		// We allow nil pointer to represent "None"
-	case "changed_tracks":
+	case "change_tracks":
 		if len(req.ProposedTracks) == 0 {
 			return fmt.Errorf("proposed_tracks is required for changed_tracks action")
 		}
@@ -481,14 +481,16 @@ func (c *IndicoClient) SubmitAbstractReview(ctx context.Context, abstractID int,
 
 	// Add action-specific fields
 	switch req.ProposedAction {
-	case "accept", "reject":
+	case "accept":
 		if req.ProposedContributionType != nil {
 			formData.Set(trackPrefix+"proposed_contribution_type", strconv.Itoa(*req.ProposedContributionType))
 		} else {
 			// Use '__None' for None value
 			formData.Set(trackPrefix+"proposed_contribution_type", "__None")
 		}
-	case "changed_tracks":
+	case "reject":
+		// No additional fields required for reject
+	case "change_tracks":
 		for _, trackID := range req.ProposedTracks {
 			formData.Add(trackPrefix+"proposed_tracks", strconv.Itoa(trackID))
 		}
