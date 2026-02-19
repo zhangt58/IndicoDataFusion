@@ -238,6 +238,7 @@ func (a *AbstractData) UpdateReview(
 	ctx context.Context,
 	client *IndicoClient,
 	reviewID int,
+	trackID int,
 	firstPriorityValue, secondPriorityValue int,
 	proposedAction string,
 	proposedContribTypeID *int,
@@ -260,7 +261,7 @@ func (a *AbstractData) UpdateReview(
 
 	req := &ReviewSubmissionRequest{
 		ReviewID:                 &reviewID,
-		TrackID:                  999, // track ID is not required for update.
+		TrackID:                  trackID,
 		QuestionRatings:          questionRatings,
 		ProposedAction:           proposedAction,
 		ProposedContributionType: proposedContribTypeID,
