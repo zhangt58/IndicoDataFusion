@@ -107,9 +107,6 @@ type AbstractData struct {
 
 	// if this abstract to be reviewed by the current user
 	IsMyReview bool `json:"is_my_review"`
-	// review URL is the original Indico URL to review this abstract
-	// review is available only if the current user is a reviewer for this abstract
-	ReviewURL string `json:"review_url"`
 
 	// MyReview is the current user's review for this abstract (nil if not reviewed yet)
 	MyReview *Review `json:"my_review,omitempty"`

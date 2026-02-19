@@ -79,8 +79,8 @@
           <Icon icon="mdi:clipboard-list" class="w-3 h-3" />
           My Review
           <a
-            href={abstract.review_url}
-            onclick={() => OpenSafeURL(abstract.review_url)}
+            href={abstract.indico_url}
+            onclick={() => OpenSafeURL(abstract.indico_url)}
             target="_blank"
             rel="noopener noreferrer"
             class="ml-1 inline-flex items-center"
