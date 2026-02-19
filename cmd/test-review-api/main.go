@@ -209,8 +209,210 @@ func main() {
 		fmt.Printf("     track-%d-comment=Excellent work!\n\n", trackID)
 	}
 
-	fmt.Println("=== Test Complete ===")
-	fmt.Println("\nNote: This test demonstrates the review API functionality.")
-	fmt.Println("To actually submit/update reviews, use the Review.SubmitNewReview()")
-	fmt.Println("or Review.UpdateReview() methods from your application code.")
+	fmt.Println("To actually submit/update reviews, use the abstract.SubmitNewReview()")
+	fmt.Println("or abstract.UpdateReview() methods from your application code.")
+
+	if reviewedAbstract != nil {
+		fmt.Printf("\nContribTypes available: %+v\n", *reviewedAbstract.ContribTypesMap)
+	}
+
+	// test the review submission methods with the first abstract if available
+	// update review:
+	fmt.Printf("\n=== Review Submission Demo ===\n")
+	if reviewedAbstract != nil && reviewedAbstract.MyReview != nil {
+		fmt.Printf("\n📝 UPDATING EXISTING REVIEW\n")
+		fmt.Printf("   Abstract: #%d - %s\n", reviewedAbstract.FriendlyID, reviewedAbstract.Title)
+
+		// accept
+		err = reviewedAbstract.UpdateReview(
+			ctx, client,
+			reviewedAbstract.MyReview.ID,
+			reviewedAbstract.MyReview.Track.ID,
+			1, 0,
+			"accept",
+			nil,
+			nil,
+			nil,
+			"Updated proposed action to accept",
+		)
+		if err != nil {
+			fmt.Printf("   ❌ Failed: %v\n", err)
+		} else {
+			fmt.Printf("   ✅ Successfully updated review\n")
+		}
+
+		// reject
+		err = reviewedAbstract.UpdateReview(
+			ctx, client,
+			reviewedAbstract.MyReview.ID,
+			reviewedAbstract.MyReview.Track.ID,
+			1, 0,
+			"reject",
+			nil,
+			nil,
+			nil,
+			"Updated proposed action to reject",
+		)
+		if err != nil {
+			fmt.Printf("   ❌ Failed: %v\n", err)
+		} else {
+			fmt.Printf("   ✅ Successfully updated review\n")
+		}
+
+		// change_tracks
+		proposedTrackIDs := []int{99}
+		err = reviewedAbstract.UpdateReview(
+			ctx, client,
+			reviewedAbstract.MyReview.ID,
+			reviewedAbstract.MyReview.Track.ID,
+			1, 0,
+			"change_tracks",
+			nil,
+			proposedTrackIDs,
+			nil,
+			"Updated proposed change to track 99",
+		)
+		if err != nil {
+			fmt.Printf("   ❌ Failed: %v\n", err)
+		} else {
+			fmt.Printf("   ✅ Successfully updated review\n")
+		}
+
+		// mark_as_duplicate
+		proposedRelatedAbstractFriendlyID := 123
+		err = reviewedAbstract.UpdateReview(
+			ctx, client,
+			reviewedAbstract.MyReview.ID,
+			reviewedAbstract.MyReview.Track.ID,
+			1, 0,
+			"change_tracks",
+			nil,
+			nil,
+			&proposedRelatedAbstractFriendlyID,
+			"Updated proposed duplicate of abstract 123 (friendly ID)",
+		)
+		if err != nil {
+			fmt.Printf("   ❌ Failed: %v\n", err)
+		} else {
+			fmt.Printf("   ✅ Successfully updated review\n")
+		}
+
+		// merge
+		proposedRelatedAbstractID := 12345
+		err = reviewedAbstract.UpdateReview(
+			ctx, client,
+			reviewedAbstract.MyReview.ID,
+			reviewedAbstract.MyReview.Track.ID,
+			1, 0,
+			"merge",
+			nil,
+			nil,
+			&proposedRelatedAbstractID,
+			"Updated proposed duplicate of abstract 12345 (database ID)",
+		)
+		if err != nil {
+			fmt.Printf("   ❌ Failed: %v\n", err)
+		} else {
+			fmt.Printf("   ✅ Successfully updated review\n")
+		}
+
+	}
+
+	// submit new review:
+	if notReviewedAbstract != nil && len(notReviewedAbstract.ReviewedForTracks) > 0 {
+		fmt.Printf("\n✨ CREATING NEW REVIEW\n")
+		fmt.Printf("   Abstract: #%d - %s\n", notReviewedAbstract.FriendlyID, notReviewedAbstract.Title)
+
+		// accept
+		trackID := notReviewedAbstract.ReviewedForTracks[0].ID
+		err = notReviewedAbstract.SubmitNewReview(
+			ctx, client,
+			trackID,
+			1, 1,
+			"accept",
+			nil,
+			nil,
+			nil,
+			"Excellent work!",
+		)
+		if err != nil {
+			fmt.Printf("   ❌ Failed: %v\n", err)
+		} else {
+			fmt.Printf("   ✅ Successfully created new review\n")
+		}
+
+		// reject
+		err = notReviewedAbstract.SubmitNewReview(
+			ctx, client,
+			trackID,
+			1, 1,
+			"reject",
+			nil,
+			nil,
+			nil,
+			"Excellent work, but I have to reject it.",
+		)
+		if err != nil {
+			fmt.Printf("   ❌ Failed: %v\n", err)
+		} else {
+			fmt.Printf("   ✅ Successfully created new review\n")
+		}
+
+		// change_tracks
+		err = notReviewedAbstract.SubmitNewReview(
+			ctx, client,
+			trackID,
+			1, 1,
+			"change_tracks",
+			nil,
+			[]int{91},
+			nil,
+			"Excellent work, but I have to change to track 91.",
+		)
+		if err != nil {
+			fmt.Printf("   ❌ Failed: %v\n", err)
+		} else {
+			fmt.Printf("   ✅ Successfully created new review\n")
+		}
+
+		// mark_as_duplicate
+		proposedRelatedAbstractFriendlyID := 123
+		err = notReviewedAbstract.SubmitNewReview(
+			ctx, client,
+			trackID,
+			1, 1,
+			"mark_as_duplicate",
+			nil,
+			nil,
+			&proposedRelatedAbstractFriendlyID,
+			"Excellent work, but I have to mark it as dup of #123.",
+		)
+		if err != nil {
+			fmt.Printf("   ❌ Failed: %v\n", err)
+		} else {
+			fmt.Printf("   ✅ Successfully created new review\n")
+		}
+
+		// merge
+		proposedRelatedAbstractID := 12345
+		err = notReviewedAbstract.SubmitNewReview(
+			ctx, client,
+			trackID,
+			1, 1,
+			"mark_as_duplicate",
+			nil,
+			nil,
+			&proposedRelatedAbstractID,
+			"Excellent work, but I have to merge with 12345.",
+		)
+		if err != nil {
+			fmt.Printf("   ❌ Failed: %v\n", err)
+		} else {
+			fmt.Printf("   ✅ Successfully created new review\n")
+		}
+
+	}
+
+	fmt.Println("\n=== Test Complete ===")
+
 }
