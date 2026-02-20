@@ -806,6 +806,9 @@ func (h *DataSourceHandler) RefreshAbstractByID(ctx context.Context, id int) (*i
 	// Set the shared question map for this abstract
 	abstract.Questions = questionMap
 
+	// Set the shared contrib types map, no need to rebuild it since it should be the same for all abstracts
+	abstract.ContribTypesMap = &contribTypesMap
+
 	for j := range abstract.Reviews {
 		for k := range abstract.Reviews[j].Ratings {
 			rating := &abstract.Reviews[j].Ratings[k]
