@@ -336,15 +336,6 @@
     error = null;
     isSubmitting = true;
     try {
-      if (!effectiveTrackID) throw new Error('No review track available. Please select a track.');
-      if (proposedAction === 'change_tracks' && proposedTrackIDs.length === 0)
-        throw new Error('Please select at least one proposed track.');
-      if (
-        (proposedAction === 'mark_as_duplicate' || proposedAction === 'merge') &&
-        !proposedRelatedAbstractID.trim()
-      )
-        throw new Error('Please select the related abstract.');
-
       // Derive first/second priority values by title from question map
       let firstPriorityValue = 0;
       let secondPriorityValue = 0;
