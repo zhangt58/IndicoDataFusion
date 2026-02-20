@@ -2,6 +2,7 @@ package indico
 
 import (
 	"context"
+	"fmt"
 	"strings"
 )
 
@@ -243,6 +244,11 @@ func (a *AbstractData) UpdateReview(
 	proposedRelatedAbstractID *int,
 	comment string,
 ) error {
+	// Validate review ID
+	if reviewID <= 0 {
+		return fmt.Errorf("review ID is required")
+	}
+
 	// Get question IDs from abstract
 	firstPriorityQuestionID := a.GetFirstPriorityQuestionID()
 	secondPriorityQuestionID := a.GetSecondPriorityQuestionID()
