@@ -172,10 +172,7 @@
                     {rating.question_details.title}
                   </div>
                   <div class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                    Question {rating.question} · Position {rating.question_details.position}
-                    {#if rating.question_details.no_score}
-                      <span class="ml-1 text-orange-600 dark:text-orange-400">(No Score)</span>
-                    {/if}
+                    Question {rating.question}
                   </div>
                 {:else}
                   <span class="text-gray-600 dark:text-gray-400">Question {rating.question}:</span>
