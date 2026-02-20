@@ -18,6 +18,14 @@ import (
 	"IndicoDataFusion/backend/config"
 )
 
+// questionMap is a shared map of question ID to question details,
+// used to enrich ratings with question info.
+var questionMap = make(map[int]*indico.QuestionData)
+
+// contribTypes is a shared map of contribution types, populated when fetching abstracts
+// Key: contrib type name, Value: contribution type ID
+var contribTypesMap = make(map[string]int)
+
 // DataSourceHandler provides a high-level interface for accessing event data
 // from different sources (Indico API or local test files).
 type DataSourceHandler struct {
@@ -28,6 +36,8 @@ type DataSourceHandler struct {
 	cache      *cache.Cache
 	// initProblems collects non-fatal initialization issues (e.g., missing API token)
 	initProblems []string
+	// userID is the ID of the current user, populated from the Indico client after fetching review tracks
+	userID int
 }
 
 // NewDataSourceHandler creates a new data source handler with optional cache config
@@ -120,6 +130,7 @@ func NewDataSourceHandler(ds *config.DataSource, cacheConfig *config.CacheConfig
 
 		// Prefer token in config entry
 		apiToken = matched.Token
+
 		// If token is empty in config, try keyring
 		if apiToken == "" {
 			if secret, err := utils.GetAPITokenSecret(matched.Name); err == nil {
@@ -228,6 +239,12 @@ func (h *DataSourceHandler) Shutdown(ctx context.Context) error {
 		return h.cache.Shutdown(ctx)
 	}
 	return nil
+}
+
+// GetClient returns the Indico client for direct API access.
+// Returns nil if in test mode or client is not initialized.
+func (h *DataSourceHandler) GetClient() *indico.IndicoClient {
+	return h.client
 }
 
 // GetInfo retrieves event information from the configured data source.
@@ -376,14 +393,35 @@ func (h *DataSourceHandler) getAbstractsFromFile() ([]indico.AbstractData, error
 	}
 
 	// Build question lookup map
-	questionMap := make(map[int]*indico.QuestionData)
 	for i := range response.Questions {
 		q := &response.Questions[i]
 		questionMap[q.ID] = q
 	}
 
-	// Expand question details in reviews
+	// Build contribution types map from abstracts
 	for i := range response.Abstracts {
+		// Collect from accepted, submitted contrib types
+		if ct := response.Abstracts[i].AcceptedContribType; ct != nil {
+			contribTypesMap[ct.Name] = ct.ID
+		}
+		if ct := response.Abstracts[i].SubmittedContribType; ct != nil {
+			contribTypesMap[ct.Name] = ct.ID
+		}
+		// Also from reviews
+		for j := range response.Abstracts[i].Reviews {
+			if ct := response.Abstracts[i].Reviews[j].ProposedContribType; ct != nil {
+				contribTypesMap[ct.Name] = ct.ID
+			}
+		}
+	}
+
+	// Expand question details in reviews and populate shared maps
+	for i := range response.Abstracts {
+		// Set the shared question map for this abstract
+		response.Abstracts[i].Questions = questionMap
+		// Set the shared contrib types map
+		response.Abstracts[i].ContribTypesMap = &contribTypesMap
+
 		for j := range response.Abstracts[i].Reviews {
 			for k := range response.Abstracts[i].Reviews[j].Ratings {
 				rating := &response.Abstracts[i].Reviews[j].Ratings[k]
@@ -449,14 +487,32 @@ func (h *DataSourceHandler) getAbstractsFromAPI(ctx context.Context) ([]indico.A
 	}
 
 	// Build question lookup map
-	questionMap := make(map[int]*indico.QuestionData)
 	for i := range response.Questions {
 		q := &response.Questions[i]
 		questionMap[q.ID] = q
 	}
 
-	// Expand question details in reviews
+	// Build contribution types map from abstracts
 	for i := range response.Abstracts {
+		if ct := response.Abstracts[i].AcceptedContribType; ct != nil {
+			contribTypesMap[ct.Name] = ct.ID
+		}
+		if ct := response.Abstracts[i].SubmittedContribType; ct != nil {
+			contribTypesMap[ct.Name] = ct.ID
+		}
+		for j := range response.Abstracts[i].Reviews {
+			if ct := response.Abstracts[i].Reviews[j].ProposedContribType; ct != nil {
+				contribTypesMap[ct.Name] = ct.ID
+			}
+		}
+	}
+	// Expand question details in reviews and populate shared maps
+	for i := range response.Abstracts {
+		// Set the shared question map
+		response.Abstracts[i].Questions = questionMap
+		// Set the shared contrib types map
+		response.Abstracts[i].ContribTypesMap = &contribTypesMap
+
 		for j := range response.Abstracts[i].Reviews {
 			for k := range response.Abstracts[i].Reviews[j].Ratings {
 				rating := &response.Abstracts[i].Reviews[j].Ratings[k]
@@ -475,7 +531,7 @@ func (h *DataSourceHandler) getAbstractsFromAPI(ctx context.Context) ([]indico.A
 		// Mark abstracts that are in my review list
 		for i := range response.Abstracts {
 			response.Abstracts[i].IsMyReview = myReviewIDsSet[response.Abstracts[i].FriendlyID]
-			response.Abstracts[i].ReviewURL = fmt.Sprintf("%s/event/%d/abstracts/%d", h.client.BaseURL, h.client.EventID, response.Abstracts[i].ID)
+			populateMyReview(h, &response.Abstracts[i])
 		}
 	}
 
@@ -673,6 +729,30 @@ func getReviewIDsSet(h *DataSourceHandler, ctx context.Context) map[int]bool {
 	return nil
 }
 
+// populateMyReview finds and sets the current user's review in the abstract.
+// It matches reviews by comparing the review user's ID with the current user's ID.
+func populateMyReview(h *DataSourceHandler, abstract *indico.AbstractData) {
+	// Sync user ID from client if available
+	if h.client != nil && h.client.UserID > 0 {
+		h.userID = h.client.UserID
+	}
+
+	if h.userID == 0 {
+		// No user ID available, cannot match reviews
+		return
+	}
+
+	// Match reviews by user ID
+	for i := range abstract.Reviews {
+		if abstract.Reviews[i].User.ID == h.userID {
+			// Create a copy of the review
+			reviewCopy := abstract.Reviews[i]
+			abstract.MyReview = &reviewCopy
+			return
+		}
+	}
+}
+
 // RefreshAbstractByID fetches fresh data for a single abstract from the API.
 // This bypasses the cache and always fetches from the live API.
 func (h *DataSourceHandler) RefreshAbstractByID(ctx context.Context, id int) (*indico.AbstractData, error) {
@@ -716,7 +796,6 @@ func (h *DataSourceHandler) RefreshAbstractByID(ctx context.Context, id int) (*i
 	}
 
 	// Build question lookup map
-	questionMap := make(map[int]*indico.QuestionData)
 	for i := range response.Questions {
 		q := &response.Questions[i]
 		questionMap[q.ID] = q
@@ -724,6 +803,12 @@ func (h *DataSourceHandler) RefreshAbstractByID(ctx context.Context, id int) (*i
 
 	// Expand question details in reviews for the single abstract
 	abstract := &response.Abstracts[0]
+	// Set the shared question map for this abstract
+	abstract.Questions = questionMap
+
+	// Set the shared contrib types map, no need to rebuild it since it should be the same for all abstracts
+	abstract.ContribTypesMap = &contribTypesMap
+
 	for j := range abstract.Reviews {
 		for k := range abstract.Reviews[j].Ratings {
 			rating := &abstract.Reviews[j].Ratings[k]
@@ -740,7 +825,7 @@ func (h *DataSourceHandler) RefreshAbstractByID(ctx context.Context, id int) (*i
 	myReviewIDsSet := getReviewIDsSet(h, ctx)
 	if myReviewIDsSet != nil {
 		abstract.IsMyReview = myReviewIDsSet[abstract.FriendlyID]
-		abstract.ReviewURL = fmt.Sprintf("%s/event/%d/abstracts/%d", h.client.BaseURL, h.client.EventID, abstract.ID)
+		populateMyReview(h, abstract)
 	}
 
 	// Ensure avatar URLs are absolute for single-abstract refresh as well
@@ -761,6 +846,11 @@ func (h *DataSourceHandler) RefreshAbstractByID(ctx context.Context, id int) (*i
 		if jav != "" && !strings.HasPrefix(jav, "http") {
 			abstract.Judge.AvatarURL = h.client.BaseURL + jav
 		}
+	}
+
+	// Ensure IndicoURL is set for the refreshed single abstract
+	if h.client != nil {
+		abstract.IndicoURL = fmt.Sprintf("%s/event/%d/abstracts/%d", h.client.BaseURL, h.client.EventID, abstract.ID)
 	}
 
 	// Update the cache if available

@@ -1,5 +1,11 @@
 package indico
 
+import (
+	"context"
+	"fmt"
+	"strings"
+)
+
 // Track represents a conference track
 type Track struct {
 	Code  string `json:"code"`
@@ -101,8 +107,18 @@ type AbstractData struct {
 	Files             []interface{} `json:"files"` // generic for now
 
 	// if this abstract to be reviewed by the current user
-	IsMyReview bool   `json:"is_my_review"`
-	ReviewURL  string `json:"review_url"`
+	IsMyReview bool `json:"is_my_review"`
+
+	// MyReview is the current user's review for this abstract (nil if not reviewed yet)
+	MyReview *Review `json:"my_review,omitempty"`
+
+	// Questions is a pointer to the shared question map for this event
+	// Key: question ID, Value: question details
+	Questions map[int]*QuestionData `json:"questions,omitempty"`
+
+	// pointer to the shared contribution type map for this event
+	// key: contrib type name, value: contrib type ID for quick lookup when submitting reviews
+	ContribTypesMap *map[string]int `json:"contrib_types,omitempty"`
 
 	// Aggregated Ratings (computed fields for frontend convenience)
 	FirstPriority  float64 `json:"first_priority"`
@@ -114,4 +130,148 @@ type AbstractsResponse struct {
 	Abstracts []AbstractData `json:"abstracts"`
 	Questions []QuestionData `json:"questions"`
 	Version   int            `json:"version,omitempty"`
+}
+
+// FindQuestionIDByTitle searches for a question ID by its title (case-insensitive).
+// Returns the question ID and true if found, 0 and false otherwise.
+func (a *AbstractData) FindQuestionIDByTitle(title string) (int, bool) {
+	if a.Questions == nil {
+		return 0, false
+	}
+
+	lowerTitle := strings.ToLower(title)
+	for id, q := range a.Questions {
+		if strings.ToLower(q.Title) == lowerTitle {
+			return id, true
+		}
+	}
+	return 0, false
+}
+
+// GetFirstPriorityQuestionID returns the question ID for "First priority".
+// Returns 0 if not found.
+func (a *AbstractData) GetFirstPriorityQuestionID() int {
+	if id, ok := a.FindQuestionIDByTitle("First priority"); ok {
+		return id
+	}
+	return 0
+}
+
+// GetSecondPriorityQuestionID returns the question ID for "Second priority".
+// Returns 0 if not found.
+func (a *AbstractData) GetSecondPriorityQuestionID() int {
+	if id, ok := a.FindQuestionIDByTitle("Second priority"); ok {
+		return id
+	}
+	return 0
+}
+
+// SubmitNewReview creates a new review for this abstract.
+// Parameters:
+//   - ctx: context for the request
+//   - client: IndicoClient to use for submission
+//   - trackID: the track ID to review for
+//   - firstPriorityValue: rating value (0 or 1) for first priority
+//   - secondPriorityValue: rating value (0 or 1) for second priority
+//   - proposedAction: the proposed action (accept, reject, change_tracks, mark_as_duplicate, merge)
+//   - proposedContribTypeID: proposed contribution type ID (nil for __None)
+//   - proposedTrackIDs: proposed track IDs for change_tracks action
+//   - proposedRelatedAbstractID: related abstract ID for mark_as_duplicate/merge actions
+//   - comment: review comment
+//
+// Returns error if submission fails.
+func (a *AbstractData) SubmitNewReview(
+	ctx context.Context,
+	client *IndicoClient,
+	trackID int,
+	firstPriorityValue, secondPriorityValue int,
+	proposedAction string,
+	proposedContribTypeID *int,
+	proposedTrackIDs []int,
+	proposedRelatedAbstractID *int,
+	comment string,
+) error {
+	// Get question IDs from abstract
+	firstPriorityQuestionID := a.GetFirstPriorityQuestionID()
+	secondPriorityQuestionID := a.GetSecondPriorityQuestionID()
+
+	// Build question ratings
+	questionRatings := map[int]int{}
+	if firstPriorityQuestionID > 0 {
+		questionRatings[firstPriorityQuestionID] = firstPriorityValue
+	}
+	if secondPriorityQuestionID > 0 {
+		questionRatings[secondPriorityQuestionID] = secondPriorityValue
+	}
+
+	req := &ReviewSubmissionRequest{
+		TrackID:                  trackID,
+		QuestionRatings:          questionRatings,
+		ProposedAction:           proposedAction,
+		ProposedContributionType: proposedContribTypeID,
+		ProposedTracks:           proposedTrackIDs,
+		ProposedRelatedAbstract:  proposedRelatedAbstractID,
+		Comment:                  comment,
+	}
+
+	return client.SubmitAbstractReview(ctx, a.ID, req)
+}
+
+// UpdateReview updates an existing review for this abstract.
+// Parameters:
+//   - ctx: context for the request
+//   - client: IndicoClient to use for submission
+//   - reviewID: the ID of the review to update
+//   - trackID: the track ID
+//   - firstPriorityValue: rating value (0 or 1) for first priority
+//   - secondPriorityValue: rating value (0 or 1) for second priority
+//   - proposedAction: the proposed action
+//   - proposedContribTypeID: proposed contribution type ID (nil for __None)
+//   - proposedTrackIDs: proposed track IDs for change_tracks action
+//   - proposedRelatedAbstractID: related abstract ID for mark_as_duplicate/merge actions
+//   - comment: review comment
+//
+// Returns error if submission fails.
+func (a *AbstractData) UpdateReview(
+	ctx context.Context,
+	client *IndicoClient,
+	reviewID int,
+	trackID int,
+	firstPriorityValue, secondPriorityValue int,
+	proposedAction string,
+	proposedContribTypeID *int,
+	proposedTrackIDs []int,
+	proposedRelatedAbstractID *int,
+	comment string,
+) error {
+	// Validate review ID
+	if reviewID <= 0 {
+		return fmt.Errorf("review ID is required")
+	}
+
+	// Get question IDs from abstract
+	firstPriorityQuestionID := a.GetFirstPriorityQuestionID()
+	secondPriorityQuestionID := a.GetSecondPriorityQuestionID()
+
+	// Build question ratings
+	questionRatings := map[int]int{}
+	if firstPriorityQuestionID > 0 {
+		questionRatings[firstPriorityQuestionID] = firstPriorityValue
+	}
+	if secondPriorityQuestionID > 0 {
+		questionRatings[secondPriorityQuestionID] = secondPriorityValue
+	}
+
+	req := &ReviewSubmissionRequest{
+		ReviewID:                 &reviewID,
+		TrackID:                  trackID,
+		QuestionRatings:          questionRatings,
+		ProposedAction:           proposedAction,
+		ProposedContributionType: proposedContribTypeID,
+		ProposedTracks:           proposedTrackIDs,
+		ProposedRelatedAbstract:  proposedRelatedAbstractID,
+		Comment:                  comment,
+	}
+
+	return client.SubmitAbstractReview(ctx, a.ID, req)
 }

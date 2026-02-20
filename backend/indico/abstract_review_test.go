@@ -526,3 +526,351 @@ func TestGetReviewTracks_ConcurrentAbstractCounts(t *testing.T) {
 
 	t.Logf("✅ Concurrent abstract count fetching works correctly")
 }
+
+// TestSubmitAbstractReview_Accept tests submitting an accept review
+func TestSubmitAbstractReview_Accept(t *testing.T) {
+	// Mock client that expects a POST request with form data
+	mc := &mockClient{
+		resp: &http.Response{
+			StatusCode: 200,
+			Body:       io.NopCloser(strings.NewReader(`{"success": true}`)),
+			Header:     make(http.Header),
+		},
+	}
+
+	c := &IndicoClient{
+		BaseURL:   "https://indico.jacow.org",
+		EventID:   37,
+		Client:    mc,
+		Timeout:   5 * time.Second,
+		csrfToken: "test-csrf-token",
+	}
+
+	contribTypeID := 42
+	req := &ReviewSubmissionRequest{
+		TrackID: 88,
+		QuestionRatings: map[int]int{
+			101: 1, // first_priority
+			102: 0, // second_priority
+		},
+		ProposedAction:           "accept",
+		ProposedContributionType: &contribTypeID,
+		Comment:                  "This is a great abstract!",
+	}
+
+	err := c.SubmitAbstractReview(context.Background(), 123, req)
+	if err != nil {
+		t.Fatalf("SubmitAbstractReview returned error: %v", err)
+	}
+}
+
+// TestSubmitAbstractReview_Reject tests submitting a reject review
+func TestSubmitAbstractReview_Reject(t *testing.T) {
+	mc := &mockClient{
+		resp: &http.Response{
+			StatusCode: 200,
+			Body:       io.NopCloser(strings.NewReader(`{"success": true}`)),
+			Header:     make(http.Header),
+		},
+	}
+
+	c := &IndicoClient{
+		BaseURL:   "https://indico.jacow.org",
+		EventID:   37,
+		Client:    mc,
+		Timeout:   5 * time.Second,
+		csrfToken: "test-csrf-token",
+	}
+
+	req := &ReviewSubmissionRequest{
+		TrackID: 88,
+		QuestionRatings: map[int]int{
+			101: 0,
+			102: 0,
+		},
+		ProposedAction:           "reject",
+		ProposedContributionType: nil, // None
+		Comment:                  "Does not meet requirements",
+	}
+
+	err := c.SubmitAbstractReview(context.Background(), 123, req)
+	if err != nil {
+		t.Fatalf("SubmitAbstractReview returned error: %v", err)
+	}
+}
+
+// TestSubmitAbstractReview_ChangeTracks tests submitting a change tracks review
+func TestSubmitAbstractReview_ChangeTracks(t *testing.T) {
+	mc := &mockClient{
+		resp: &http.Response{
+			StatusCode: 200,
+			Body:       io.NopCloser(strings.NewReader(`{"success": true}`)),
+			Header:     make(http.Header),
+		},
+	}
+
+	c := &IndicoClient{
+		BaseURL:   "https://indico.jacow.org",
+		EventID:   37,
+		Client:    mc,
+		Timeout:   5 * time.Second,
+		csrfToken: "test-csrf-token",
+	}
+
+	req := &ReviewSubmissionRequest{
+		TrackID: 88,
+		QuestionRatings: map[int]int{
+			101: 1,
+		},
+		ProposedAction: "changed_tracks",
+		ProposedTracks: []int{99, 100},
+		Comment:        "Better suited for these tracks",
+	}
+
+	err := c.SubmitAbstractReview(context.Background(), 123, req)
+	if err != nil {
+		t.Fatalf("SubmitAbstractReview returned error: %v", err)
+	}
+}
+
+// TestSubmitAbstractReview_MarkAsDuplicate tests submitting a mark as duplicate review
+func TestSubmitAbstractReview_MarkAsDuplicate(t *testing.T) {
+	mc := &mockClient{
+		resp: &http.Response{
+			StatusCode: 200,
+			Body:       io.NopCloser(strings.NewReader(`{"success": true}`)),
+			Header:     make(http.Header),
+		},
+	}
+
+	c := &IndicoClient{
+		BaseURL:   "https://indico.jacow.org",
+		EventID:   37,
+		Client:    mc,
+		Timeout:   5 * time.Second,
+		csrfToken: "test-csrf-token",
+	}
+
+	relatedAbstractID := 456
+	req := &ReviewSubmissionRequest{
+		TrackID: 88,
+		QuestionRatings: map[int]int{
+			101: 0,
+		},
+		ProposedAction:          "mark_as_duplicate",
+		ProposedRelatedAbstract: &relatedAbstractID,
+		Comment:                 "Duplicate of abstract #456",
+	}
+
+	err := c.SubmitAbstractReview(context.Background(), 123, req)
+	if err != nil {
+		t.Fatalf("SubmitAbstractReview returned error: %v", err)
+	}
+}
+
+// TestSubmitAbstractReview_Merge tests submitting a merge review
+func TestSubmitAbstractReview_Merge(t *testing.T) {
+	mc := &mockClient{
+		resp: &http.Response{
+			StatusCode: 200,
+			Body:       io.NopCloser(strings.NewReader(`{"success": true}`)),
+			Header:     make(http.Header),
+		},
+	}
+
+	c := &IndicoClient{
+		BaseURL:   "https://indico.jacow.org",
+		EventID:   37,
+		Client:    mc,
+		Timeout:   5 * time.Second,
+		csrfToken: "test-csrf-token",
+	}
+
+	relatedAbstractID := 789
+	req := &ReviewSubmissionRequest{
+		TrackID: 88,
+		QuestionRatings: map[int]int{
+			101: 1,
+		},
+		ProposedAction:          "merge",
+		ProposedRelatedAbstract: &relatedAbstractID,
+		Comment:                 "Should be merged with #789",
+	}
+
+	err := c.SubmitAbstractReview(context.Background(), 123, req)
+	if err != nil {
+		t.Fatalf("SubmitAbstractReview returned error: %v", err)
+	}
+}
+
+// TestSubmitAbstractReview_EditExisting tests editing an existing review
+func TestSubmitAbstractReview_EditExisting(t *testing.T) {
+	mc := &mockClient{
+		resp: &http.Response{
+			StatusCode: 200,
+			Body:       io.NopCloser(strings.NewReader(`{"success": true}`)),
+			Header:     make(http.Header),
+		},
+	}
+
+	c := &IndicoClient{
+		BaseURL:   "https://indico.jacow.org",
+		EventID:   37,
+		Client:    mc,
+		Timeout:   5 * time.Second,
+		csrfToken: "test-csrf-token",
+	}
+
+	reviewID := 1234
+	contribTypeID := 42
+	req := &ReviewSubmissionRequest{
+		ReviewID: &reviewID, // Editing existing review
+		TrackID:  88,
+		QuestionRatings: map[int]int{
+			101: 1,
+			102: 1,
+		},
+		ProposedAction:           "accept",
+		ProposedContributionType: &contribTypeID,
+		Comment:                  "Updated review - even better now!",
+	}
+
+	err := c.SubmitAbstractReview(context.Background(), 123, req)
+	if err != nil {
+		t.Fatalf("SubmitAbstractReview returned error: %v", err)
+	}
+}
+
+// TestSubmitAbstractReview_ValidationErrors tests validation of required fields
+func TestSubmitAbstractReview_ValidationErrors(t *testing.T) {
+	c := &IndicoClient{
+		BaseURL:   "https://indico.jacow.org",
+		EventID:   37,
+		Client:    &mockClient{},
+		Timeout:   5 * time.Second,
+		csrfToken: "test-csrf-token",
+	}
+
+	tests := []struct {
+		name        string
+		req         *ReviewSubmissionRequest
+		expectedErr string
+	}{
+		{
+			name:        "nil request",
+			req:         nil,
+			expectedErr: "request cannot be nil",
+		},
+		{
+			name: "missing track_id",
+			req: &ReviewSubmissionRequest{
+				ProposedAction: "accept",
+			},
+			expectedErr: "track_id is required",
+		},
+		{
+			name: "missing proposed_action",
+			req: &ReviewSubmissionRequest{
+				TrackID: 88,
+			},
+			expectedErr: "proposed_action is required",
+		},
+		{
+			name: "invalid proposed_action",
+			req: &ReviewSubmissionRequest{
+				TrackID:        88,
+				ProposedAction: "invalid_action",
+			},
+			expectedErr: "invalid proposed_action",
+		},
+		{
+			name: "changed_tracks without proposed_tracks",
+			req: &ReviewSubmissionRequest{
+				TrackID:        88,
+				ProposedAction: "changed_tracks",
+				ProposedTracks: []int{},
+			},
+			expectedErr: "proposed_tracks is required for changed_tracks action",
+		},
+		{
+			name: "mark_as_duplicate without proposed_related_abstract",
+			req: &ReviewSubmissionRequest{
+				TrackID:        88,
+				ProposedAction: "mark_as_duplicate",
+			},
+			expectedErr: "proposed_related_abstract is required for mark_as_duplicate action",
+		},
+		{
+			name: "merge without proposed_related_abstract",
+			req: &ReviewSubmissionRequest{
+				TrackID:        88,
+				ProposedAction: "merge",
+			},
+			expectedErr: "proposed_related_abstract is required for merge action",
+		},
+		{
+			name: "missing csrf_token",
+			req: &ReviewSubmissionRequest{
+				TrackID:        88,
+				ProposedAction: "accept",
+			},
+			expectedErr: "csrf_token is required and not cached",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Clear cached token for the csrf test
+			if tt.name == "missing csrf_token" {
+				c.csrfToken = ""
+			} else {
+				c.csrfToken = "test-csrf-token"
+			}
+
+			err := c.SubmitAbstractReview(context.Background(), 123, tt.req)
+			if err == nil {
+				t.Fatalf("expected error, got nil")
+			}
+			if !strings.Contains(err.Error(), tt.expectedErr) {
+				t.Errorf("expected error containing %q, got %q", tt.expectedErr, err.Error())
+			}
+		})
+	}
+}
+
+// TestSubmitAbstractReview_HTTPError tests handling of HTTP errors
+func TestSubmitAbstractReview_HTTPError(t *testing.T) {
+	mc := &mockClient{
+		resp: &http.Response{
+			StatusCode: 400,
+			Body:       io.NopCloser(strings.NewReader("Bad Request")),
+			Header:     make(http.Header),
+		},
+	}
+
+	c := &IndicoClient{
+		BaseURL:   "https://indico.jacow.org",
+		EventID:   37,
+		Client:    mc,
+		Timeout:   5 * time.Second,
+		csrfToken: "test-csrf-token",
+	}
+
+	contribTypeID := 42
+	req := &ReviewSubmissionRequest{
+		TrackID: 88,
+		QuestionRatings: map[int]int{
+			101: 1,
+		},
+		ProposedAction:           "accept",
+		ProposedContributionType: &contribTypeID,
+	}
+
+	err := c.SubmitAbstractReview(context.Background(), 123, req)
+	if err == nil {
+		t.Fatalf("expected error for non-2xx response")
+	}
+	if !strings.Contains(err.Error(), "400") {
+		t.Errorf("expected error to contain status code 400, got: %v", err)
+	}
+}

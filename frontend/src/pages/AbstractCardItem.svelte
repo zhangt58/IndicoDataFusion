@@ -8,6 +8,7 @@
   import AffiliationDialog from '../components/AffiliationDialog.svelte';
   import AffiliationBadge from '../components/AffiliationBadge.svelte';
   import AbstractReviewsDialog from '../components/AbstractReviewsDialog.svelte';
+  import AbstractReviewFormDialog from '../components/AbstractReviewFormDialog.svelte';
   import RawJsonDialog from '../components/RawJsonDialog.svelte';
 
   let { abstract = $bindable({}), onRefresh = null, isMyReview = false } = $props();
@@ -16,6 +17,7 @@
   let showAffiliationDialog = $state(false);
   let selectedAffiliation = $state(null);
   let showReviewsDialog = $state(false);
+  let showReviewFormDialog = $state(false);
   let showRawJsonDialog = $state(false);
 
   // refresh state
@@ -30,6 +32,21 @@
   // Handle reviews click
   function handleReviewsClick() {
     showReviewsDialog = true;
+  }
+
+  // Handle My Review click - open the review form dialog
+  function handleMyReviewClick(event) {
+    event.preventDefault();
+    event.stopPropagation();
+    showReviewFormDialog = true;
+  }
+
+  // Handle abstract updated from review form
+  function handleAbstractUpdated(refreshed) {
+    abstract = refreshed;
+    if (typeof onRefresh === 'function') {
+      onRefresh(refreshed);
+    }
   }
 
   // Handle refresh
@@ -72,28 +89,15 @@
     </div>
     <div class="ml-4 flex items-center gap-2">
       {#if isMyReview}
-        <span
-          class="px-2 py-1 text-xs rounded bg-purple-100 dark:bg-purple-900 text-purple-700 dark:text-purple-200 font-semibold flex items-center gap-1"
-          title="This abstract is on your review track"
+        <button
+          type="button"
+          onclick={handleMyReviewClick}
+          class="px-2 py-1 text-xs rounded bg-purple-100 dark:bg-purple-900 text-purple-700 dark:text-purple-200 font-semibold flex items-center gap-1 hover:bg-purple-200 dark:hover:bg-purple-800 transition-colors cursor-pointer"
+          title="Click to submit/update your review"
         >
           <Icon icon="mdi:clipboard-list" class="w-3 h-3" />
-          My Review
-          <a
-            href={abstract.review_url}
-            onclick={() => OpenSafeURL(abstract.review_url)}
-            target="_blank"
-            rel="noopener noreferrer"
-            class="ml-1 inline-flex items-center"
-            title="Open review page"
-            aria-label="Open review page"
-          >
-            <Icon
-              icon="mdi:open-in-new"
-              class="w-3 h-3 text-blue-600 dark:text-blue-300"
-              aria-hidden="true"
-            />
-          </a>
-        </span>
+          {abstract.my_review ? 'Update Review' : 'Submit Review'}
+        </button>
       {/if}
       <button
         type="button"
@@ -309,10 +313,10 @@
   </div>
 
   <!-- Link to Indico (with View Raw JSON button aligned to the right) -->
-  {#if abstract.indico_url}
-    <div
-      class="mt-2 pt-3 border-t border-gray-200 dark:border-gray-600 flex items-center justify-between"
-    >
+  <div
+    class="mt-2 pt-3 border-t border-gray-200 dark:border-gray-600 flex items-center justify-between"
+  >
+    {#if abstract.indico_url}
       <a
         href={abstract.indico_url}
         onclick={async (e) => {
@@ -324,27 +328,29 @@
             console.error('BrowserOpenURL failed', e);
           }
         }}
-        class="text-sm text-blue-600 dark:text-blue-400 hover:underline"
+        class="inline-flex items-center gap-1 text-sm text-blue-600 dark:text-blue-400 hover:underline"
         title="Open abstract link in web-browser"
       >
-        View on Indico →
+        View on Indico
+        <Icon icon="mdi:open-in-new" class="w-4 h-4" />
       </a>
+    {/if}
 
-      <button
-        type="button"
-        class="text-sm text-blue-600 dark:text-blue-400 hover:underline"
-        onclick={() => (showRawJsonDialog = true)}
-        title="View raw JSON"
-      >
-        View Raw JSON
-      </button>
-    </div>
-    <RawJsonDialog
-      bind:open={showRawJsonDialog}
-      data={abstract}
-      title={`Abstract [${abstract.id}]`}
-    />
-  {/if}
+    <button
+      type="button"
+      class="text-sm text-blue-600 dark:text-blue-400 hover:underline"
+      onclick={() => (showRawJsonDialog = true)}
+      title="View raw JSON"
+    >
+      View Raw JSON
+    </button>
+  </div>
+
+  <RawJsonDialog
+    bind:open={showRawJsonDialog}
+    data={abstract}
+    title={`Abstract [${abstract.id}]`}
+  />
 </div>
 
 <!-- Affiliation Details Dialog -->
@@ -357,3 +363,13 @@
   abstractTitle={abstract.title}
   onAffiliationClick={handleAffiliationClick}
 />
+
+<!-- Abstract Review Form Dialog -->
+{#if isMyReview}
+  <AbstractReviewFormDialog
+    bind:open={showReviewFormDialog}
+    {abstract}
+    reviewTrack={abstract.reviewed_for_tracks?.[0]}
+    onAbstractUpdated={handleAbstractUpdated}
+  />
+{/if}

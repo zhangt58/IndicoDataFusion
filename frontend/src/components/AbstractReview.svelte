@@ -3,70 +3,9 @@
   import AffiliationBadge from './AffiliationBadge.svelte';
   import TrackBadge from '../pages/TrackBadge.svelte';
   import TypeBadge from '../pages/TypeBadge.svelte';
+  import { formatDate, formatRatingValue, ACTION_STYLES } from '../lib/reviewUtils.js';
 
   let { review = null, onAffiliationClick = null } = $props();
-
-  // Format date for display
-  function formatDate(dateStr) {
-    if (!dateStr) return '';
-    const date = new Date(dateStr);
-    return date.toLocaleString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    });
-  }
-
-  // Get action badge style and icon
-  function getActionStyle(action) {
-    switch (action) {
-      case 'accept':
-        return {
-          icon: 'mdi:arrow-up',
-          class:
-            'bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 border-green-300 dark:border-green-700',
-          label: 'Accept',
-        };
-      case 'reject':
-        return {
-          icon: 'mdi:arrow-down',
-          class:
-            'bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200 border-red-300 dark:border-red-700',
-          label: 'Reject',
-        };
-      case 'change_tracks':
-        return {
-          icon: 'mdi:repeat',
-          class:
-            'bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 border-blue-300 dark:border-blue-700',
-          label: 'Change Tracks',
-        };
-      case 'mark_as_duplicate':
-        return {
-          icon: 'mdi:content-copy',
-          class:
-            'bg-orange-100 dark:bg-orange-900 text-orange-800 dark:text-orange-200 border-orange-300 dark:border-orange-700',
-          label: 'Mark as Duplicate',
-        };
-      default:
-        return {
-          icon: 'mdi:message-text',
-          class:
-            'bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200 border-gray-300 dark:border-gray-600',
-          label: action,
-        };
-    }
-  }
-
-  // Format rating value
-  function formatRatingValue(value) {
-    if (typeof value === 'boolean') {
-      return value ? 'Yes' : 'No';
-    }
-    return value;
-  }
 
   // Handle affiliation click
   function handleAffiliationClick(affiliation) {
@@ -75,7 +14,7 @@
     }
   }
 
-  const actionStyle = $derived(review ? getActionStyle(review.proposed_action) : null);
+  const actionStyle = $derived(review ? (ACTION_STYLES[review.proposed_action] ?? null) : null);
 </script>
 
 {#if review}
@@ -116,7 +55,7 @@
 
       <!-- Proposed Action Badge -->
       {#if actionStyle}
-        <div class="flex items-center gap-2 px-2 py-1 rounded-lg border {actionStyle.class}">
+        <div class="flex items-center gap-2 px-2 py-1 rounded-lg border {actionStyle.badgeClass}">
           <Icon icon={actionStyle.icon} class="w-4 h-4" />
           <span class="text-xs font-semibold">{actionStyle.label}</span>
         </div>
@@ -172,10 +111,7 @@
                     {rating.question_details.title}
                   </div>
                   <div class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                    Question {rating.question} · Position {rating.question_details.position}
-                    {#if rating.question_details.no_score}
-                      <span class="ml-1 text-orange-600 dark:text-orange-400">(No Score)</span>
-                    {/if}
+                    Question {rating.question}
                   </div>
                 {:else}
                   <span class="text-gray-600 dark:text-gray-400">Question {rating.question}:</span>

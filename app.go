@@ -167,6 +167,115 @@ func (a *App) GetReviewAbstractIDs(reviewTrackID int) ([]int, error) {
 	return a.handler.GetReviewAbstractIDs(a.ctx, reviewTrackID)
 }
 
+// SubmitAbstractReview submits a new review for an abstract.
+// Parameters:
+//   - abstractID: the database ID of the abstract
+//   - trackID: the track ID to review for
+//   - firstPriorityValue: rating value (0 or 1) for first priority question
+//   - secondPriorityValue: rating value (0 or 1) for second priority question
+//   - proposedAction: the proposed action (accept, reject, change_tracks, mark_as_duplicate, merge)
+//   - proposedContribTypeID: proposed contribution type ID (nil for __None)
+//   - proposedTrackIDs: proposed track IDs for change_tracks action
+//   - proposedRelatedAbstractID: related abstract ID for mark_as_duplicate/merge actions
+//   - comment: review comment
+func (a *App) SubmitAbstractReview(
+	abstractID int,
+	trackID int,
+	firstPriorityValue int,
+	secondPriorityValue int,
+	proposedAction string,
+	proposedContribTypeID *int,
+	proposedTrackIDs []int,
+	proposedRelatedAbstractID *int,
+	comment string,
+) error {
+	if a.handler == nil {
+		return errors.Errorf("data handler not initialized")
+	}
+
+	// Get the abstract
+	abstract, err := a.handler.GetAbstractByID(a.ctx, abstractID)
+	if err != nil {
+		return errors.Wrap(err, "failed to get abstract")
+	}
+
+	// Get the client
+	client := a.handler.GetClient()
+	if client == nil {
+		return errors.Errorf("no Indico client available - test mode not supported")
+	}
+
+	// Submit the review
+	return abstract.SubmitNewReview(
+		a.ctx,
+		client,
+		trackID,
+		firstPriorityValue,
+		secondPriorityValue,
+		proposedAction,
+		proposedContribTypeID,
+		proposedTrackIDs,
+		proposedRelatedAbstractID,
+		comment,
+	)
+}
+
+// UpdateAbstractReview updates an existing review for an abstract.
+// Parameters:
+//   - abstractID: the database ID of the abstract
+//   - reviewID: the review ID to update
+//   - trackID: the track ID being reviewed
+//   - firstPriorityValue: rating value (0 or 1) for first priority question
+//   - secondPriorityValue: rating value (0 or 1) for second priority question
+//   - proposedAction: the proposed action (accept, reject, change_tracks, mark_as_duplicate, merge)
+//   - proposedContribTypeID: proposed contribution type ID (nil for __None)
+//   - proposedTrackIDs: proposed track IDs for change_tracks action
+//   - proposedRelatedAbstractID: related abstract ID for mark_as_duplicate/merge actions
+//   - comment: review comment
+func (a *App) UpdateAbstractReview(
+	abstractID int,
+	reviewID int,
+	trackID int,
+	firstPriorityValue int,
+	secondPriorityValue int,
+	proposedAction string,
+	proposedContribTypeID *int,
+	proposedTrackIDs []int,
+	proposedRelatedAbstractID *int,
+	comment string,
+) error {
+	if a.handler == nil {
+		return errors.Errorf("data handler not initialized")
+	}
+
+	// Get the abstract
+	abstract, err := a.handler.GetAbstractByID(a.ctx, abstractID)
+	if err != nil {
+		return errors.Wrap(err, "failed to get abstract")
+	}
+
+	// Get the client
+	client := a.handler.GetClient()
+	if client == nil {
+		return errors.Errorf("no Indico client available - test mode not supported")
+	}
+
+	// Update the review
+	return abstract.UpdateReview(
+		a.ctx,
+		client,
+		reviewID,
+		trackID,
+		firstPriorityValue,
+		secondPriorityValue,
+		proposedAction,
+		proposedContribTypeID,
+		proposedTrackIDs,
+		proposedRelatedAbstractID,
+		comment,
+	)
+}
+
 // AppInfo holds application metadata
 type AppInfo struct {
 	Name        string `json:"name"`
