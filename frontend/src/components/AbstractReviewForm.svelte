@@ -613,7 +613,25 @@
   <!-- ── Contribution Type — only for accept (not reject) ─────────────────── -->
   {#if proposedAction === 'accept'}
     <div class="flex items-center gap-2 text-xs flex-wrap">
-      <span class="text-gray-600 dark:text-gray-400 font-semibold">Proposed Type:</span>
+      <div class="flex items-center gap-1">
+        {#if abstract?.indico_url}
+          <a
+            href={abstract.indico_url}
+            target="_blank"
+            rel="noopener noreferrer"
+            title="The full list of contribution types is only available on the original review web page, click to open."
+            class="inline-flex items-center"
+            aria-label="Open original abstract page (Indico)"
+          >
+            <Icon
+              icon="mdi:information-outline"
+              class="w-3.5 h-3.5 text-gray-500 dark:text-gray-400 cursor-pointer"
+              aria-hidden="false"
+            />
+          </a>
+        {/if}
+        <span class="text-gray-600 dark:text-gray-400 font-semibold">Proposed Type:</span>
+      </div>
       <div class="flex flex-wrap gap-1">
         <button
           type="button"
