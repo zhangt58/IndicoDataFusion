@@ -377,23 +377,6 @@ func main() {
 
 		// mark_as_duplicate
 		proposedRelatedAbstractFriendlyID := 123
-		err = notReviewedAbstract.SubmitNewReview(
-			ctx, client,
-			trackID,
-			1, 1,
-			"mark_as_duplicate",
-			nil,
-			nil,
-			&proposedRelatedAbstractFriendlyID,
-			"Excellent work, but I have to mark it as dup of #123.",
-		)
-		if err != nil {
-			fmt.Printf("   ❌ Failed: %v\n", err)
-		} else {
-			fmt.Printf("   ✅ Successfully created new review\n")
-		}
-
-		// merge
 		proposedRelatedAbstractID := 12345
 		err = notReviewedAbstract.SubmitNewReview(
 			ctx, client,
@@ -403,7 +386,26 @@ func main() {
 			nil,
 			nil,
 			&proposedRelatedAbstractID,
-			"Excellent work, but I have to merge with 12345.",
+			fmt.Sprintf("Excellent work, but I have to mark it as dup of #%d (database ID %d).",
+				proposedRelatedAbstractFriendlyID, proposedRelatedAbstractID),
+		)
+		if err != nil {
+			fmt.Printf("   ❌ Failed: %v\n", err)
+		} else {
+			fmt.Printf("   ✅ Successfully created new review\n")
+		}
+
+		// merge
+		err = notReviewedAbstract.SubmitNewReview(
+			ctx, client,
+			trackID,
+			1, 1,
+			"merge",
+			nil,
+			nil,
+			&proposedRelatedAbstractID,
+			fmt.Sprintf("Excellent work, but I have to merge with #%d (database ID %d).",
+				proposedRelatedAbstractFriendlyID, proposedRelatedAbstractID),
 		)
 		if err != nil {
 			fmt.Printf("   ❌ Failed: %v\n", err)
