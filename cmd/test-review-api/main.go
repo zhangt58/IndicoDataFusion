@@ -285,7 +285,7 @@ func main() {
 			reviewedAbstract.MyReview.ID,
 			reviewedAbstract.MyReview.Track.ID,
 			1, 0,
-			"change_tracks",
+			"mark_as_duplicate",
 			nil,
 			nil,
 			&proposedRelatedAbstractFriendlyID,
