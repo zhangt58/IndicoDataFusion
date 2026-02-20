@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -522,28 +523,20 @@ func (c *IndicoClient) SubmitAbstractReview(ctx context.Context, abstractID int,
 	}
 
 	// Execute request
-	//resp, err := c.Client.Do(httpReq)
-	//if err != nil {
-	//	return err
-	//}
-	//defer func() { _ = resp.Body.Close() }()
-	//
-	// Check response status
-	//if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-	//	b, _ := io.ReadAll(io.LimitReader(resp.Body, 8*1024))
-	//	return fmt.Errorf("api error: status %d: %s", resp.StatusCode, string(b))
-	//}
-
-	// Log the full request URL and payload
-	fmt.Printf("=== Review Submission ===\n")
-	fmt.Printf("URL: %s\n", u.String())
-	fmt.Printf("Payload:\n")
-	for key, values := range formData {
-		for _, value := range values {
-			fmt.Printf("  %s = %s\n", key, value)
-		}
+	resp, err := c.Client.Do(httpReq)
+	if err != nil {
+		return err
 	}
-	fmt.Printf("=========================\n")
+	defer func() { _ = resp.Body.Close() }()
+
+	// Check response status
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		b, _ := io.ReadAll(io.LimitReader(resp.Body, 8*1024))
+		return fmt.Errorf("api error: status %d: %s", resp.StatusCode, string(b))
+	}
+
+	// Compact log message for review submission (single-line)
+	log.Printf("review_submission url=%s payload=%s\n", u.String(), formData.Encode())
 
 	return nil
 }
