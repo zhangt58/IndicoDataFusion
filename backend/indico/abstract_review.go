@@ -402,9 +402,9 @@ type ReviewSubmissionRequest struct {
 	ReviewID                 *int        // Review ID for editing existing review (nil for new review)
 	TrackID                  int         // The review track ID
 	QuestionRatings          map[int]int // Question ID -> Rating value (0 or 1)
-	ProposedAction           string      // accept, reject, changed_tracks, mark_as_duplicate, merge
+	ProposedAction           string      // accept, reject, change_tracks, mark_as_duplicate, merge
 	ProposedContributionType *int        // Required for accept/reject actions (can be None)
-	ProposedTracks           []int       // Required for changed_tracks action
+	ProposedTracks           []int       // Required for change_tracks action
 	ProposedRelatedAbstract  *int        // Required for mark_as_duplicate/merge actions
 	Comment                  string      // Review comment
 }
@@ -433,7 +433,7 @@ func (c *IndicoClient) SubmitAbstractReview(ctx context.Context, abstractID int,
 		// We allow nil pointer to represent "None"
 	case "change_tracks":
 		if len(req.ProposedTracks) == 0 {
-			return fmt.Errorf("proposed_tracks is required for changed_tracks action")
+			return fmt.Errorf("proposed_tracks is required for change_tracks action")
 		}
 	case "mark_as_duplicate", "merge":
 		if req.ProposedRelatedAbstract == nil {

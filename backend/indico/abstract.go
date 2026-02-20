@@ -173,9 +173,9 @@ func (a *AbstractData) GetSecondPriorityQuestionID() int {
 //   - trackID: the track ID to review for
 //   - firstPriorityValue: rating value (0 or 1) for first priority
 //   - secondPriorityValue: rating value (0 or 1) for second priority
-//   - proposedAction: the proposed action (accept, reject, changed_tracks, mark_as_duplicate, merge)
+//   - proposedAction: the proposed action (accept, reject, change_tracks, mark_as_duplicate, merge)
 //   - proposedContribTypeID: proposed contribution type ID (nil for __None)
-//   - proposedTrackIDs: proposed track IDs for changed_tracks action
+//   - proposedTrackIDs: proposed track IDs for change_tracks action
 //   - proposedRelatedAbstractID: related abstract ID for mark_as_duplicate/merge actions
 //   - comment: review comment
 //
@@ -227,7 +227,7 @@ func (a *AbstractData) SubmitNewReview(
 //   - secondPriorityValue: rating value (0 or 1) for second priority
 //   - proposedAction: the proposed action
 //   - proposedContribTypeID: proposed contribution type ID (nil for __None)
-//   - proposedTrackIDs: proposed track IDs for changed_tracks action
+//   - proposedTrackIDs: proposed track IDs for change_tracks action
 //   - proposedRelatedAbstractID: related abstract ID for mark_as_duplicate/merge actions
 //   - comment: review comment
 //
