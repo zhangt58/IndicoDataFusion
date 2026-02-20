@@ -845,6 +845,11 @@ func (h *DataSourceHandler) RefreshAbstractByID(ctx context.Context, id int) (*i
 		}
 	}
 
+	// Ensure IndicoURL is set for the refreshed single abstract
+	if h.client != nil {
+		abstract.IndicoURL = fmt.Sprintf("%s/event/%d/abstracts/%d", h.client.BaseURL, h.client.EventID, abstract.ID)
+	}
+
 	// Update the cache if available
 	if h.cache != nil {
 		// Get current cached abstracts

@@ -313,10 +313,10 @@
   </div>
 
   <!-- Link to Indico (with View Raw JSON button aligned to the right) -->
-  {#if abstract.indico_url}
-    <div
-      class="mt-2 pt-3 border-t border-gray-200 dark:border-gray-600 flex items-center justify-between"
-    >
+  <div
+    class="mt-2 pt-3 border-t border-gray-200 dark:border-gray-600 flex items-center justify-between"
+  >
+    {#if abstract.indico_url}
       <a
         href={abstract.indico_url}
         onclick={async (e) => {
@@ -334,22 +334,23 @@
         View on Indico
         <Icon icon="mdi:open-in-new" class="w-4 h-4" />
       </a>
+    {/if}
 
-      <button
-        type="button"
-        class="text-sm text-blue-600 dark:text-blue-400 hover:underline"
-        onclick={() => (showRawJsonDialog = true)}
-        title="View raw JSON"
-      >
-        View Raw JSON
-      </button>
-    </div>
-    <RawJsonDialog
-      bind:open={showRawJsonDialog}
-      data={abstract}
-      title={`Abstract [${abstract.id}]`}
-    />
-  {/if}
+    <button
+      type="button"
+      class="text-sm text-blue-600 dark:text-blue-400 hover:underline"
+      onclick={() => (showRawJsonDialog = true)}
+      title="View raw JSON"
+    >
+      View Raw JSON
+    </button>
+  </div>
+
+  <RawJsonDialog
+    bind:open={showRawJsonDialog}
+    data={abstract}
+    title={`Abstract [${abstract.id}]`}
+  />
 </div>
 
 <!-- Affiliation Details Dialog -->
