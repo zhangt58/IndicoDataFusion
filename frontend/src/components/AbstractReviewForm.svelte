@@ -103,10 +103,11 @@
   });
 
   // Currently selected related abstract object (for display)
+  // proposedRelatedAbstractID stores the database ID (a.id), not friendly_id
   const selectedRelatedAbstract = $derived.by(() => {
     if (!proposedRelatedAbstractID) return null;
-    const id = parseInt(proposedRelatedAbstractID);
-    return allAbstracts.find((a) => a.friendly_id === id) ?? null;
+    const dbID = parseInt(proposedRelatedAbstractID);
+    return allAbstracts.find((a) => a.id === dbID) ?? null;
   });
 
   // Primary author (first primary or first person)
@@ -127,6 +128,71 @@
     if (!abstract?.reviewed_for_tracks || abstract.reviewed_for_tracks.length === 0) return [];
     return [...abstract.reviewed_for_tracks].sort((a, b) => (a.id ?? 0) - (b.id ?? 0));
   });
+
+  // Form validation: check if form is valid for submission
+  const isFormValid = $derived.by(() => {
+    // Must have a track ID
+    if (!effectiveTrackID) return false;
+
+    // Action-specific validation
+    if (proposedAction === 'change_tracks' && proposedTrackIDs.length === 0) return false;
+    if (
+      (proposedAction === 'mark_as_duplicate' || proposedAction === 'merge') &&
+      !proposedRelatedAbstractID.trim()
+    )
+      return false;
+
+    return true;
+  });
+
+  // Check if form has changes (for edit mode)
+  const hasChanges = $derived.by(() => {
+    if (!isEditMode || !currentReview) return true; // always allow submit for new reviews
+
+    // Check ratings changes
+    for (const rating of currentReview.ratings ?? []) {
+      const currentValue =
+        typeof rating.value === 'boolean'
+          ? rating.value
+            ? '1'
+            : '0'
+          : String(Number(rating.value) || 0);
+      const formValue = questionRatings[rating.question] ?? '0';
+      if (currentValue !== formValue) return true;
+    }
+
+    // Check proposed action
+    if ((currentReview.proposed_action || 'accept') !== proposedAction) return true;
+
+    // Check proposed contribution type
+    const currentContribTypeName = currentReview.proposed_contrib_type?.name ?? '';
+    if (currentContribTypeName !== proposedContribTypeName) return true;
+
+    // Check proposed tracks (for change_tracks action)
+    const currentTrackIDs = (currentReview.proposed_tracks ?? [])
+      .map((t) => t.id)
+      .sort((a, b) => a - b);
+    const formTrackIDs = [...proposedTrackIDs].sort((a, b) => a - b);
+    if (
+      currentTrackIDs.length !== formTrackIDs.length ||
+      !currentTrackIDs.every((id, idx) => id === formTrackIDs[idx])
+    )
+      return true;
+
+    // Check proposed related abstract
+    const currentRelatedID = currentReview.proposed_related_abstract
+      ? String(currentReview.proposed_related_abstract.id || '')
+      : '';
+    if (currentRelatedID !== proposedRelatedAbstractID) return true;
+
+    // Check comment
+    if ((currentReview.comment || '') !== comment) return true;
+
+    return false;
+  });
+
+  // Submit button should be enabled only if form is valid and has changes (for edit mode)
+  const canSubmit = $derived(isFormValid && hasChanges && !isSubmitting);
 
   // ── Action badge styles — mirrors AbstractReview.svelte ─────────────────────
   const ACTION_STYLES = {
@@ -187,11 +253,7 @@
       proposedContribTypeName = currentReview.proposed_contrib_type?.name ?? '';
       proposedTrackIDs = currentReview.proposed_tracks?.map((t) => t.id) ?? [];
       proposedRelatedAbstractID = currentReview.proposed_related_abstract
-        ? String(
-            currentReview.proposed_related_abstract.friendly_id ||
-              currentReview.proposed_related_abstract.id ||
-              '',
-          )
+        ? String(currentReview.proposed_related_abstract.id || '')
         : '';
       relatedAbstractSearch = '';
       comment = currentReview.comment || '';
@@ -258,7 +320,8 @@
   }
 
   function selectRelatedAbstract(a) {
-    proposedRelatedAbstractID = String(a.friendly_id);
+    // Store the database ID (a.id), not the friendly_id
+    proposedRelatedAbstractID = String(a.id);
     relatedAbstractSearch = '';
   }
 
@@ -353,7 +416,7 @@
     <div class="flex items-center justify-between gap-2 mb-1">
       <div class="flex items-center gap-2">
         <span class="text-sm font-bold text-blue-700 dark:text-blue-300">
-          #{abstract?.friendly_id || abstract?.id}
+          #{abstract?.friendly_id}
         </span>
         <h4 class="text-sm font-semibold text-gray-800 dark:text-white mt-0.5 leading-snug">
           {abstract?.title}
@@ -867,6 +930,38 @@
     </div>
   {/if}
 
+  <!-- Validation messages for incomplete form -->
+  {#if !isFormValid && !error}
+    <div
+      class="p-2 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-300 dark:border-yellow-800 rounded text-sm text-yellow-800 dark:text-yellow-300 flex items-start gap-2"
+      role="alert"
+    >
+      <Icon icon="mdi:information-outline" class="w-5 h-5 shrink-0 mt-0.5" />
+      <div>
+        {#if proposedAction === 'change_tracks' && proposedTrackIDs.length === 0}
+          <span>Please select at least one proposed track.</span>
+        {:else if (proposedAction === 'mark_as_duplicate' || proposedAction === 'merge') && !proposedRelatedAbstractID.trim()}
+          <span>Please select the related abstract.</span>
+        {:else if !effectiveTrackID}
+          <span>No review track available. Please select a track.</span>
+        {:else}
+          <span>Please complete all required fields.</span>
+        {/if}
+      </div>
+    </div>
+  {/if}
+
+  <!-- No changes warning for edit mode -->
+  {#if isEditMode && !hasChanges && !error}
+    <div
+      class="p-2 bg-blue-50 dark:bg-blue-900/20 border border-blue-300 dark:border-blue-800 rounded text-sm text-blue-700 dark:text-blue-300 flex items-start gap-2"
+      role="alert"
+    >
+      <Icon icon="mdi:information-outline" class="w-5 h-5 shrink-0 mt-0.5" />
+      <span>No changes detected. Modify the review to enable the Update button.</span>
+    </div>
+  {/if}
+
   <!-- ── Submit / Cancel ───────────────────────────────────────────────────── -->
   <div class="flex justify-end gap-2 pt-1 border-t border-gray-200 dark:border-gray-700">
     <button
@@ -880,7 +975,12 @@
     <button
       type="button"
       onclick={handleSubmit}
-      disabled={isSubmitting}
+      disabled={!canSubmit}
+      title={!canSubmit && !isSubmitting
+        ? isEditMode && !hasChanges
+          ? 'No changes to save'
+          : 'Please complete all required fields'
+        : ''}
       class="px-4 py-1.5 text-sm font-medium text-white rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5
         {isEditMode ? 'bg-amber-600 hover:bg-amber-700' : 'bg-blue-600 hover:bg-blue-700'}"
     >
