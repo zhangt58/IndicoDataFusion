@@ -11,6 +11,7 @@
   import TypeBadge from '../pages/TypeBadge.svelte';
   import StateBadge from '../pages/StateBadge.svelte';
   import { getAllTracks } from '../pages/AbstractTableItem.js';
+  import { formatDate, ACTION_STYLES } from '../lib/reviewUtils.js';
 
   /**
    * Props:
@@ -194,40 +195,6 @@
   // Submit button should be enabled only if form is valid and has changes (for edit mode)
   const canSubmit = $derived(isFormValid && hasChanges && !isSubmitting);
 
-  // ── Action badge styles — mirrors AbstractReview.svelte ─────────────────────
-  const ACTION_STYLES = {
-    accept: {
-      icon: 'mdi:arrow-up',
-      badgeClass:
-        'bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 border-green-300 dark:border-green-700',
-      label: 'Accept',
-    },
-    reject: {
-      icon: 'mdi:arrow-down',
-      badgeClass:
-        'bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200 border-red-300 dark:border-red-700',
-      label: 'Reject',
-    },
-    change_tracks: {
-      icon: 'mdi:repeat',
-      badgeClass:
-        'bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 border-blue-300 dark:border-blue-700',
-      label: 'Change Tracks',
-    },
-    mark_as_duplicate: {
-      icon: 'mdi:content-copy',
-      badgeClass:
-        'bg-orange-100 dark:bg-orange-900 text-orange-800 dark:text-orange-200 border-orange-300 dark:border-orange-700',
-      label: 'Mark as Duplicate',
-    },
-    merge: {
-      icon: 'mdi:merge',
-      badgeClass:
-        'bg-purple-100 dark:bg-purple-900 text-purple-800 dark:text-purple-200 border-purple-300 dark:border-purple-700',
-      label: 'Merge',
-    },
-  };
-
   // ── Initialisation ──────────────────────────────────────────────────────────
   let _initialized = $state(false);
 
@@ -298,21 +265,6 @@
   });
 
   // ── Helpers ─────────────────────────────────────────────────────────────────
-  function formatDate(dateStr) {
-    if (!dateStr) return '';
-    try {
-      return new Date(dateStr).toLocaleString('en-US', {
-        year: 'numeric',
-        month: 'short',
-        day: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
-      });
-    } catch {
-      return dateStr;
-    }
-  }
-
   function toggleProposedTrack(trackID) {
     proposedTrackIDs = proposedTrackIDs.includes(trackID)
       ? proposedTrackIDs.filter((id) => id !== trackID)
@@ -499,14 +451,10 @@
         <div
           class="flex items-center gap-1.5 px-2 py-1 rounded-lg border text-xs font-semibold {ACTION_STYLES[
             currentReview.proposed_action
-          ]?.badgeClass ||
-            'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 border-gray-300'}"
+          ].badgeClass}"
         >
-          <Icon
-            icon={ACTION_STYLES[currentReview.proposed_action]?.icon || 'mdi:help'}
-            class="w-3.5 h-3.5"
-          />
-          {ACTION_STYLES[currentReview.proposed_action]?.label || currentReview.proposed_action}
+          <Icon icon={ACTION_STYLES[currentReview.proposed_action].icon} class="w-3.5 h-3.5" />
+          {ACTION_STYLES[currentReview.proposed_action].label || currentReview.proposed_action}
         </div>
       </div>
 
