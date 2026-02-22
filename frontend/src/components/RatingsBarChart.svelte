@@ -6,6 +6,8 @@
     abstractData = [],
     title = 'Ratings by Abstract (First & Second Priority)',
     height = '50vh',
+    firstPriorityWeight = 1,
+    secondPriorityWeight = 1,
   } = $props();
 
   let container = $state(null);
@@ -21,6 +23,11 @@
       // Use pre-computed first_priority and second_priority fields
       const firstPriority = abstract.first_priority || 0;
       const secondPriority = abstract.second_priority || 0;
+      const w1 = firstPriorityWeight ?? 1;
+      const w2 = secondPriorityWeight ?? 1;
+      const weightedFirst = firstPriority * w1;
+      const weightedSecond = secondPriority * w2;
+      const weightedTotal = weightedFirst + weightedSecond;
 
       // Include if either priority exists
       if (firstPriority > 0 || secondPriority > 0) {
@@ -29,6 +36,9 @@
           title,
           firstPriority,
           secondPriority,
+          weightedFirst,
+          weightedSecond,
+          weightedTotal,
           avg:
             (firstPriority + secondPriority) /
             ((firstPriority > 0 ? 1 : 0) + (secondPriority > 0 ? 1 : 0)),
@@ -45,51 +55,61 @@
     // Sort by abstract ID
     ratingsData.sort((a, b) => a.id - b.id);
 
+    const w1 = firstPriorityWeight ?? 1;
+    const w2 = secondPriorityWeight ?? 1;
+    const isWeighted = w1 !== 1 || w2 !== 1;
+
     const abstractIds = ratingsData.map((item) => item.id.toString());
     const firstPriorityData = ratingsData.map((item) => ({
-      value: item.firstPriority,
+      value: item.weightedFirst,
       title: item.title,
       id: item.id,
     }));
     const secondPriorityData = ratingsData.map((item) => ({
-      value: item.secondPriority,
+      value: item.weightedSecond,
       title: item.title,
       id: item.id,
     }));
 
+    const firstLabel = isWeighted ? `1st Priority ×${w1}` : 'First Priority';
+    const secondLabel = isWeighted ? `2nd Priority ×${w2}` : 'Second Priority';
+    const chartTitle = isWeighted
+      ? `Weighted Ratings (w1=${w1}, w2=${w2})`
+      : title || 'Ratings by Abstract (First & Second Priority)';
+
     return {
       title: {
-        text: title,
+        text: chartTitle,
         left: 'center',
         top: 6,
         textStyle: { fontFamily: 'Inter, sans-serif', fontWeight: 600, fontSize: 16 },
       },
       grid: { left: '10%', right: '10%', top: 60, bottom: 80 },
       legend: {
-        data: ['First Priority', 'Second Priority'],
+        data: [firstLabel, secondLabel],
         top: 35,
         textStyle: { fontFamily: 'Inter, sans-serif' },
       },
       tooltip: {
         trigger: 'axis',
-        axisPointer: {
-          type: 'shadow',
-        },
+        axisPointer: { type: 'shadow' },
         formatter: (params) => {
           if (!params || params.length === 0) return '';
           const dataIndex = params[0].dataIndex;
           const item = ratingsData[dataIndex];
 
           let html = `<strong>Abstract #${item.id}</strong><br/>`;
-          html += `<span style="font-size: 12px; color: #666;">${item.title}</span><br/>`;
-          html += `<div style="margin-top: 6px;">`;
-
+          html += `<span style="font-size:12px;color:#666">${item.title}</span><br/>`;
+          html += `<div style="margin-top:6px">`;
           params.forEach((param) => {
             if (param.value > 0) {
               html += `${param.marker} ${param.seriesName}: <strong>${param.value.toFixed(1)}</strong><br/>`;
             }
           });
-
+          if (isWeighted) {
+            html += `<hr style="margin:4px 0;border-color:#eee"/>`;
+            html += `Weighted Total: <strong>${item.weightedTotal.toFixed(1)}</strong><br/>`;
+          }
           html += `</div>`;
           return html;
         },
@@ -100,14 +120,11 @@
         nameLocation: 'middle',
         nameGap: 30,
         data: abstractIds,
-        axisLabel: {
-          fontFamily: 'Inter, sans-serif',
-          rotate: 45,
-        },
+        axisLabel: { fontFamily: 'Inter, sans-serif', rotate: 45 },
       },
       yAxis: {
         type: 'value',
-        name: 'Rating Score',
+        name: isWeighted ? 'Weighted Score' : 'Rating Score',
         nameLocation: 'middle',
         nameGap: 50,
         axisLabel: { fontFamily: 'Inter, sans-serif' },
@@ -126,34 +143,20 @@
       ],
       series: [
         {
-          name: 'First Priority',
+          name: firstLabel,
           type: 'bar',
+          stack: 'total',
           data: firstPriorityData,
-          itemStyle: {
-            color: '#3B82F6', // Blue
-          },
-          emphasis: {
-            itemStyle: {
-              color: '#2563EB',
-              borderColor: '#1e3a8a',
-              borderWidth: 2,
-            },
-          },
+          itemStyle: { color: '#3B82F6' },
+          emphasis: { itemStyle: { color: '#2563EB', borderColor: '#1e3a8a', borderWidth: 2 } },
         },
         {
-          name: 'Second Priority',
+          name: secondLabel,
           type: 'bar',
+          stack: 'total',
           data: secondPriorityData,
-          itemStyle: {
-            color: '#10B981', // Green
-          },
-          emphasis: {
-            itemStyle: {
-              color: '#059669',
-              borderColor: '#064e3b',
-              borderWidth: 0,
-            },
-          },
+          itemStyle: { color: '#10B981' },
+          emphasis: { itemStyle: { color: '#059669', borderColor: '#064e3b', borderWidth: 0 } },
         },
       ],
     };

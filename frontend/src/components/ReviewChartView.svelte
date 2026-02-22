@@ -6,9 +6,15 @@
   import ReviewTimeline from './ReviewTimeline.svelte';
   import ReviewerDialog from './ReviewerDialog.svelte';
   import MyReviewChart from './MyReviewChart.svelte';
+  import ReviewMatrixView from './ReviewMatrixView.svelte';
 
   // Props: expects an array of abstracts with reviews data
   let { abstractData = [] } = $props();
+
+  // ── Shared weights: lifted state so Matrix and Ratings chart stay in sync ──
+  let firstPriorityWeight = $state(1);
+  let secondPriorityWeight = $state(1);
+
   // Derived flag: whether there are any abstracts assigned to the current user
   const hasMyReviews = $derived.by(() => {
     if (!abstractData) return false;
@@ -222,6 +228,16 @@
       </TabItem>
     {/if}
 
+    <TabItem title="Matrix">
+      <div class="p-0.5 last:-mt-6">
+        <ReviewMatrixView
+          abstracts={abstractData}
+          bind:firstPriorityWeight
+          bind:secondPriorityWeight
+        />
+      </div>
+    </TabItem>
+
     <TabItem open title="By Reviewer">
       <div class="p-0.5 last:-mt-4">
         {#if reviewerOptions && reviewerOptions.series && reviewerOptions.series.length}
@@ -288,7 +304,12 @@
 
     <TabItem title="Ratings">
       <div class="p-0.5 last:-mt-4">
-        <RatingsBarChart {abstractData} height={chartHeight} />
+        <RatingsBarChart
+          {abstractData}
+          height={chartHeight}
+          {firstPriorityWeight}
+          {secondPriorityWeight}
+        />
       </div>
     </TabItem>
 
