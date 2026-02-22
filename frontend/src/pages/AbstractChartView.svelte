@@ -227,7 +227,6 @@
 </script>
 
 <div class="p-2 mb-1">
-  <!-- Top-level tabs: Affiliation vs Submission -->
   <Tabs class="shadow-md rounded-md">
     <TabItem open title="Affiliation">
       <div class="grid grid-cols-1 md:grid-cols-1 gap-4 last:-mt-4">
@@ -303,8 +302,7 @@
     </TabItem>
 
     <TabItem title="Submission">
-      <!-- Submission content -->
-      <div class="p-0.5">
+      <div class="p-0.5 last:-mt-4">
         {#if abstractData && abstractData.length}
           <AbstractSubmissionTrend submittedTimes={abstractData} title={''} height={'40vh'} />
         {:else}
@@ -314,8 +312,7 @@
     </TabItem>
 
     <TabItem title="Reviews">
-      <!-- Review content -->
-      <div class="p-0.5">
+      <div class="p-0.5 last:-mt-4">
         {#if abstractData && abstractData.length}
           <ReviewChartView {abstractData} />
         {:else}
@@ -325,8 +322,7 @@
     </TabItem>
 
     <TabItem title="Word Cloud">
-      <!-- Word Cloud content -->
-      <div class="p-0.5">
+      <div class="p-0.5 last:-mt-4">
         {#if abstractData && abstractData.length}
           <WordCloud abstracts={abstractData} minLength={3} maxWords={200} height="70vh" title="" />
         {:else}

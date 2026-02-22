@@ -189,7 +189,7 @@
   }
 </script>
 
-<div class="p-2 mb-1 last:-mt-4">
+<div class="p-2 mb-1">
   <!-- Summary stats bar -->
   <div class="grid grid-cols-3 gap-4 mb-1 bg-gray-50 dark:bg-gray-800 rounded-lg">
     <div class="text-center">
@@ -216,13 +216,14 @@
   <Tabs tabStyle="underline">
     {#if hasMyReviews}
       <TabItem title="My Reviews">
-        <div class="p-0.5">
+        <div class="p-0.5 last:-mt-4">
           <MyReviewChart {abstractData} height={myReviewsChartHeight} />
         </div>
       </TabItem>
     {/if}
+
     <TabItem open title="By Reviewer">
-      <div class="p-0.5">
+      <div class="p-0.5 last:-mt-4">
         {#if reviewerOptions && reviewerOptions.series && reviewerOptions.series.length}
           <BarChart
             labels={reviewerOptions.labels}
@@ -239,7 +240,7 @@
     </TabItem>
 
     <TabItem title="By Track">
-      <div class="p-0.5">
+      <div class="p-0.5 last:-mt-4">
         {#if trackOptions && trackOptions.series && trackOptions.series.length}
           <div class="flex flex-col md:flex-row gap-0.5">
             <div class="w-full md:w-1/2">
@@ -269,7 +270,7 @@
     </TabItem>
 
     <TabItem title="By Action">
-      <div class="p-0.5">
+      <div class="p-0.5 last:-mt-4">
         {#if actionOptions && actionOptions.series && actionOptions.series.length}
           <DonutChart
             labels={actionOptions.labels}
@@ -286,13 +287,13 @@
     </TabItem>
 
     <TabItem title="Ratings">
-      <div class="p-0.5">
+      <div class="p-0.5 last:-mt-4">
         <RatingsBarChart {abstractData} height={chartHeight} />
       </div>
     </TabItem>
 
     <TabItem title="Timeline">
-      <div class="p-0.5">
+      <div class="p-0.5 last:-mt-4">
         <ReviewTimeline reviews={allReviews} height={chartHeight} />
       </div>
     </TabItem>

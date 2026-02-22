@@ -121,4 +121,3 @@
 {:else}
   <div class="text-sm text-gray-500 text-center py-6">No track data available</div>
 {/if}
-

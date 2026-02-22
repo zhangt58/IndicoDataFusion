@@ -83,7 +83,7 @@
   const myReviews = $derived.by(() => collectMyReviews(abstractData || []));
 </script>
 
-<div class="p-2 last:-mt-4">
+<div class="p-2">
   <div class="grid grid-cols-3 gap-2 mb-2 bg-gray-50 dark:bg-gray-800 rounded-lg p-2 items-center">
     <div class="text-center">
       <div class="text-lg font-semibold text-green-600 dark:text-green-400">{reviewedCount}</div>
