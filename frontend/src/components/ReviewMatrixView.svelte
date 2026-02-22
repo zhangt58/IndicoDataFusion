@@ -27,16 +27,57 @@
 
   // ── action colour palette ─────────────────────────────────────────────────
   const ACTION_COLORS = {
-    accept: { bg: '#dcfce7', border: '#16a34a', text: '#15803d' },
-    reject: { bg: '#fee2e2', border: '#dc2626', text: '#b91c1c' },
-    change_tracks: { bg: '#dbeafe', border: '#2563eb', text: '#1d4ed8' },
-    mark_as_duplicate: { bg: '#ffedd5', border: '#ea580c', text: '#c2410c' },
-    merge: { bg: '#f3e8ff', border: '#9333ea', text: '#7e22ce' },
-    none: { bg: '#f3f4f6', border: '#d1d5db', text: '#6b7280' },
-    mixed: { bg: '#fef9c3', border: '#ca8a04', text: '#854d0e' },
+    accept: {
+      bg: '#dcfce7',
+      border: '#16a34a',
+      text: '#15803d',
+      darkBg: '#14532d',
+      darkBorder: '#22c55e',
+      darkText: '#86efac',
+    },
+    reject: {
+      bg: '#fee2e2',
+      border: '#dc2626',
+      text: '#b91c1c',
+      darkBg: '#450a0a',
+      darkBorder: '#ef4444',
+      darkText: '#fca5a5',
+    },
+    change_tracks: {
+      bg: '#dbeafe',
+      border: '#2563eb',
+      text: '#1d4ed8',
+      darkBg: '#1e1b4b',
+      darkBorder: '#60a5fa',
+      darkText: '#93c5fd',
+    },
+    mark_as_duplicate: {
+      bg: '#ffedd5',
+      border: '#ea580c',
+      text: '#c2410c',
+      darkBg: '#431407',
+      darkBorder: '#fb923c',
+      darkText: '#fdba74',
+    },
+    merge: {
+      bg: '#f3e8ff',
+      border: '#9333ea',
+      text: '#7e22ce',
+      darkBg: '#2e1065',
+      darkBorder: '#c084fc',
+      darkText: '#d8b4fe',
+    },
+    none: {
+      bg: '#f3f4f6',
+      border: '#d1d5db',
+      text: '#6b7280',
+      darkBg: '#1f2937',
+      darkBorder: '#4b5563',
+      darkText: '#9ca3af',
+    },
   };
 
-  // "Mine" is indicated by a sky-blue dot only (no outline border)
+  // "Mine" is indicated by a coloured dot only (no outline border)
   const MY_DOT_COLOR = '#0ea5e9'; // sky-500  – assigned but not yet reviewed
   const DONE_DOT_COLOR = '#16a34a'; // green-600 – already reviewed by me
 
@@ -49,18 +90,23 @@
   let showWeightControls = $state(false);
   let sortByScore = $state(false);
 
-  // ── helpers ───────────────────────────────────────────────────────────────
-
-  function consensusAction(abstract) {
+  /**
+   * Return the proposed action of the most-recently created/modified review.
+   * Falls back to majority-vote when timestamps are missing, then 'none'.
+   */
+  function latestAction(abstract) {
     const reviews = abstract.reviews;
     if (!reviews || reviews.length === 0) return 'none';
-    const actions = reviews.map((r) => r.proposed_action).filter(Boolean);
-    if (actions.length === 0) return 'none';
-    const counts = {};
-    for (const a of actions) counts[a] = (counts[a] || 0) + 1;
-    const sorted = Object.entries(counts).sort((a, b) => b[1] - a[1]);
-    if (sorted.length > 1 && sorted[0][1] === sorted[1][1]) return 'mixed';
-    return sorted[0][0];
+
+    // Sort descending by modified_dt > created_dt
+    const sorted = [...reviews].sort((a, b) => {
+      const ta = new Date(a.modified_dt ?? a.created_dt ?? 0).getTime();
+      const tb = new Date(b.modified_dt ?? b.created_dt ?? 0).getTime();
+      return tb - ta;
+    });
+
+    const action = sorted[0]?.proposed_action;
+    return action && ACTION_COLORS[action] ? action : 'none';
   }
 
   function calcScore(abstract) {
@@ -79,6 +125,20 @@
     if (abstract.submitted_for_tracks?.length > 0)
       return abstract.submitted_for_tracks[0].title || '';
     return '';
+  }
+
+  /** Build native-tooltip text for a cell. */
+  function cellTooltip(abstract, action, scoreStr, reviewCount, ismine, hasMyReview, displayId) {
+    const actionLabel = ACTION_STYLES[action]?.label ?? action;
+    const lines = [
+      `#${displayId} – ${abstract.title}`,
+      `Track: ${primaryTrack(abstract) || '—'}`,
+      `Latest action: ${actionLabel}`,
+      `Weighted rating: ${scoreStr}`,
+      `Reviews: ${reviewCount}`,
+    ];
+    if (ismine) lines.push(hasMyReview ? '✓ My review submitted' : '⊙ Assigned to me');
+    return lines.join('\n');
   }
 
   // ── sorted + grouped ──────────────────────────────────────────────────────
@@ -104,7 +164,6 @@
       seen.get(track).abstracts.push(abstract);
     }
 
-    // Optionally sort each group by descending weighted score
     if (sortByScore) {
       for (const g of groups) {
         g.abstracts = [...g.abstracts].sort((a, b) => calcScore(b) - calcScore(a));
@@ -149,14 +208,21 @@
       label: style.label,
       color: ACTION_COLORS[key] ?? ACTION_COLORS.none,
     })),
-    { key: 'mixed', label: 'Mixed', color: ACTION_COLORS.mixed },
     { key: 'none', label: 'No Review', color: ACTION_COLORS.none },
   ];
+
+  // ── shared button class helpers ───────────────────────────────────────────
+  const btnBase =
+    'flex items-center gap-1 px-2 py-0.5 rounded border font-medium transition-colors';
+  const btnNeutral = `${btnBase} bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:border-gray-400 dark:hover:border-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700`;
+  const btnActive = `${btnBase} bg-sky-100 dark:bg-sky-900/50 border-sky-400 dark:border-sky-500 text-sky-700 dark:text-sky-300`;
+  const btnSortNeutral = `${btnBase} bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:border-gray-400 dark:hover:border-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700`;
+  const btnSortActive = `${btnBase} bg-amber-100 dark:bg-amber-900/40 border-amber-400 dark:border-amber-500 text-amber-700 dark:text-amber-300`;
 </script>
 
 <!-- ── Header bar: title + summary + legend + controls toggle ────────────── -->
 <div
-  class="flex flex-wrap items-center gap-x-4 gap-y-1 px-3 py-1.5 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/60 text-xs select-none"
+  class="flex flex-wrap items-center gap-x-4 gap-y-1 px-1 py-1.5 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/60 text-xs select-none"
 >
   {#if title}
     <span class="font-semibold text-gray-700 dark:text-gray-200 shrink-0">{title}</span>
@@ -172,19 +238,17 @@
       <span class="flex items-center gap-1">
         <span
           class="inline-block w-3 h-3 rounded-sm border"
-          style="background:{item.color.bg};border-color:{item.color.border}"
+          data-action={item.key}
+          style="background:var(--action-bg);border-color:var(--action-border)"
         ></span>
         <span class="text-gray-600 dark:text-gray-300">{item.label}</span>
       </span>
     {/each}
-
-    <!-- Mine: shown as a coloured dot (same as cell dot indicator) -->
+    <!-- Reviewed dot indicator -->
     <span class="flex items-center gap-1.5">
       <span
-        class="relative inline-block w-3 h-3 rounded-sm border"
-        style="background:#f3f4f6;border-color:#d1d5db"
+        class="relative inline-block w-3 h-3 rounded-sm border border-gray-300 dark:border-gray-600 bg-gray-100 dark:bg-gray-800"
       >
-        <!-- green dot = reviewed -->
         <span
           class="absolute top-0 right-0 w-1.5 h-1.5 rounded-full -translate-y-px translate-x-px"
           style="background:{DONE_DOT_COLOR}"
@@ -192,12 +256,11 @@
       </span>
       <span class="text-gray-600 dark:text-gray-300">Reviewed</span>
     </span>
+    <!-- Assigned dot indicator -->
     <span class="flex items-center gap-1.5">
       <span
-        class="relative inline-block w-3 h-3 rounded-sm border"
-        style="background:#f3f4f6;border-color:#d1d5db"
+        class="relative inline-block w-3 h-3 rounded-sm border border-gray-300 dark:border-gray-600 bg-gray-100 dark:bg-gray-800"
       >
-        <!-- sky dot = assigned, not yet reviewed -->
         <span
           class="absolute top-0 right-0 w-1.5 h-1.5 rounded-full -translate-y-px translate-x-px"
           style="background:{MY_DOT_COLOR}"
@@ -207,14 +270,11 @@
     </span>
   </div>
 
-  <!-- Weights toggle -->
+  <!-- Weights toggle button -->
   <button
     type="button"
     onclick={() => (showWeightControls = !showWeightControls)}
-    class="flex items-center gap-1 px-2 py-0.5 rounded border transition-colors ml-1
-           {showWeightControls
-      ? 'bg-sky-100 dark:bg-sky-900/40 border-sky-400 text-sky-700 dark:text-sky-300'
-      : 'bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-400 hover:border-gray-400'}"
+    class="{showWeightControls ? btnActive : btnNeutral} ml-1"
     aria-expanded={showWeightControls}
     title="Adjust priority weights"
   >
@@ -223,10 +283,11 @@
   </button>
 </div>
 
-<!-- ── Weight controls (inline, shown when toggled) ──────────────────────── -->
+<!-- ── Weight controls row (shown when toggled) ───────────────────────────── -->
 {#if showWeightControls}
   <div
-    class="flex flex-wrap items-center gap-x-5 gap-y-1 px-3 py-2 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 text-xs"
+    class="flex flex-wrap items-center gap-x-5 gap-y-1.5 px-3 py-2
+           bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 text-xs"
   >
     <!-- 1st priority slider -->
     <label class="flex items-center gap-2 shrink-0">
@@ -263,22 +324,19 @@
     </label>
 
     <span class="text-gray-400 dark:text-gray-500 italic whitespace-nowrap">
-      score = {firstPriorityWeight}×1st + {secondPriorityWeight}×2nd
+      weighted rating = {firstPriorityWeight}×1st + {secondPriorityWeight}×2nd
     </span>
 
-    <!-- Sort-by-score toggle -->
+    <!-- Sort-by-weighted-rating toggle -->
     <button
       type="button"
       onclick={() => (sortByScore = !sortByScore)}
-      class="flex items-center gap-1.5 px-2 py-0.5 rounded border transition-colors ml-auto shrink-0
-             {sortByScore
-        ? 'bg-amber-100 dark:bg-amber-900/40 border-amber-400 text-amber-700 dark:text-amber-300'
-        : 'bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-400 hover:border-gray-400'}"
+      class="{sortByScore ? btnSortActive : btnSortNeutral} ml-auto shrink-0"
       aria-pressed={sortByScore}
-      title="Sort each track's abstracts by descending weighted score"
+      title="Sort each track's abstracts by descending weighted rating"
     >
       <Icon icon={sortByScore ? 'mdi:sort-descending' : 'mdi:sort-variant'} class="w-3.5 h-3.5" />
-      <span>Sort by score</span>
+      <span>Sort by rating</span>
     </button>
   </div>
 {/if}
@@ -293,7 +351,7 @@
   </div>
 {:else}
   <div
-    class="overflow-y-auto pr-4"
+    class="overflow-y-auto pr-4 px-1"
     style="max-height: calc(100vh - 25rem)"
     role="grid"
     aria-label="Abstract review matrix"
@@ -323,8 +381,7 @@
         style="grid-template-columns: repeat({effectiveColumns}, minmax(0, 1fr))"
       >
         {#each group.abstracts as abstract (abstract.id)}
-          {@const action = consensusAction(abstract)}
-          {@const colors = ACTION_COLORS[action] ?? ACTION_COLORS.none}
+          {@const action = latestAction(abstract)}
           {@const score = calcScore(abstract)}
           {@const scoreStr = fmtScore(score)}
           {@const ismine = abstract.is_my_review === true}
@@ -335,28 +392,22 @@
           <button
             type="button"
             onclick={() => openAbstract(abstract)}
-            class="review-cell relative flex flex-col items-start justify-start rounded p-0.5
+            class="cursor-pointer select-none relative flex flex-col items-start justify-start rounded p-0.5
                    leading-tight transition-transform duration-100
                    hover:scale-110 hover:z-20
                    focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400"
-            style="
-              min-height: 2rem;
-              font-size: 10px;
-              font-weight: 700;
-              background: {colors.bg};
-              border: 1.5px solid {colors.border};
-              color: {colors.text};
-            "
+            data-action={action}
+            style="min-height:2rem; font-size:10px; font-weight:700; background:var(--action-bg); border:1.5px solid var(--action-border); color:var(--action-text);"
             aria-label="Abstract #{displayId}: {abstract.title}"
-            title="#{displayId} – {abstract.title}
-Track: {primaryTrack(abstract)}
-Action: {ACTION_STYLES[action]?.label ?? action}
-Score: {scoreStr}
-Reviews: {reviewCount}{ismine
-              ? hasMyReview
-                ? '\n✓ My review submitted'
-                : '\n⊙ Assigned to me'
-              : ''}"
+            title={cellTooltip(
+              abstract,
+              action,
+              scoreStr,
+              reviewCount,
+              ismine,
+              hasMyReview,
+              displayId,
+            )}
           >
             <!-- Top row: ID (left) + mine dot (right) -->
             <span class="w-full flex items-center justify-between leading-none">
@@ -370,20 +421,18 @@ Reviews: {reviewCount}{ismine
               {/if}
             </span>
 
-            <!-- Bottom row: review count (left) + weighted score (right, prominent) -->
+            <!-- Bottom row: review count (left) + weighted rating (right, prominent) -->
             <span class="w-full flex items-end justify-between mt-auto leading-none">
               {#if reviewCount > 0}
-                <span class="opacity-50 font-normal text-xs" aria-hidden="true">
-                  {reviewCount}
-                </span>
+                <span class="opacity-50 font-normal text-xs" aria-hidden="true">{reviewCount}</span>
               {:else}
                 <span></span>
               {/if}
 
               {#if score !== 0}
                 <span
-                  class="font-black tabular-nums text-lg font-semibold opacity-95 leading-none"
-                  style="color:{colors.text};"
+                  class="font-black tabular-nums text-lg leading-none opacity-95"
+                  style="color:var(--action-text);"
                   aria-hidden="true">{scoreStr}</span
                 >
               {/if}
@@ -402,7 +451,6 @@ Reviews: {reviewCount}{ismine
     reviews={selectedAbstract.reviews || []}
     abstractTitle={selectedAbstract.title}
   />
-
   <AbstractReviewFormDialog
     bind:open={showReviewFormDialog}
     abstract={selectedAbstract}
@@ -412,8 +460,83 @@ Reviews: {reviewCount}{ismine
 {/if}
 
 <style>
-  .review-cell {
-    cursor: pointer;
-    user-select: none;
+  /* Default (light) action colour variables applied by data-action selector */
+  [data-action='accept'] {
+    --action-bg: #dcfce7;
+    --action-border: #16a34a;
+    --action-text: #15803d;
+  }
+  [data-action='reject'] {
+    --action-bg: #fee2e2;
+    --action-border: #dc2626;
+    --action-text: #b91c1c;
+  }
+  [data-action='change_tracks'] {
+    --action-bg: #dbeafe;
+    --action-border: #2563eb;
+    --action-text: #1d4ed8;
+  }
+  [data-action='mark_as_duplicate'] {
+    --action-bg: #ffedd5;
+    --action-border: #ea580c;
+    --action-text: #c2410c;
+  }
+  [data-action='merge'] {
+    --action-bg: #f3e8ff;
+    --action-border: #9333ea;
+    --action-text: #7e22ce;
+  }
+  [data-action='none'] {
+    --action-bg: #f3f4f6;
+    --action-border: #d1d5db;
+    --action-text: #6b7280;
+  }
+
+  :global(.dark) {
+    /* Action colour dark overrides */
+    /* Accept */
+    [data-action='accept'] {
+      --action-bg: #14532d;
+      --action-border: #22c55e;
+      --action-text: #86efac;
+    }
+    /* Reject */
+    [data-action='reject'] {
+      --action-bg: #450a0a;
+      --action-border: #ef4444;
+      --action-text: #fca5a5;
+    }
+    /* Change Tracks */
+    [data-action='change_tracks'] {
+      --action-bg: #1e1b4b;
+      --action-border: #60a5fa;
+      --action-text: #93c5fd;
+    }
+    /* Mark as Duplicate */
+    [data-action='mark_as_duplicate'] {
+      --action-bg: #431407;
+      --action-border: #fb923c;
+      --action-text: #fdba74;
+    }
+    /* Merge */
+    [data-action='merge'] {
+      --action-bg: #2e1065;
+      --action-border: #c084fc;
+      --action-text: #d8b4fe;
+    }
+    /* None */
+    [data-action='none'] {
+      --action-bg: #1f2937;
+      --action-border: #4b5563;
+      --action-text: #9ca3af;
+    }
+
+    /* Reviewed/Assigned dots */
+    .reviewed-dot {
+      background: #16a34a;
+    }
+    .assigned-dot {
+      background: #0ea5e9;
+    }
   }
 </style>
