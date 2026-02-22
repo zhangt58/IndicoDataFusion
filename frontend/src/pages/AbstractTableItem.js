@@ -207,19 +207,17 @@ export function transformAbstractToTableItem(abstract) {
     ID: rawId,
     IDNumber: isNaN(idNum) ? null : idNum,
     FriendlyID: abstract.friendly_id,
-    DatabaseID: abstract.id, // Always the actual database ID for API calls
+    DatabaseID: abstract.id,
     Title: abstract.title || '',
     State: abstract.state || '',
     Submitter: abstract.submitter?.full_name || '',
     Affiliation: affiliationDisplay,
     AffiliationFull: affiliationData ? JSON.stringify(affiliationData) : '',
-    // New explicit fields requested (prefer non-empty code when available)
     AcceptedTrack: abstract.accepted_track ? getTrackLabel(abstract.accepted_track) : '',
     AcceptedContribType: abstract.accepted_contrib_type?.name || '',
     SubmittedContribType: abstract.submitted_contrib_type?.name || '',
     ReviewedForTracks: reviewedTrackTitles,
     SubmittedForTracks: submittedTrackTitles,
-
     Score: abstract.score ?? '',
     Submitted: formatTimestamp(abstract.submitted_dt),
     SubmittedISO: submittedISO,
@@ -228,7 +226,14 @@ export function transformAbstractToTableItem(abstract) {
     AuthorsTooltip: getAllAuthorsTooltip(abstract.persons), // All authors for tooltip
     FirstPriority: abstract.first_priority ?? 0,
     SecondPriority: abstract.second_priority ?? 0,
-    IsMyReview: abstract.is_my_review === true ? 'Yes' : 'No',
+    MyReview:
+      abstract.is_my_review === true
+        ? abstract.my_review != null
+          ? 'Submitted'
+          : 'Assigned'
+        : 'Not Assigned',
+    HasMyReview: abstract.my_review != null,
+    MyReviewTrack: abstract.reviewed_for_tracks?.[0] ?? null,
   };
 }
 

@@ -1,7 +1,6 @@
 <script>
   import { RefreshAbstractByID } from '../../wailsjs/go/main/App';
   import { DataTable, DataTableControls } from '@zhangt58/svelte-vtable';
-  import Icon from '@iconify/svelte';
   import TypeBadge from './TypeBadge.svelte';
   import AbstractDetailsDialog from './AbstractDetailsDialog.svelte';
   import TrackDetailsDialog from './TrackDetailsDialog.svelte';
@@ -10,6 +9,8 @@
   import TitleButton from '../components/TitleButton.svelte';
   import TrackBadge from './TrackBadge.svelte';
   import StateBadge from './StateBadge.svelte';
+  import AbstractReviewFormDialog from '../components/AbstractReviewFormDialog.svelte';
+  import ReviewButton from '../components/ReviewButton.svelte';
   import {
     getTableItems,
     getShortTrackName,
@@ -36,6 +37,11 @@
   // Refresh state - track which rows are currently refreshing
   let refreshingIds = $state(new Set());
 
+  // Review form dialog state
+  let showReviewFormDialog = $state(false);
+  let reviewFormAbstract = $state(null);
+  let reviewFormTrack = $state(null);
+
   // Simple client-side controls (search/sort/pagination)
   // We will use the event-based API like the example: DataTableControls emits pagechange/searchchange
   let searchQuery = $state('');
@@ -57,7 +63,7 @@
     { id: 'Score', title: 'Score', stretch: 1, hide: true },
     { id: 'Submitted', title: 'Submitted', stretch: 2 },
     { id: 'Authors', title: 'Authors', stretch: 2 },
-    { id: 'IsMyReview', title: 'IsMyReview', stretch: 1 },
+    { id: 'MyReview', title: 'My Review', stretch: 1 },
     { id: 'FirstPriority', title: 'First Priority', stretch: 1 },
     { id: 'SecondPriority', title: 'Second Priority', stretch: 1 },
     { id: 'Refresh', title: 'Refresh', stretch: 1 },
@@ -188,6 +194,29 @@
     } catch (e) {
       console.error('Failed to parse affiliationFull:', e);
       selectedAffiliation = null;
+    }
+  }
+
+  // Open review form for a table row item
+  function openReviewForm(item) {
+    const abstract = findAbstractById(item.DatabaseID);
+    if (!abstract) return;
+    reviewFormAbstract = abstract;
+    reviewFormTrack = item.MyReviewTrack;
+    showReviewFormDialog = true;
+  }
+
+  // Handle abstract updated after review form submission
+  function handleReviewFormUpdated(refreshed) {
+    if (!refreshed) return;
+    const index = abstractData.findIndex((a) => String(a.id) === String(refreshed.id));
+    if (index !== -1) {
+      abstractData = [...abstractData.slice(0, index), refreshed, ...abstractData.slice(index + 1)];
+    }
+    // If the details dialog is also open for the same abstract, sync it
+    if (selectedAbstractId && String(selectedAbstractId) === String(refreshed.id)) {
+      selectedAbstract = refreshed;
+      lastSyncedAbstract = refreshed;
     }
   }
 
@@ -379,6 +408,18 @@
       return na - nb;
     }
 
+    // Special-case My Review: custom order Submitted > Assigned > None
+    if (originalKey === 'My Review' || idKey === 'MyReview') {
+      const order = (v) => {
+        if (v == null) return 0;
+        const s = String(v);
+        if (s === 'Submitted') return 2;
+        if (s === 'Assigned') return 1;
+        return 0; // 'Not Assigned' or unknown
+      };
+      return order(va) - order(vb);
+    }
+
     // fallback string compare
     const sa = String(va ?? '').toLowerCase();
     const sb = String(vb ?? '').toLowerCase();
@@ -444,14 +485,9 @@
       <td class={col.nowrap ? 'nowrap' : ''}>
         {#if col.id === 'ID'}
           {item.ID}
-        {:else if col.id === 'IsMyReview'}
-          {#if item.IsMyReview === 'Yes'}
-            <span
-              class="px-2 py-1 text-purple-700 dark:text-purple-200 font-medium flex items-center gap-0.5"
-              title="This abstract is on your review track"
-            >
-              <Icon icon="mdi:clipboard-list" class="w-3 h-3" />Yes
-            </span>
+        {:else if col.id === 'MyReview'}
+          {#if item.MyReview !== 'Not Assigned'}
+            <ReviewButton hasReview={item.HasMyReview} onClick={() => openReviewForm(item)} />
           {/if}
         {:else if col.id === 'Title'}
           <TitleButton
@@ -603,3 +639,11 @@
 
 <!-- Affiliation Details Dialog -->
 <AffiliationDialog bind:open={showAffiliationDialog} affiliation={selectedAffiliation} />
+
+<!-- Review Form Dialog -->
+<AbstractReviewFormDialog
+  bind:open={showReviewFormDialog}
+  abstract={reviewFormAbstract}
+  reviewTrack={reviewFormTrack}
+  onAbstractUpdated={handleReviewFormUpdated}
+/>
