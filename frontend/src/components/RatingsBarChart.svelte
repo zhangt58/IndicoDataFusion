@@ -106,21 +106,10 @@
 
     return {
       backgroundColor: 'transparent',
-      title: {
-        text: chartTitle,
-        left: 'center',
-        top: 6,
-        textStyle: {
-          fontFamily: 'Inter, sans-serif',
-          fontWeight: 600,
-          fontSize: 14,
-          color: titleColor,
-        },
-      },
       grid: { left: '8%', right: '5%', top: 56, bottom: 72 },
       legend: {
         data: [firstLabel, secondLabel],
-        top: 32,
+        top: 26,
         textStyle: { fontFamily: 'Inter, sans-serif', color: legendColor },
       },
       tooltip: {
