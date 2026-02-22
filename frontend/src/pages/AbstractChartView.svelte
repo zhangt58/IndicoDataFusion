@@ -230,7 +230,7 @@
   <!-- Top-level tabs: Affiliation vs Submission -->
   <Tabs class="shadow-md rounded-md">
     <TabItem open title="Affiliation">
-      <div class="grid grid-cols-1 md:grid-cols-1 gap-4">
+      <div class="grid grid-cols-1 md:grid-cols-1 gap-4 last:-mt-4">
         <div>
           <Tabs tabStyle="underline">
             <TabItem open title="By Institution">

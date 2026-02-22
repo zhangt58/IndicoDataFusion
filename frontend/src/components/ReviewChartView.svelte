@@ -178,7 +178,7 @@
   }
 </script>
 
-<div class="p-2 mb-1">
+<div class="p-2 mb-1 last:-mt-4">
   <!-- Summary stats bar -->
   <div class="grid grid-cols-3 gap-4 mb-1 bg-gray-50 dark:bg-gray-800 rounded-lg">
     <div class="text-center">
