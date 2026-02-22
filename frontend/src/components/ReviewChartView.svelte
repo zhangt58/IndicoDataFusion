@@ -5,9 +5,18 @@
   import RatingsBarChart from './RatingsBarChart.svelte';
   import ReviewTimeline from './ReviewTimeline.svelte';
   import ReviewerDialog from './ReviewerDialog.svelte';
+  import MyReviewChart from './MyReviewChart.svelte';
 
   // Props: expects an array of abstracts with reviews data
   let { abstractData = [] } = $props();
+  // Derived flag: whether there are any abstracts assigned to the current user
+  const hasMyReviews = $derived.by(() => {
+    if (!abstractData) return false;
+    for (const a of abstractData) {
+      if (a && (a.is_my_review === true || a.my_review != null)) return true;
+    }
+    return false;
+  });
 
   // Color schemes for different chart types
   const reviewerColors = [
@@ -159,7 +168,9 @@
   const allReviews = $derived(chartData.reviews);
   const reviewerObjMap = $derived(chartData.reviewerObjMap);
 
-  const chartHeight = '50vh';
+  // Per-tab chart heights
+  const chartHeight = '48vh'; // default for most tabs
+  const myReviewsChartHeight = '20vh'; // smaller compact height only for My Reviews tab
 
   // Modal state for showing reviewer details
   let showReviewerModal = $state(false);
@@ -203,6 +214,13 @@
 
   <!-- Tabs for different visualizations -->
   <Tabs tabStyle="underline">
+    {#if hasMyReviews}
+      <TabItem title="My Reviews">
+        <div class="p-0.5">
+          <MyReviewChart {abstractData} height={myReviewsChartHeight} />
+        </div>
+      </TabItem>
+    {/if}
     <TabItem open title="By Reviewer">
       <div class="p-0.5">
         {#if reviewerOptions && reviewerOptions.series && reviewerOptions.series.length}

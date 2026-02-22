@@ -10,7 +10,7 @@
     minLength = 3,
     maxWords = $bindable(100),
     width = 800,
-    height = "70vh",
+    height = '70vh',
     title = 'Word Cloud',
   } = $props();
 
