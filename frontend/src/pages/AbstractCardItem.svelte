@@ -10,6 +10,7 @@
   import AbstractReviewsDialog from '../components/AbstractReviewsDialog.svelte';
   import AbstractReviewFormDialog from '../components/AbstractReviewFormDialog.svelte';
   import RawJsonDialog from '../components/RawJsonDialog.svelte';
+  import ReviewButton from '../components/ReviewButton.svelte';
 
   let { abstract = $bindable({}), onRefresh = null, isMyReview = false } = $props();
 
@@ -89,15 +90,7 @@
     </div>
     <div class="ml-4 flex items-center gap-2">
       {#if isMyReview}
-        <button
-          type="button"
-          onclick={handleMyReviewClick}
-          class="px-2 py-1 text-xs rounded bg-purple-100 dark:bg-purple-900 text-purple-700 dark:text-purple-200 font-semibold flex items-center gap-1 hover:bg-purple-200 dark:hover:bg-purple-800 transition-colors cursor-pointer"
-          title="Click to submit/update your review"
-        >
-          <Icon icon="mdi:clipboard-list" class="w-3 h-3" />
-          {abstract.my_review ? 'Update Review' : 'Submit Review'}
-        </button>
+        <ReviewButton hasReview={!!abstract.my_review} onClick={handleMyReviewClick} />
       {/if}
       <button
         type="button"
