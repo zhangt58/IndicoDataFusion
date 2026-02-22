@@ -100,17 +100,33 @@
     return abstractData.find((a) => String(a.id) === sid);
   }
 
+  // Index of the currently open abstract within sortedItems
+  let currentDialogIndex = $state(-1);
+
   // Open abstract details by id (used by title button)
   function openAbstract(id) {
     const sid = String(id);
     selectedAbstractId = sid;
     selectedAbstract = findAbstractById(sid);
     lastSyncedAbstract = selectedAbstract; // Initialize with the original
+    currentDialogIndex = sortedItems.findIndex((it) => String(it.DatabaseID) === sid);
     if (selectedAbstract) {
       showAbstractDialog = true;
     } else {
       console.warn('[AbstractTableView] Abstract not found for ID:', id);
     }
+  }
+
+  // Navigate to prev/next abstract in sortedItems
+  function navigateDialog(direction) {
+    const nextIndex = direction === 'prev' ? currentDialogIndex - 1 : currentDialogIndex + 1;
+    if (nextIndex < 0 || nextIndex >= sortedItems.length) return;
+    const item = sortedItems[nextIndex];
+    const sid = String(item.DatabaseID);
+    selectedAbstractId = sid;
+    selectedAbstract = findAbstractById(sid);
+    lastSyncedAbstract = selectedAbstract;
+    currentDialogIndex = nextIndex;
   }
 
   // Sync changes from dialog back to abstractData array
@@ -573,6 +589,9 @@
   bind:open={showAbstractDialog}
   bind:abstract={selectedAbstract}
   isMyReview={selectedAbstract?.is_my_review || false}
+  currentIndex={currentDialogIndex}
+  totalCount={sortedItems.length}
+  onNavigate={navigateDialog}
 />
 
 <!-- Track Details Dialog -->
