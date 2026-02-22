@@ -312,7 +312,7 @@
     </TabItem>
 
     <TabItem title="Reviews">
-      <div class="p-0.5 last:-mt-4">
+      <div class="p-0.5 last:-mt-8">
         {#if abstractData && abstractData.length}
           <ReviewChartView {abstractData} />
         {:else}

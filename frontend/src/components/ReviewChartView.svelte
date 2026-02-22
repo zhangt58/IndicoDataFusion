@@ -197,7 +197,7 @@
 
 <div class="p-2 mb-1">
   <!-- Summary stats bar -->
-  <div class="grid grid-cols-3 gap-4 mb-1 bg-gray-50 dark:bg-gray-800 rounded-lg">
+  <div class="grid grid-cols-3 gap-4 mb-0 bg-gray-50 dark:bg-gray-800 rounded-lg">
     <div class="text-center">
       <div class="text-2xl font-bold text-blue-600 dark:text-blue-400">
         {chartData.totalReviews}
@@ -220,24 +220,6 @@
 
   <!-- Tabs for different visualizations -->
   <Tabs tabStyle="underline">
-    {#if hasMyReviews}
-      <TabItem title="My Reviews">
-        <div class="p-0.5 last:-mt-4">
-          <MyReviewChart {abstractData} height={myReviewsChartHeight} />
-        </div>
-      </TabItem>
-    {/if}
-
-    <TabItem title="Matrix">
-      <div class="p-0.5 last:-mt-6">
-        <ReviewMatrixView
-          abstracts={abstractData}
-          bind:firstPriorityWeight
-          bind:secondPriorityWeight
-        />
-      </div>
-    </TabItem>
-
     <TabItem open title="By Reviewer">
       <div class="p-0.5 last:-mt-4">
         {#if reviewerOptions && reviewerOptions.series && reviewerOptions.series.length}
@@ -318,6 +300,24 @@
         <ReviewTimeline reviews={allReviews} height={chartHeight} />
       </div>
     </TabItem>
+
+    <TabItem title="Matrix">
+      <div class="p-0.5 last:-mt-6">
+        <ReviewMatrixView
+          abstracts={abstractData}
+          bind:firstPriorityWeight
+          bind:secondPriorityWeight
+        />
+      </div>
+    </TabItem>
+
+    {#if hasMyReviews}
+      <TabItem title="My Reviews">
+        <div class="p-0.5 last:-mt-4">
+          <MyReviewChart {abstractData} height={myReviewsChartHeight} />
+        </div>
+      </TabItem>
+    {/if}
   </Tabs>
 </div>
 
