@@ -1,8 +1,8 @@
 <script>
   import { onMount, onDestroy } from 'svelte';
 
-  // Props (Rune-style)
-  let { reviews = [], title = 'Review Submissions Over Time', height = '50vh' } = $props();
+  // Props (Rune-style) - title intentionally empty; we don't render a chart title
+  let { reviews = [], height = '28vh' } = $props();
 
   let container = $state(null);
   let chart = $state(null);
@@ -44,14 +44,11 @@
       Math.round((20 / Math.max(1, timelineData.labels.length)) * 100),
     );
 
+    // Always render without a chart title; use a slightly smaller top grid spacing
+    const gridTop = 30;
+
     return {
-      title: {
-        text: title,
-        left: 'center',
-        top: 6,
-        textStyle: { fontFamily: 'Inter, sans-serif', fontWeight: 600, fontSize: 16 },
-      },
-      grid: { left: '10%', right: '10%', top: 60, bottom: showSlider ? 80 : 50 },
+      grid: { left: '10%', right: '10%', top: gridTop, bottom: showSlider ? 80 : 50 },
       tooltip: {
         trigger: 'axis',
         formatter: (params) => {
@@ -170,7 +167,7 @@
     bind:this={container}
     class="echarts-container"
     role="img"
-    aria-label={title}
+    aria-label="Review timeline"
     style="width:100%; height: {height}"
   ></div>
 {:else}

@@ -5,9 +5,24 @@
   import RatingsBarChart from './RatingsBarChart.svelte';
   import ReviewTimeline from './ReviewTimeline.svelte';
   import ReviewerDialog from './ReviewerDialog.svelte';
+  import MyReviewChart from './MyReviewChart.svelte';
+  import ReviewMatrixView from './ReviewMatrixView.svelte';
 
   // Props: expects an array of abstracts with reviews data
   let { abstractData = [] } = $props();
+
+  // ── Shared weights: lifted state so Matrix and Ratings chart stay in sync ──
+  let firstPriorityWeight = $state(1);
+  let secondPriorityWeight = $state(1);
+
+  // Derived flag: whether there are any abstracts assigned to the current user
+  const hasMyReviews = $derived.by(() => {
+    if (!abstractData) return false;
+    for (const a of abstractData) {
+      if (a && (a.is_my_review === true || a.my_review != null)) return true;
+    }
+    return false;
+  });
 
   // Color schemes for different chart types
   const reviewerColors = [
@@ -159,7 +174,9 @@
   const allReviews = $derived(chartData.reviews);
   const reviewerObjMap = $derived(chartData.reviewerObjMap);
 
-  const chartHeight = '50vh';
+  // Per-tab chart heights
+  const chartHeight = '48vh'; // default for most tabs
+  const myReviewsChartHeight = '20vh'; // smaller compact height only for My Reviews tab
 
   // Modal state for showing reviewer details
   let showReviewerModal = $state(false);
@@ -180,7 +197,7 @@
 
 <div class="p-2 mb-1">
   <!-- Summary stats bar -->
-  <div class="grid grid-cols-3 gap-4 mb-1 bg-gray-50 dark:bg-gray-800 rounded-lg">
+  <div class="grid grid-cols-3 gap-4 mb-0 bg-gray-50 dark:bg-gray-800 rounded-lg">
     <div class="text-center">
       <div class="text-2xl font-bold text-blue-600 dark:text-blue-400">
         {chartData.totalReviews}
@@ -204,7 +221,7 @@
   <!-- Tabs for different visualizations -->
   <Tabs tabStyle="underline">
     <TabItem open title="By Reviewer">
-      <div class="p-0.5">
+      <div class="p-0.5 last:-mt-4">
         {#if reviewerOptions && reviewerOptions.series && reviewerOptions.series.length}
           <BarChart
             labels={reviewerOptions.labels}
@@ -221,7 +238,7 @@
     </TabItem>
 
     <TabItem title="By Track">
-      <div class="p-0.5">
+      <div class="p-0.5 last:-mt-4">
         {#if trackOptions && trackOptions.series && trackOptions.series.length}
           <div class="flex flex-col md:flex-row gap-0.5">
             <div class="w-full md:w-1/2">
@@ -251,7 +268,7 @@
     </TabItem>
 
     <TabItem title="By Action">
-      <div class="p-0.5">
+      <div class="p-0.5 last:-mt-4">
         {#if actionOptions && actionOptions.series && actionOptions.series.length}
           <DonutChart
             labels={actionOptions.labels}
@@ -268,16 +285,39 @@
     </TabItem>
 
     <TabItem title="Ratings">
-      <div class="p-0.5">
-        <RatingsBarChart {abstractData} height={chartHeight} />
+      <div class="p-0.5 last:-mt-4">
+        <RatingsBarChart
+          {abstractData}
+          height={chartHeight}
+          bind:firstPriorityWeight
+          bind:secondPriorityWeight
+        />
       </div>
     </TabItem>
 
     <TabItem title="Timeline">
-      <div class="p-0.5">
+      <div class="p-0.5 last:-mt-4">
         <ReviewTimeline reviews={allReviews} height={chartHeight} />
       </div>
     </TabItem>
+
+    <TabItem title="Matrix">
+      <div class="p-0.5 last:-mt-6">
+        <ReviewMatrixView
+          abstracts={abstractData}
+          bind:firstPriorityWeight
+          bind:secondPriorityWeight
+        />
+      </div>
+    </TabItem>
+
+    {#if hasMyReviews}
+      <TabItem title="My Reviews">
+        <div class="p-0.5 last:-mt-4">
+          <MyReviewChart {abstractData} height={myReviewsChartHeight} />
+        </div>
+      </TabItem>
+    {/if}
   </Tabs>
 </div>
 

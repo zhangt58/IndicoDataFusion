@@ -10,7 +10,7 @@
     minLength = 3,
     maxWords = $bindable(100),
     width = 800,
-    height = 400,
+    height = '70vh',
     title = 'Word Cloud',
   } = $props();
 
@@ -211,7 +211,7 @@
 
 <div
   bind:this={container}
-  class="flex flex-col items-center justify-center last:-mt-4"
+  class="flex flex-col items-center justify-center"
   style="width: 100%; height: {height}; min-height: {height};"
 >
   {#if title}
