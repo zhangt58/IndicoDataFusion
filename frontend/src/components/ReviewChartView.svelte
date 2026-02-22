@@ -307,8 +307,8 @@
         <RatingsBarChart
           {abstractData}
           height={chartHeight}
-          {firstPriorityWeight}
-          {secondPriorityWeight}
+          bind:firstPriorityWeight
+          bind:secondPriorityWeight
         />
       </div>
     </TabItem>
