@@ -5,6 +5,7 @@
   import ReviewChartView from '../components/ReviewChartView.svelte';
   import WordCloud from '../components/WordCloud.svelte';
   import { Tabs, TabItem } from 'flowbite-svelte';
+  import AffiliationTableView from '../components/AffiliationTableView.svelte';
 
   // Props: array of abstract objects (same shape returned by GetAbstracts)
   let { abstractData = [] } = $props();
@@ -293,6 +294,21 @@
                   />
                 {:else}
                   <div class="text-sm text-gray-500 text-center py-8">No data available</div>
+                {/if}
+              </div>
+            </TabItem>
+
+            <TabItem title="Table">
+              <div
+                class="p-0.5 last:-mt-7 overflow-auto border"
+                style="height:calc(100vh - 18rem);"
+              >
+                {#if abstractData && abstractData.length}
+                  <AffiliationTableView {abstractData} />
+                {:else}
+                  <div class="text-sm text-gray-500 text-center py-8">
+                    No affiliation data available
+                  </div>
                 {/if}
               </div>
             </TabItem>
