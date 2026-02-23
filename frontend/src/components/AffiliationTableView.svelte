@@ -1,7 +1,7 @@
 <script>
   import { DataTable, DataTableControls } from '@zhangt58/svelte-vtable';
   import AbstractDetailsDialog from '../pages/AbstractDetailsDialog.svelte';
-  import { Tooltip } from 'flowbite-svelte';
+  import AbstractTooltip from './AbstractTooltip.svelte';
 
   // Props: array of abstract objects (same shape returned by GetAbstracts)
   let { abstractData = [] } = $props();
@@ -143,6 +143,43 @@
     if (!country) return 'Other';
     return countryToContinent[country] || 'Other';
   }
+
+  // Precompute a lookup map of abstracts with memoized speakerName/snippet/friendlyId
+  let abstractMap = $derived.by(() => {
+    const map = {};
+    for (const a of abstractData || []) {
+      const rawId = a.id ?? '';
+      const id = String(rawId);
+
+      // compute friendly id display
+      const native = a.friendly_id ?? null;
+      const friendlyId = native ? `#${native}` : `#${id}`;
+
+      // compute speaker name (prefer Persons / persons and is_speaker)
+      const personsField = a.persons ?? [];
+      let speaker = null;
+      if (Array.isArray(personsField) && personsField.length > 0) {
+        speaker =
+          personsField.find((p) => p?.is_speaker === true || p?.is_speaker === 'true') ||
+          personsField[0];
+      }
+      let speakerName = '';
+      if (speaker) {
+        const first = speaker.first_name ?? '';
+        const last = speaker.last_name ?? '';
+        speakerName = first || last ? `${first}${first && last ? ' ' : ''}${last}`.trim() : speaker.name || '';
+      }
+
+      // compute snippet (first ~200 chars)
+      const rawText = a.content ?? '';
+      const rawStr = String(rawText || '');
+      const snippet = rawStr.replace(/\s+/g, ' ').trim().slice(0, 200) + (rawStr.length > 200 ? '…' : '');
+
+      // store a shallow copy with memoized fields to avoid re-computing
+      map[id] = { ...a, _speakerName: speakerName, _snippet: snippet, _friendlyId: friendlyId };
+    }
+    return map;
+  });
 
   // Derived: aggregate affiliations into unique rows with counts and examples
   const affiliationData = $derived.by(() => {
@@ -362,41 +399,7 @@
                 >
                   {getFriendlyId(abstractId)}
                 </button>
-                <Tooltip trigger="hover" placement="top" arrow={true}>
-                  <div class="max-w-xs">
-                    <div class="font-semibold text-sm text-gray-900 dark:text-white">
-                      {findAbstractById(abstractId)?.title || '(No title)'}
-                    </div>
-                    <div class="text-sm text-gray-700 dark:text-gray-300 mt-1">
-                      {(function () {
-                        const a = findAbstractById(abstractId);
-                        const persons = a?.persons ?? [];
-                        const sp = Array.isArray(persons)
-                          ? persons.find(
-                              (p) => p?.is_speaker === true || p?.is_speaker === 'true',
-                            ) || persons[0]
-                          : null;
-                        if (sp) {
-                          const fn = sp.first_name ?? '';
-                          const ln = sp.last_name ?? '';
-                          return fn || ln ? `${fn}${fn && ln ? ' ' : ''}${ln}` : sp.name || '';
-                        }
-                        return '';
-                      })()}
-                    </div>
-                    <div class="text-xs text-gray-600 dark:text-gray-400 mt-2">
-                      {(function () {
-                        const a = findAbstractById(abstractId);
-                        const raw = a?.content || '';
-                        const s = String(raw || '')
-                          .replace(/\s+/g, ' ')
-                          .trim()
-                          .slice(0, 200);
-                        return s + (String(raw || '').length > 200 ? '…' : '');
-                      })()}
-                    </div>
-                  </div>
-                </Tooltip>
+                <AbstractTooltip abstract={abstractMap[abstractId]} />
                 {#if i < Math.min(4, item.AbstractIds.length - 1)}{', '}{/if}
               {/each}
               {#if item.AbstractIds.length > 5}

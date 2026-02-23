@@ -300,7 +300,7 @@
 
             <TabItem title="Table">
               <div
-                class="p-0.5 last:-mt-7 overflow-auto border"
+                class="p-0.5 last:-mt-7 overflow-auto"
                 style="height:calc(100vh - 18rem);"
               >
                 {#if abstractData && abstractData.length}
