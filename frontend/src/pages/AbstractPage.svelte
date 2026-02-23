@@ -2,6 +2,7 @@
   import { onMount, onDestroy } from 'svelte';
   import Icon from '@iconify/svelte';
   import { GetAbstracts, IsTestMode, GetCacheStats } from '../../wailsjs/go/main/App';
+  import { GetAssignedReviewCount } from '../../wailsjs/go/main/App';
   import { EventsOn, EventsOff } from '../../wailsjs/runtime/runtime';
   import { createCachePage } from '../utils/cacheUtils.js';
   import AbstractCardView from './AbstractCardView.svelte';
@@ -20,6 +21,7 @@
   let showReviewPanel = $state(false);
   let selectedReviewTrackID = $state(null);
   let reviewButton = $state(null);
+  let hasAssignedReviews = $state(false);
 
   async function loadData() {
     loading = true;
@@ -61,6 +63,15 @@
       console.error('Failed to check test mode', e);
     }
 
+    // Query backend whether current user has assigned review abstracts
+    try {
+      const c = await GetAssignedReviewCount();
+      hasAssignedReviews = (c && c > 0) || false;
+    } catch (e) {
+      console.warn('Failed to get assigned review count', e);
+      hasAssignedReviews = false;
+    }
+
     await loadData();
 
     EventsOn('cache:updated', async (...data) => {
@@ -88,6 +99,16 @@
       // Handle refresh/delete/clear actions
       if (ev.action === 'refreshed' && ev.key === 'abstracts') {
         cacheExpired = false;
+      }
+
+      // If abstracts refreshed, re-check assigned review count as assignments may have changed
+      if (ev.key === 'abstracts' && ev.action === 'refreshed') {
+        try {
+          const c2 = await GetAssignedReviewCount();
+          hasAssignedReviews = (c2 && c2 > 0) || false;
+        } catch (e) {
+          console.warn('Failed to update assigned review count after refresh', e);
+        }
       }
 
       handleCacheEvent(ev);
@@ -169,17 +190,19 @@
       >
         <Icon icon="mdi:chart-bar" class="shrink-0 h-6 w-6" />
       </button>
-      <button
-        bind:this={reviewButton}
-        onclick={() => (showReviewPanel = !showReviewPanel)}
-        class="p-1.5 rounded transition-colors {showReviewPanel
-          ? 'bg-sky-400'
-          : 'hover:bg-sky-100'}"
-        title="My Reviews"
-        aria-label="My Reviews"
-      >
-        <Icon icon="mdi:clipboard-list" class="shrink-0 h-6 w-6" />
-      </button>
+      {#if hasAssignedReviews}
+        <button
+          bind:this={reviewButton}
+          onclick={() => (showReviewPanel = !showReviewPanel)}
+          class="p-1.5 rounded transition-colors {showReviewPanel
+            ? 'bg-sky-400'
+            : 'hover:bg-sky-100'}"
+          title="My Reviews"
+          aria-label="My Reviews"
+        >
+          <Icon icon="mdi:clipboard-list" class="shrink-0 h-6 w-6" />
+        </button>
+      {/if}
     </div>
   </div>
 
