@@ -1005,6 +1005,26 @@ func (h *DataSourceHandler) GetReviewTracks(ctx context.Context) (*indico.Review
 	return h.client.GetReviewTracks(ctx)
 }
 
+// GetAssignedReviewCount returns the number of unique abstracts assigned to the current user
+// across all review tracks. Returns 0 if none or if review track information is not available.
+func (h *DataSourceHandler) GetAssignedReviewCount(ctx context.Context) (int, error) {
+	if h.isTestMode {
+		// In test mode no review-assignment fixtures are available; return 0 to keep behavior predictable
+		return 0, nil
+	}
+
+	if h.client == nil {
+		return 0, fmt.Errorf("indico client not initialized")
+	}
+
+	myReviewIDsSet := getReviewIDsSet(h, ctx)
+	if myReviewIDsSet == nil {
+		return 0, nil
+	}
+
+	return len(myReviewIDsSet), nil
+}
+
 // GetReviewAbstractIDs returns the list of abstract IDs (friendly_id) for a given review track ID.
 // In API mode this queries the Indico client; in test mode it returns an empty list.
 func (h *DataSourceHandler) GetReviewAbstractIDs(ctx context.Context, reviewTrackID int) ([]int, error) {

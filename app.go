@@ -159,6 +159,14 @@ func (a *App) GetReviewTracks() (*indico.ReviewTracks, error) {
 	return a.handler.GetReviewTracks(a.ctx)
 }
 
+// GetAssignedReviewCount returns the number of unique abstracts assigned to the current user across all review tracks.
+func (a *App) GetAssignedReviewCount() (int, error) {
+	if a.handler == nil {
+		return 0, errors.Errorf("data handler not initialized")
+	}
+	return a.handler.GetAssignedReviewCount(a.ctx)
+}
+
 // GetReviewAbstractIDs returns the list of abstract IDs under a specific review track.
 func (a *App) GetReviewAbstractIDs(reviewTrackID int) ([]int, error) {
 	if a.handler == nil {
