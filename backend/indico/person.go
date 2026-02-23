@@ -1,17 +1,8 @@
 package indico
 
-import "encoding/json"
-
-// Affiliation represents a structured affiliation object for people and judges
-type Affiliation struct {
-	City        string `json:"city"`
-	CountryCode string `json:"country_code"`
-	CountryName string `json:"country_name"`
-	ID          int    `json:"id"`
-	Name        string `json:"name"`
-	Postcode    string `json:"postcode"`
-	Street      string `json:"street"`
-}
+import (
+	"encoding/json"
+)
 
 // Person represents a person in an abstract (author, speaker, etc.)
 type Person struct {
@@ -28,7 +19,7 @@ type Person struct {
 func (p *Person) UnmarshalJSON(data []byte) error {
 	type Alias Person
 	aux := &struct {
-		AffiliationString string       `json:"affiliation"` // ignore the string field
+		AffiliationString string       `json:"affiliation"` // ignore the string field unless no link/meta
 		AffiliationLink   *Affiliation `json:"affiliation_link"`
 		*Alias
 	}{
@@ -37,7 +28,16 @@ func (p *Person) UnmarshalJSON(data []byte) error {
 	if err := json.Unmarshal(data, &aux); err != nil {
 		return err
 	}
-	p.Affiliation = aux.AffiliationLink
+	// Prefer structured affiliation_link; fall back to plain affiliation string
+	if aux.AffiliationLink != nil {
+		// ensure Raw is set from incoming structured name if not already present
+		if aux.AffiliationLink.Raw == "" && aux.AffiliationLink.Name != "" {
+			aux.AffiliationLink.Raw = aux.AffiliationLink.Name
+		}
+		p.Affiliation = registerAffiliation(aux.AffiliationLink)
+	} else if aux.AffiliationString != "" {
+		p.Affiliation = registerAffiliation(&Affiliation{Name: aux.AffiliationString, Raw: aux.AffiliationString})
+	}
 	return nil
 }
 
@@ -57,7 +57,7 @@ type Judge struct {
 func (j *Judge) UnmarshalJSON(data []byte) error {
 	type Alias Judge
 	aux := &struct {
-		AffiliationString string       `json:"affiliation"` // ignore the string field
+		AffiliationString string       `json:"affiliation"` // ignore the string field unless no meta
 		AffiliationMeta   *Affiliation `json:"affiliation_meta"`
 		*Alias
 	}{
@@ -66,7 +66,14 @@ func (j *Judge) UnmarshalJSON(data []byte) error {
 	if err := json.Unmarshal(data, &aux); err != nil {
 		return err
 	}
-	j.Affiliation = aux.AffiliationMeta
+	if aux.AffiliationMeta != nil {
+		if aux.AffiliationMeta.Raw == "" && aux.AffiliationMeta.Name != "" {
+			aux.AffiliationMeta.Raw = aux.AffiliationMeta.Name
+		}
+		j.Affiliation = registerAffiliation(aux.AffiliationMeta)
+	} else if aux.AffiliationString != "" {
+		j.Affiliation = registerAffiliation(&Affiliation{Name: aux.AffiliationString, Raw: aux.AffiliationString})
+	}
 	return nil
 }
 
@@ -87,7 +94,7 @@ type Submitter struct {
 func (s *Submitter) UnmarshalJSON(data []byte) error {
 	type Alias Submitter
 	aux := &struct {
-		AffiliationString string       `json:"affiliation"` // ignore the string field
+		AffiliationString string       `json:"affiliation"` // ignore the string field unless no meta
 		AffiliationMeta   *Affiliation `json:"affiliation_meta"`
 		*Alias
 	}{
@@ -96,7 +103,14 @@ func (s *Submitter) UnmarshalJSON(data []byte) error {
 	if err := json.Unmarshal(data, &aux); err != nil {
 		return err
 	}
-	s.Affiliation = aux.AffiliationMeta
+	if aux.AffiliationMeta != nil {
+		if aux.AffiliationMeta.Raw == "" && aux.AffiliationMeta.Name != "" {
+			aux.AffiliationMeta.Raw = aux.AffiliationMeta.Name
+		}
+		s.Affiliation = registerAffiliation(aux.AffiliationMeta)
+	} else if aux.AffiliationString != "" {
+		s.Affiliation = registerAffiliation(&Affiliation{Name: aux.AffiliationString, Raw: aux.AffiliationString})
+	}
 	return nil
 }
 
@@ -118,7 +132,7 @@ type Reviewer struct {
 func (r *Reviewer) UnmarshalJSON(data []byte) error {
 	type Alias Reviewer
 	aux := &struct {
-		AffiliationString string       `json:"affiliation"` // ignore the string field
+		AffiliationString string       `json:"affiliation"` // ignore the string field unless no meta
 		AffiliationMeta   *Affiliation `json:"affiliation_meta"`
 		*Alias
 	}{
@@ -127,6 +141,13 @@ func (r *Reviewer) UnmarshalJSON(data []byte) error {
 	if err := json.Unmarshal(data, &aux); err != nil {
 		return err
 	}
-	r.Affiliation = aux.AffiliationMeta
+	if aux.AffiliationMeta != nil {
+		if aux.AffiliationMeta.Raw == "" && aux.AffiliationMeta.Name != "" {
+			aux.AffiliationMeta.Raw = aux.AffiliationMeta.Name
+		}
+		r.Affiliation = registerAffiliation(aux.AffiliationMeta)
+	} else if aux.AffiliationString != "" {
+		r.Affiliation = registerAffiliation(&Affiliation{Name: aux.AffiliationString, Raw: aux.AffiliationString})
+	}
 	return nil
 }

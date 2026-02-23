@@ -193,3 +193,51 @@ func TestAffiliationUniqueID(t *testing.T) {
 		t.Errorf("Expected affiliation ID 852614, got %d", person1.Affiliation.ID)
 	}
 }
+
+// New tests verifying fallback to plain affiliation string when structured data missing
+func TestPersonAffiliationStringFallback(t *testing.T) {
+	jsonData := []byte(`{
+		"affiliation": "Facility for Rare Isotope Beams, Michigan State University",
+		"author_type": "primary",
+		"email": "stringonly@example.com",
+		"first_name": "String",
+		"last_name": "Only",
+		"is_speaker": false,
+		"person_id": 99999
+	}`)
+
+	var person Person
+	if err := json.Unmarshal(jsonData, &person); err != nil {
+		t.Fatalf("Failed to unmarshal person with string-only affiliation: %v", err)
+	}
+	if person.Affiliation == nil {
+		t.Fatal("Expected affiliation to be set from affiliation string, got nil")
+	}
+	if person.Affiliation.Name != "Facility for Rare Isotope Beams, Michigan State University" {
+		t.Errorf("Unexpected affiliation name: %s", person.Affiliation.Name)
+	}
+}
+
+func TestSubmitterAffiliationStringFallback(t *testing.T) {
+	jsonData := []byte(`{
+		"affiliation": "Facility for Rare Isotope Beams, Michigan State University",
+		"avatar_url": "/user/344/picture-default/MzQ0.5atl",
+		"email": "submitter_string@example.com",
+		"first_name": "Bob",
+		"full_name": "Bob Johnson",
+		"id": 345,
+		"identifier": "User:345:MzQ0.Admz",
+		"last_name": "Johnson"
+	}`)
+
+	var submitter Submitter
+	if err := json.Unmarshal(jsonData, &submitter); err != nil {
+		t.Fatalf("Failed to unmarshal submitter with string-only affiliation: %v", err)
+	}
+	if submitter.Affiliation == nil {
+		t.Fatal("Expected submitter affiliation to be set from affiliation string, got nil")
+	}
+	if submitter.Affiliation.Name != "Facility for Rare Isotope Beams, Michigan State University" {
+		t.Errorf("Unexpected submitter affiliation name: %s", submitter.Affiliation.Name)
+	}
+}

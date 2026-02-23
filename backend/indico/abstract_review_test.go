@@ -622,7 +622,7 @@ func TestSubmitAbstractReview_ChangeTracks(t *testing.T) {
 		QuestionRatings: map[int]int{
 			101: 1,
 		},
-		ProposedAction: "changed_tracks",
+		ProposedAction: "change_tracks",
 		ProposedTracks: []int{99, 100},
 		Comment:        "Better suited for these tracks",
 	}
@@ -784,13 +784,13 @@ func TestSubmitAbstractReview_ValidationErrors(t *testing.T) {
 			expectedErr: "invalid proposed_action",
 		},
 		{
-			name: "changed_tracks without proposed_tracks",
+			name: "change_tracks without proposed_tracks",
 			req: &ReviewSubmissionRequest{
 				TrackID:        88,
-				ProposedAction: "changed_tracks",
+				ProposedAction: "change_tracks",
 				ProposedTracks: []int{},
 			},
-			expectedErr: "proposed_tracks is required for changed_tracks action",
+			expectedErr: "proposed_tracks is required for change_tracks action",
 		},
 		{
 			name: "mark_as_duplicate without proposed_related_abstract",
