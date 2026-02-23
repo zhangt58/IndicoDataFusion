@@ -13,18 +13,11 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"time"
 
 	"IndicoDataFusion/backend/config"
 )
-
-// questionMap is a shared map of question ID to question details,
-// used to enrich ratings with question info.
-var questionMap = make(map[int]*indico.QuestionData)
-
-// contribTypes is a shared map of contribution types, populated when fetching abstracts
-// Key: contrib type name, Value: contribution type ID
-var contribTypesMap = make(map[string]int)
 
 // DataSourceHandler provides a high-level interface for accessing event data
 // from different sources (Indico API or local test files).
@@ -38,6 +31,11 @@ type DataSourceHandler struct {
 	initProblems []string
 	// userID is the ID of the current user, populated from the Indico client after fetching review tracks
 	userID int
+
+	// Per-handler maps (moved from package scope)
+	questions    map[int]*indico.QuestionData
+	contribTypes map[string]int
+	mu           sync.RWMutex
 }
 
 // NewDataSourceHandler creates a new data source handler with optional cache config
@@ -46,6 +44,10 @@ func NewDataSourceHandler(ds *config.DataSource, cacheConfig *config.CacheConfig
 	handler := &DataSourceHandler{
 		config: ds,
 	}
+
+	// Initialize per-handler maps
+	handler.questions = make(map[int]*indico.QuestionData)
+	handler.contribTypes = make(map[string]int)
 
 	// Parse cache configuration
 	ttl := 24 * time.Hour               // Default: 24 hours
@@ -235,6 +237,17 @@ func NewDataSourceHandlerFromConfigFile(configPath string) (*DataSourceHandler, 
 
 // Shutdown gracefully shuts down the handler, saving cache to disk
 func (h *DataSourceHandler) Shutdown(ctx context.Context) error {
+	// If receiver is nil, nothing to do
+	if h == nil {
+		return nil
+	}
+
+	// Clear per-handler maps to release memory and avoid cross-handler contamination
+	h.mu.Lock()
+	h.questions = nil
+	h.contribTypes = nil
+	h.mu.Unlock()
+
 	if h.cache != nil {
 		return h.cache.Shutdown(ctx)
 	}
@@ -393,41 +406,53 @@ func (h *DataSourceHandler) getAbstractsFromFile() ([]indico.AbstractData, error
 	}
 
 	// Build question lookup map
-	for i := range response.Questions {
-		q := &response.Questions[i]
-		questionMap[q.ID] = q
+	if len(response.Questions) > 0 {
+		h.mu.Lock()
+		for i := range response.Questions {
+			q := &response.Questions[i]
+			h.questions[q.ID] = q
+		}
+		h.mu.Unlock()
 	}
 
 	// Build contribution types map from abstracts
-	for i := range response.Abstracts {
-		// Collect from accepted, submitted contrib types
-		if ct := response.Abstracts[i].AcceptedContribType; ct != nil {
-			contribTypesMap[ct.Name] = ct.ID
-		}
-		if ct := response.Abstracts[i].SubmittedContribType; ct != nil {
-			contribTypesMap[ct.Name] = ct.ID
-		}
-		// Also from reviews
-		for j := range response.Abstracts[i].Reviews {
-			if ct := response.Abstracts[i].Reviews[j].ProposedContribType; ct != nil {
-				contribTypesMap[ct.Name] = ct.ID
+	if len(response.Abstracts) > 0 {
+		h.mu.Lock()
+		for i := range response.Abstracts {
+			// Collect from accepted, submitted contrib types
+			if ct := response.Abstracts[i].AcceptedContribType; ct != nil {
+				h.contribTypes[ct.Name] = ct.ID
+			}
+			if ct := response.Abstracts[i].SubmittedContribType; ct != nil {
+				h.contribTypes[ct.Name] = ct.ID
+			}
+			// Also from reviews
+			for j := range response.Abstracts[i].Reviews {
+				if ct := response.Abstracts[i].Reviews[j].ProposedContribType; ct != nil {
+					h.contribTypes[ct.Name] = ct.ID
+				}
 			}
 		}
+		h.mu.Unlock()
 	}
 
 	// Expand question details in reviews and populate shared maps
 	for i := range response.Abstracts {
 		// Set the shared question map for this abstract
-		response.Abstracts[i].Questions = questionMap
+		h.mu.RLock()
+		response.Abstracts[i].Questions = h.questions
 		// Set the shared contrib types map
-		response.Abstracts[i].ContribTypesMap = &contribTypesMap
+		response.Abstracts[i].ContribTypesMap = &h.contribTypes
+		h.mu.RUnlock()
 
 		for j := range response.Abstracts[i].Reviews {
 			for k := range response.Abstracts[i].Reviews[j].Ratings {
 				rating := &response.Abstracts[i].Reviews[j].Ratings[k]
-				if q, ok := questionMap[rating.Question]; ok {
+				h.mu.RLock()
+				if q, ok := h.questions[rating.Question]; ok {
 					rating.QuestionDetails = q
 				}
+				h.mu.RUnlock()
 			}
 		}
 		// Compute aggregated ratings for frontend
@@ -487,38 +512,50 @@ func (h *DataSourceHandler) getAbstractsFromAPI(ctx context.Context) ([]indico.A
 	}
 
 	// Build question lookup map
-	for i := range response.Questions {
-		q := &response.Questions[i]
-		questionMap[q.ID] = q
+	if len(response.Questions) > 0 {
+		h.mu.Lock()
+		for i := range response.Questions {
+			q := &response.Questions[i]
+			h.questions[q.ID] = q
+		}
+		h.mu.Unlock()
 	}
 
 	// Build contribution types map from abstracts
-	for i := range response.Abstracts {
-		if ct := response.Abstracts[i].AcceptedContribType; ct != nil {
-			contribTypesMap[ct.Name] = ct.ID
-		}
-		if ct := response.Abstracts[i].SubmittedContribType; ct != nil {
-			contribTypesMap[ct.Name] = ct.ID
-		}
-		for j := range response.Abstracts[i].Reviews {
-			if ct := response.Abstracts[i].Reviews[j].ProposedContribType; ct != nil {
-				contribTypesMap[ct.Name] = ct.ID
+	if len(response.Abstracts) > 0 {
+		h.mu.Lock()
+		for i := range response.Abstracts {
+			if ct := response.Abstracts[i].AcceptedContribType; ct != nil {
+				h.contribTypes[ct.Name] = ct.ID
+			}
+			if ct := response.Abstracts[i].SubmittedContribType; ct != nil {
+				h.contribTypes[ct.Name] = ct.ID
+			}
+			for j := range response.Abstracts[i].Reviews {
+				if ct := response.Abstracts[i].Reviews[j].ProposedContribType; ct != nil {
+					h.contribTypes[ct.Name] = ct.ID
+				}
 			}
 		}
+		h.mu.Unlock()
 	}
 	// Expand question details in reviews and populate shared maps
 	for i := range response.Abstracts {
 		// Set the shared question map
-		response.Abstracts[i].Questions = questionMap
+		h.mu.RLock()
+		response.Abstracts[i].Questions = h.questions
 		// Set the shared contrib types map
-		response.Abstracts[i].ContribTypesMap = &contribTypesMap
+		response.Abstracts[i].ContribTypesMap = &h.contribTypes
+		h.mu.RUnlock()
 
 		for j := range response.Abstracts[i].Reviews {
 			for k := range response.Abstracts[i].Reviews[j].Ratings {
 				rating := &response.Abstracts[i].Reviews[j].Ratings[k]
-				if q, ok := questionMap[rating.Question]; ok {
+				h.mu.RLock()
+				if q, ok := h.questions[rating.Question]; ok {
 					rating.QuestionDetails = q
 				}
+				h.mu.RUnlock()
 			}
 		}
 		// Compute aggregated ratings for frontend
@@ -796,25 +833,32 @@ func (h *DataSourceHandler) RefreshAbstractByID(ctx context.Context, id int) (*i
 	}
 
 	// Build question lookup map
-	for i := range response.Questions {
-		q := &response.Questions[i]
-		questionMap[q.ID] = q
+	if len(response.Questions) > 0 {
+		h.mu.Lock()
+		for i := range response.Questions {
+			q := &response.Questions[i]
+			h.questions[q.ID] = q
+		}
+		h.mu.Unlock()
 	}
 
 	// Expand question details in reviews for the single abstract
 	abstract := &response.Abstracts[0]
 	// Set the shared question map for this abstract
-	abstract.Questions = questionMap
-
+	h.mu.RLock()
+	abstract.Questions = h.questions
 	// Set the shared contrib types map, no need to rebuild it since it should be the same for all abstracts
-	abstract.ContribTypesMap = &contribTypesMap
+	abstract.ContribTypesMap = &h.contribTypes
+	h.mu.RUnlock()
 
 	for j := range abstract.Reviews {
 		for k := range abstract.Reviews[j].Ratings {
 			rating := &abstract.Reviews[j].Ratings[k]
-			if q, ok := questionMap[rating.Question]; ok {
+			h.mu.RLock()
+			if q, ok := h.questions[rating.Question]; ok {
 				rating.QuestionDetails = q
 			}
+			h.mu.RUnlock()
 		}
 	}
 
