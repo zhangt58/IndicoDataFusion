@@ -162,7 +162,7 @@ func main() {
 	}
 
 	// Step 5: Review API URLs
-	fmt.Println("=== Step 5: Review Submission URLs ===\n")
+	fmt.Println("=== Step 5: Review Submission URLs ===")
 
 	// Find one reviewed and one not reviewed abstract for demo
 	var reviewedAbstract, notReviewedAbstract *indico.AbstractData

@@ -167,13 +167,15 @@
       if (speaker) {
         const first = speaker.first_name ?? '';
         const last = speaker.last_name ?? '';
-        speakerName = first || last ? `${first}${first && last ? ' ' : ''}${last}`.trim() : speaker.name || '';
+        speakerName =
+          first || last ? `${first}${first && last ? ' ' : ''}${last}`.trim() : speaker.name || '';
       }
 
       // compute snippet (first ~200 chars)
       const rawText = a.content ?? '';
       const rawStr = String(rawText || '');
-      const snippet = rawStr.replace(/\s+/g, ' ').trim().slice(0, 200) + (rawStr.length > 200 ? '…' : '');
+      const snippet =
+        rawStr.replace(/\s+/g, ' ').trim().slice(0, 200) + (rawStr.length > 200 ? '…' : '');
 
       // store a shallow copy with memoized fields to avoid re-computing
       map[id] = { ...a, _speakerName: speakerName, _snippet: snippet, _friendlyId: friendlyId };

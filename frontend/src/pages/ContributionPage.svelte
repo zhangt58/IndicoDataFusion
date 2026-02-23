@@ -50,17 +50,17 @@
 
     await loadData();
 
-    // Get current data source name from cache stats
-    let currentDataSource = null;
-    try {
-      const stats = await GetCacheStats();
-      currentDataSource = stats?.data_source_name || null;
-    } catch (e) {
-      currentDataSource = null;
-    }
-
-    EventsOn('cache:updated', (...data) => {
+    EventsOn('cache:updated', async (...data) => {
       const ev = (data && data.length ? data[0] : data) || {};
+
+      // Get current data source at event time (not mount time) to avoid stale filtering
+      let currentDataSource = null;
+      try {
+        const stats = await GetCacheStats();
+        currentDataSource = stats?.data_source_name || null;
+      } catch (e) {
+        console.warn('Failed to get current data source in cache:updated handler', e);
+      }
 
       if (ev.data_source_name && currentDataSource && ev.data_source_name !== currentDataSource) {
         return;

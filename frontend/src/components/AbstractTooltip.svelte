@@ -11,7 +11,8 @@
     if (a._speakerName) return a._speakerName;
     const persons = a.persons ?? [];
     if (!Array.isArray(persons) || persons.length === 0) return '';
-    const sp = persons.find((p) => p?.is_speaker === true || p?.is_speaker === 'true') || persons[0];
+    const sp =
+      persons.find((p) => p?.is_speaker === true || p?.is_speaker === 'true') || persons[0];
     if (!sp) return '';
     const first = sp.first_name ?? '';
     const last = sp.last_name ?? '';
@@ -23,7 +24,10 @@
     if (!a) return '';
     if (a._snippet) return a._snippet;
     const raw = a.content ?? '';
-    const s = String(raw || '').replace(/\s+/g, ' ').trim().slice(0, max);
+    const s = String(raw || '')
+      .replace(/\s+/g, ' ')
+      .trim()
+      .slice(0, max);
     return s + (String(raw || '').length > max ? '…' : '');
   }
 </script>

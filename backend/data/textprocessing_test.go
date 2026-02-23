@@ -7,7 +7,7 @@ import (
 func TestGetWordFrequencies(t *testing.T) {
 	text := "machine learning is a powerful learning technique. Machine learning algorithms can learn from data."
 
-	frequencies := GetWordFrequencies(text, 3, 10)
+	frequencies := GetWordFrequencies(text, 3, 10, false)
 
 	if len(frequencies) == 0 {
 		t.Fatal("Expected word frequencies, got none")
@@ -56,7 +56,7 @@ func TestGetWordFrequencies(t *testing.T) {
 func TestGetWordFrequenciesStopwords(t *testing.T) {
 	text := "the the the machine learning is the best"
 
-	frequencies := GetWordFrequencies(text, 3, 10)
+	frequencies := GetWordFrequencies(text, 3, 10, false)
 
 	// "the", "is" should be filtered out as stopwords
 	for _, freq := range frequencies {
@@ -85,7 +85,7 @@ func TestGetWordFrequenciesStopwords(t *testing.T) {
 func TestGetWordFrequenciesMinLength(t *testing.T) {
 	text := "a ab abc abcd abcde"
 
-	frequencies := GetWordFrequencies(text, 4, 10)
+	frequencies := GetWordFrequencies(text, 4, 10, false)
 
 	// Only "abcd" and "abcde" should pass the min length of 4
 	if len(frequencies) != 2 {
@@ -102,7 +102,7 @@ func TestGetWordFrequenciesMinLength(t *testing.T) {
 func TestGetWordFrequenciesTopN(t *testing.T) {
 	text := "one two three four five six seven eight nine ten"
 
-	frequencies := GetWordFrequencies(text, 1, 5)
+	frequencies := GetWordFrequencies(text, 1, 5, false)
 
 	if len(frequencies) > 5 {
 		t.Errorf("Expected at most 5 words, got %d", len(frequencies))
@@ -112,7 +112,7 @@ func TestGetWordFrequenciesTopN(t *testing.T) {
 func TestGetWordFrequenciesEmpty(t *testing.T) {
 	text := ""
 
-	frequencies := GetWordFrequencies(text, 3, 10)
+	frequencies := GetWordFrequencies(text, 3, 10, false)
 
 	if len(frequencies) != 0 {
 		t.Errorf("Expected empty result for empty text, got %d words", len(frequencies))
@@ -122,7 +122,7 @@ func TestGetWordFrequenciesEmpty(t *testing.T) {
 func TestGetWordFrequenciesOnlyStopwords(t *testing.T) {
 	text := "the the and or but if then"
 
-	frequencies := GetWordFrequencies(text, 2, 10)
+	frequencies := GetWordFrequencies(text, 2, 10, false)
 
 	if len(frequencies) != 0 {
 		t.Errorf("Expected empty result for text with only stopwords, got %d words", len(frequencies))
