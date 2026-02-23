@@ -16,7 +16,6 @@
   let cacheExpired = $state(false);
 
   let eventInfo = $state(null);
-  let currentDataSource = null;
   // Toggle to show dates converted to the user's local timezone
   let showLocal = $state(false);
 
@@ -54,17 +53,17 @@
 
     await loadData();
 
-    // Get current data source name from cache stats so we can ignore cache events from other data sources
-    try {
-      const stats = await GetCacheStats();
-      currentDataSource = stats?.data_source_name || null;
-    } catch (e) {
-      console.warn('Failed to get cache stats for data source name', e);
-      currentDataSource = null;
-    }
-
-    EventsOn('cache:updated', (...data) => {
+    EventsOn('cache:updated', async (...data) => {
       const ev = (data && data.length ? data[0] : data) || {};
+
+      // Get current data source at event time (not mount time) to avoid stale filtering
+      let currentDataSource = null;
+      try {
+        const stats = await GetCacheStats();
+        currentDataSource = stats?.data_source_name || null;
+      } catch (e) {
+        console.warn('Failed to get current data source in cache:updated handler', e);
+      }
 
       // If the event includes a data_source_name and it doesn't match our current data source, ignore it
       if (ev.data_source_name && currentDataSource && ev.data_source_name !== currentDataSource) {
