@@ -483,18 +483,34 @@ func (c *Cache) loadFromDisk() error {
 	c.currentSize = 0
 	now := time.Now()
 	expiredCount := 0
+	recalculatedCount := 0
 
 	for key, entry := range entries {
+		// Recalculate ExpiresAt based on current TTL setting
+		// This ensures that when config changes (e.g., TTL updated from 24h to 1h),
+		// entries loaded from disk use the new TTL
+		if c.ttl > 0 {
+			// Calculate new expiry based on the entry's timestamp plus the current TTL
+			entry.ExpiresAt = entry.Timestamp.Add(c.ttl)
+			recalculatedCount++
+		} else {
+			// No expiration
+			entry.ExpiresAt = time.Time{}
+		}
+
 		// Count expired entries but keep them
 		if !entry.ExpiresAt.IsZero() && now.After(entry.ExpiresAt) {
 			expiredCount++
 		}
 
+		// Reset LastNotified so entries that may be expired get notified
+		entry.LastNotified = time.Time{}
+
 		c.entries[key] = entry
 		c.currentSize += entry.Size
 	}
 
-	log.Printf("Cache loaded from disk: %d entries (%d expired but kept)", len(c.entries), expiredCount)
+	log.Printf("Cache loaded from disk: %d entries (%d recalculated ExpiresAt, %d expired but kept)", len(c.entries), recalculatedCount, expiredCount)
 	return nil
 }
 
@@ -614,4 +630,33 @@ func (c *Cache) SetOnEvict(cb func(fullKey string)) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	c.onEvict = cb
+}
+
+// UpdateTTL updates the TTL for the cache and recalculates ExpiresAt for all existing entries.
+// This preserves the relative age of entries - entries will expire at (Timestamp + newTTL).
+// If newTTL is 0, all entries will have no expiration.
+func (c *Cache) UpdateTTL(newTTL time.Duration) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	// Update the cache's TTL
+	c.ttl = newTTL
+
+	// Recalculate ExpiresAt for all entries
+	for _, entry := range c.entries {
+		if newTTL > 0 {
+			// Calculate new expiry based on the entry's timestamp plus the new TTL
+			entry.ExpiresAt = entry.Timestamp.Add(newTTL)
+		} else {
+			// No expiration
+			entry.ExpiresAt = time.Time{}
+		}
+		// Reset LastNotified so entries that may now be expired get notified
+		entry.LastNotified = time.Time{}
+	}
+
+	log.Printf("Cache TTL updated to %s and ExpiresAt recalculated for %d entries", newTTL, len(c.entries))
+
+	// Queue async save to persist updated expiration times
+	go c.queueSave()
 }
