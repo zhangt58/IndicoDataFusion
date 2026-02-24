@@ -8,6 +8,9 @@
     ClearCache,
     DeleteCacheEntry,
     IsTestMode,
+    OpenCacheDirectory,
+    GetStructuredConfigUI,
+    ApplyStructuredConfigUI,
   } from '../../wailsjs/go/main/App';
   import { Modal } from 'flowbite-svelte';
   import Icon from '@iconify/svelte';
@@ -23,11 +26,27 @@
   let showClearConfirm = $state(false);
   let expandedDataSources = $state({});
 
+  // Cache configuration state
+  let configData = $state(null);
+  let showCacheConfig = $state(false);
+  let applyingConfig = $state(false);
+
   async function loadCacheInfo() {
     try {
       loading = true;
       cacheStats = await GetCacheStats();
       cacheEntries = await GetCacheEntries();
+
+      // Load cache configuration
+      const cfg = await GetStructuredConfigUI();
+      if (!cfg.cache) {
+        cfg.cache = {
+          ttl: '24h',
+          maxSize: '100MB',
+          cacheDir: '',
+        };
+      }
+      configData = cfg;
 
       // Only expand the active data source
       if (cacheEntries && typeof cacheEntries === 'object') {
@@ -142,6 +161,34 @@
 
   function cancelClearCache() {
     showClearConfirm = false;
+  }
+
+  async function handleOpenCacheDirectory() {
+    errorMsg = '';
+    try {
+      await OpenCacheDirectory();
+    } catch (e) {
+      errorMsg = `Failed to open cache directory: ${e}`;
+    }
+  }
+
+  async function applyCacheConfig() {
+    errorMsg = '';
+    successMsg = '';
+    applyingConfig = true;
+    try {
+      await ApplyStructuredConfigUI(configData);
+      successMsg = 'Cache configuration applied successfully';
+      setTimeout(() => {
+        successMsg = '';
+      }, 3000);
+      // Reload cache info to reflect changes
+      await loadCacheInfo();
+    } catch (e) {
+      errorMsg = `Failed to apply cache configuration: ${e}`;
+    } finally {
+      applyingConfig = false;
+    }
   }
 
   function getCacheKeyLabel(key) {
@@ -354,7 +401,7 @@
 
     <!-- Cached Data Entries (Grouped by Data Source) -->
     {#if cacheEntries && Object.keys(cacheEntries).length > 0}
-      <div class="space-y-2">
+      <div class="space-y-1">
         <div class="flex items-center justify-between">
           <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100">Cached Data</h3>
         </div>
@@ -498,12 +545,22 @@
     <div
       class="bg-gray-50 dark:bg-gray-800 rounded-lg shadow p-2 border border-gray-200 dark:border-gray-700"
     >
-      <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-3">Actions</h3>
-      <div class="space-y-2">
+      <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">Actions</h3>
+      <div class="flex gap-2">
+        <button
+          type="button"
+          onclick={handleOpenCacheDirectory}
+          disabled={!cacheStats?.cache_dir}
+          class="flex-1 px-3 py-2 rounded-lg bg-gray-600 text-white font-medium hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
+          title="Open cache directory in file browser"
+        >
+          <Icon icon="mdi:folder-open" class="w-5 h-5" />
+          Open Directory
+        </button>
         <button
           type="button"
           onclick={handleClearAll}
-          class="w-full px-4 py-3 rounded-lg bg-red-600 text-white font-medium hover:bg-red-700 transition-colors flex items-center justify-center gap-2"
+          class="flex-1 px-3 py-2 rounded-lg bg-red-600 text-white font-medium hover:bg-red-700 transition-colors flex items-center justify-center gap-2"
         >
           <Icon icon="mdi:trash-can" class="w-5 h-5" />
           Clear All Cache
@@ -524,6 +581,104 @@
         class="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-3"
       >
         <p class="text-sm text-green-600 dark:text-green-400">{successMsg}</p>
+      </div>
+    {/if}
+
+    <!-- Cache Configuration (collapsible) -->
+    {#if configData?.cache}
+      <div
+        class="bg-gray-50 dark:bg-gray-800 rounded-lg shadow border border-gray-200 dark:border-gray-700 overflow-hidden"
+      >
+        <button
+          type="button"
+          onclick={() => (showCacheConfig = !showCacheConfig)}
+          class="w-full flex items-center justify-between p-2 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+        >
+          <span class="text-lg font-semibold text-gray-900 dark:text-gray-100">
+            Cache Configuration
+          </span>
+          <Icon
+            icon="mdi:chevron-down"
+            class={`w-5 h-5 text-gray-500 dark:text-gray-400 transform transition-transform ${showCacheConfig ? 'rotate-180' : ''}`}
+          />
+        </button>
+
+        {#if showCacheConfig}
+          <div class="border-t border-gray-200 dark:border-gray-700 p-3">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mb-3">
+              <div>
+                <label
+                  for="cache-ttl"
+                  class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+                >
+                  TTL (Time-To-Live)
+                  <span
+                    class="text-xs text-gray-500 dark:text-gray-400 ml-1"
+                    title="How long cache entries stay valid before expiring">ⓘ</span
+                  >
+                </label>
+                <input
+                  id="cache-ttl"
+                  type="text"
+                  bind:value={configData.cache.ttl}
+                  placeholder="24h"
+                  class="w-full rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                />
+                <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">e.g., 24h, 1h30m, 30m</p>
+              </div>
+              <div>
+                <label
+                  for="cache-maxsize"
+                  class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+                >
+                  Max Size
+                  <span
+                    class="text-xs text-gray-500 dark:text-gray-400 ml-1"
+                    title="Maximum cache size - oldest entries evicted when limit reached">ⓘ</span
+                  >
+                </label>
+                <input
+                  id="cache-maxsize"
+                  type="text"
+                  bind:value={configData.cache.maxSize}
+                  placeholder="100MB"
+                  class="w-full rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                />
+                <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">e.g., 100MB, 1GB, 500MB</p>
+              </div>
+              <div>
+                <label
+                  for="cache-dir"
+                  class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+                >
+                  Cache Directory
+                  <span
+                    class="text-xs text-gray-500 dark:text-gray-400 ml-1"
+                    title="Custom cache directory path (leave empty for default)">ⓘ</span
+                  >
+                </label>
+                <input
+                  id="cache-dir"
+                  type="text"
+                  bind:value={configData.cache.cacheDir}
+                  placeholder="~/.cache/IndicoDataFusion"
+                  class="w-full rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-2 py-1.5 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                />
+                <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Leave empty for default</p>
+              </div>
+            </div>
+            <div class="flex justify-end">
+              <button
+                type="button"
+                onclick={applyCacheConfig}
+                disabled={applyingConfig}
+                class="px-3 py-1.5 rounded-lg bg-indigo-600 text-white font-medium hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                {applyingConfig ? 'Applying...' : 'Apply'}
+              </button>
+            </div>
+          </div>
+        {/if}
       </div>
     {/if}
   {/if}
