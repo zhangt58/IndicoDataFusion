@@ -53,7 +53,7 @@ type CacheOptions struct {
 	LoadOnStartup  bool          // Load cache from disk on creation
 	TTL            time.Duration // Time-to-live for cache entries (0 = no expiration)
 	MaxSize        int64         // Maximum cache size in bytes (0 = no limit)
-	DataSourceName string        // Data source name to include in cache keys
+	DataSourceName string        // Data source name to include in cache keys; if empty, expiry monitoring is disabled
 }
 
 // NewCache creates a new Cache instance
@@ -104,8 +104,11 @@ func NewCache(opts CacheOptions) (*Cache, error) {
 	// Start async save worker
 	go cache.asyncSaveWorker()
 
-	// Start expiry notification worker - notifies about expired entries without deleting them
-	go cache.expiryNotificationWorker()
+	// Start expiry notification worker only for caches scoped to a data source.
+	// Non-scoped (global) caches (dataSourceName == "") are intentionally NOT monitored.
+	if cache.dataSourceName != "" {
+		go cache.expiryNotificationWorker()
+	}
 
 	return cache, nil
 }
@@ -113,6 +116,12 @@ func NewCache(opts CacheOptions) (*Cache, error) {
 // expiryNotificationWorker periodically checks for expired entries and fires callbacks WITHOUT deleting them.
 // This allows the UI to be notified about expired cache while keeping the data available.
 func (c *Cache) expiryNotificationWorker() {
+	// Worker only operates for caches scoped to a data source.
+	// Intentionally do not monitor global/unscoped caches.
+	if c.dataSourceName == "" {
+		return
+	}
+
 	// Helper function to check and notify expired entries
 	checkAndNotify := func() {
 		now := time.Now()
@@ -120,9 +129,14 @@ func (c *Cache) expiryNotificationWorker() {
 
 		c.mu.Lock()
 		for fullKey, entry := range c.entries {
-			// Check if expired and not yet notified (or notified more than 1 minute ago)
+			// Only consider entries that belong exactly to this cache's data source
+			if entry.DataSourceName != c.dataSourceName {
+				continue
+			}
+
+			// Check if expired and not yet notified (or notified more than LAST_NOTIFIED_MIN_INTERVAL ago)
 			if !entry.ExpiresAt.IsZero() && now.After(entry.ExpiresAt) {
-				// Only notify if we haven't notified yet, or it's been more than 2 seconds
+				// Only notify if we haven't notified yet, or it's been more than LAST_NOTIFIED_MIN_INTERVAL
 				if entry.LastNotified.IsZero() || now.Sub(entry.LastNotified) > LAST_NOTIFIED_MIN_INTERVAL {
 					newlyExpired = append(newlyExpired, fullKey)
 					entry.LastNotified = now
@@ -469,18 +483,34 @@ func (c *Cache) loadFromDisk() error {
 	c.currentSize = 0
 	now := time.Now()
 	expiredCount := 0
+	recalculatedCount := 0
 
 	for key, entry := range entries {
+		// Recalculate ExpiresAt based on current TTL setting
+		// This ensures that when config changes (e.g., TTL updated from 24h to 1h),
+		// entries loaded from disk use the new TTL
+		if c.ttl > 0 {
+			// Calculate new expiry based on the entry's timestamp plus the current TTL
+			entry.ExpiresAt = entry.Timestamp.Add(c.ttl)
+			recalculatedCount++
+		} else {
+			// No expiration
+			entry.ExpiresAt = time.Time{}
+		}
+
 		// Count expired entries but keep them
 		if !entry.ExpiresAt.IsZero() && now.After(entry.ExpiresAt) {
 			expiredCount++
 		}
 
+		// Reset LastNotified so entries that may be expired get notified
+		entry.LastNotified = time.Time{}
+
 		c.entries[key] = entry
 		c.currentSize += entry.Size
 	}
 
-	log.Printf("Cache loaded from disk: %d entries (%d expired but kept)", len(c.entries), expiredCount)
+	log.Printf("Cache loaded from disk: %d entries (%d recalculated ExpiresAt, %d expired but kept)", len(c.entries), recalculatedCount, expiredCount)
 	return nil
 }
 
@@ -600,4 +630,33 @@ func (c *Cache) SetOnEvict(cb func(fullKey string)) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	c.onEvict = cb
+}
+
+// UpdateTTL updates the TTL for the cache and recalculates ExpiresAt for all existing entries.
+// This preserves the relative age of entries - entries will expire at (Timestamp + newTTL).
+// If newTTL is 0, all entries will have no expiration.
+func (c *Cache) UpdateTTL(newTTL time.Duration) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	// Update the cache's TTL
+	c.ttl = newTTL
+
+	// Recalculate ExpiresAt for all entries
+	for _, entry := range c.entries {
+		if newTTL > 0 {
+			// Calculate new expiry based on the entry's timestamp plus the new TTL
+			entry.ExpiresAt = entry.Timestamp.Add(newTTL)
+		} else {
+			// No expiration
+			entry.ExpiresAt = time.Time{}
+		}
+		// Reset LastNotified so entries that may now be expired get notified
+		entry.LastNotified = time.Time{}
+	}
+
+	log.Printf("Cache TTL updated to %s and ExpiresAt recalculated for %d entries", newTTL, len(c.entries))
+
+	// Queue async save to persist updated expiration times
+	go c.queueSave()
 }

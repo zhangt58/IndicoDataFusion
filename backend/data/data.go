@@ -1164,4 +1164,13 @@ func (h *DataSourceHandler) SetCacheOnEvict(cb func(fullKey string)) {
 	h.cache.SetOnEvict(cb)
 }
 
+// UpdateCacheTTL updates the TTL for the cache and recalculates ExpiresAt for all existing entries.
+// This is used when the cache configuration is updated without recreating the handler.
+func (h *DataSourceHandler) UpdateCacheTTL(newTTL time.Duration) {
+	if h.cache == nil {
+		return
+	}
+	h.cache.UpdateTTL(newTTL)
+}
+
 // End of DataSourceHandler methods

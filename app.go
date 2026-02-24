@@ -755,6 +755,35 @@ func (a *App) OpenSafeURL(rawURL string) error {
 	return nil
 }
 
+// OpenCacheDirectory opens the cache directory in the system file browser
+func (a *App) OpenCacheDirectory() error {
+	stats := a.GetCacheStats()
+	cacheDir, ok := stats["cache_dir"].(string)
+	if !ok || cacheDir == "" {
+		return errors.New("cache directory not available")
+	}
+
+	// Cross-platform handling: Linux -> xdg-open, macOS -> open, Windows -> explorer
+	switch goruntime.GOOS {
+	case "linux":
+		if err := exec.Command("xdg-open", cacheDir).Start(); err != nil {
+			return errors.Wrap(err, "failed to open cache directory with xdg-open")
+		}
+	case "darwin":
+		if err := exec.Command("open", cacheDir).Start(); err != nil {
+			return errors.Wrap(err, "failed to open cache directory with open")
+		}
+	case "windows":
+		if err := exec.Command("explorer", cacheDir).Start(); err != nil {
+			return errors.Wrap(err, "failed to open cache directory with explorer")
+		}
+	default:
+		return errors.New("unsupported platform")
+	}
+
+	return nil
+}
+
 // GetWordFrequencies computes word frequencies from input text
 func (a *App) GetWordFrequencies(text string, minLength int, topN int, enablePluralNorm bool) []data.WordFrequency {
 	return data.GetWordFrequencies(text, minLength, topN, enablePluralNorm)
