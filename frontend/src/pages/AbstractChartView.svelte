@@ -4,11 +4,23 @@
   import AbstractSubmissionTrend from '../components/AbstractSubmissionTrend.svelte';
   import ReviewChartView from '../components/ReviewChartView.svelte';
   import WordCloud from '../components/WordCloud.svelte';
-  import { Tabs, TabItem } from 'flowbite-svelte';
+  import { Tabs, TabItem, Button } from 'flowbite-svelte';
   import AffiliationTableView from '../components/AffiliationTableView.svelte';
+  import AffiliationSettings from '../components/AffiliationSettings.svelte';
+  import Icon from '@iconify/svelte';
 
   // Props: array of abstract objects (same shape returned by GetAbstracts)
   let { abstractData = [] } = $props();
+
+  // Affiliation deduplication state — aliasToCanonical is managed by AffiliationSettings
+  let useAffiliationMap = $state(false);
+  /**
+   * Flat lookup: alias (raw name) → canonical (display name).
+   * Managed by AffiliationSettings (loaded from config, kept live).
+   * @type {Record<string, string>}
+   */
+  let aliasToCanonical = $state({});
+  let showAffiliationSettings = $state(false);
 
   // Color schemes for charts
   const instituteColors = [
@@ -53,7 +65,6 @@
 
             items.push({
               raw: affiliationStr,
-              affiliation: affiliationStr,
               country_name: p.affiliation?.country_name || p.country_name,
               continent: p.affiliation?.continent || p.continent,
             });
@@ -65,11 +76,12 @@
   }
 
   // Aggregate helpers: by institute (name), by country_name, by continent
-  function aggregateByInstitute(items) {
+  function aggregateByInstitute(items, applyMap, lookup) {
     const m = new Map();
     for (const it of items) {
-      const key = it.affiliation || it.raw || '';
-      if (!key) continue;
+      const raw = it.raw || '';
+      if (!raw) continue;
+      const key = applyMap && lookup[raw] ? lookup[raw] : raw;
       m.set(key, (m.get(key) || 0) + 1);
     }
     return m;
@@ -196,7 +208,7 @@
   // Build all three charts with derived state
   const chartData = $derived.by(() => {
     const items = collectAffiliations(abstractData || []);
-    const instMap = aggregateByInstitute(items);
+    const instMap = aggregateByInstitute(items, useAffiliationMap, aliasToCanonical);
     const countryMap = aggregateByCountry(items);
     const continentMap = aggregateByContinent(items);
 
@@ -222,15 +234,31 @@
   const continentOptions = $derived(chartData.continent);
   const instituteFullOptions = $derived(chartData.instituteFull);
 
-  // Shared chart height for the paired donut/bar display.
-  // Use a non-pixel unit so layout remains responsive. Adjust as needed.
   const chartHeight = '50vh';
 </script>
 
 <div class="p-2 mb-1">
   <Tabs class="shadow-md rounded-md">
     <TabItem open title="Affiliation">
-      <div class="grid grid-cols-1 md:grid-cols-1 gap-4 last:-mt-4">
+      <div
+        class="flex items-center justify-between gap-2 px-1 py-1 border-b border-gray-200 dark:border-gray-700"
+      >
+        <div class="flex items-center gap-2 last:-mt-6">
+          <label class="flex items-center gap-2 text-sm">
+            <input type="checkbox" bind:checked={useAffiliationMap} class="rounded" />
+            <span>Use Deduplication</span>
+          </label>
+          <Button
+            size="xs"
+            color="light"
+            onclick={() => (showAffiliationSettings = true)}
+            title="Manage affiliation deduplication"
+          >
+            <Icon icon="mdi:cog" class="w-4 h-4" />
+          </Button>
+        </div>
+      </div>
+      <div class="grid grid-cols-1 md:grid-cols-1 gap-4">
         <div>
           <Tabs tabStyle="underline">
             <TabItem open title="By Institution">
@@ -301,7 +329,7 @@
             <TabItem title="Table">
               <div class="p-0.5 last:-mt-7 overflow-auto" style="height:calc(100vh - 18rem);">
                 {#if abstractData && abstractData.length}
-                  <AffiliationTableView {abstractData} />
+                  <AffiliationTableView {abstractData} bind:useAffiliationMap {aliasToCanonical} />
                 {:else}
                   <div class="text-sm text-gray-500 text-center py-8">
                     No affiliation data available
@@ -345,3 +373,5 @@
     </TabItem>
   </Tabs>
 </div>
+
+<AffiliationSettings bind:open={showAffiliationSettings} bind:aliasToCanonical />

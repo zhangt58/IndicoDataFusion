@@ -4,7 +4,12 @@
   import AbstractTooltip from './AbstractTooltip.svelte';
 
   // Props: array of abstract objects (same shape returned by GetAbstracts)
-  let { abstractData = [] } = $props();
+  let {
+    abstractData = [],
+    useAffiliationMap = $bindable(false),
+    /** @type {Record<string, string>} flat alias→canonical lookup */
+    aliasToCanonical = {},
+  } = $props();
 
   // Table controls state
   let searchQuery = $state('');
@@ -97,9 +102,15 @@
                 ? p.affiliation
                 : p.affiliation.name || p.affiliation.raw || String(p.affiliation);
 
+            // Apply deduplication: replace alias with canonical when enabled
+            const displayAffiliation =
+              useAffiliationMap && affiliationStr
+                ? (aliasToCanonical[affiliationStr] ?? affiliationStr)
+                : affiliationStr;
+
             items.push({
               raw: affiliationStr,
-              affiliation: affiliationStr,
+              affiliation: displayAffiliation,
               country_name: p.affiliation?.country_name || p.country_name || '',
               continent: p.affiliation?.continent || p.continent || '',
               abstract_id: a.id || a.ID || null,
@@ -185,6 +196,10 @@
 
   // Derived: aggregate affiliations into unique rows with counts and examples
   const affiliationData = $derived.by(() => {
+    // Re-run when deduplication settings change
+    useAffiliationMap;
+    aliasToCanonical;
+
     const items = collectAffiliations(abstractData || []);
     const m = new Map();
     for (const it of items) {
