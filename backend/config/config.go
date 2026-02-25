@@ -80,11 +80,20 @@ type APITokenEntry struct {
 	Token    string `yaml:"token" json:"token"`
 }
 
+// ChartSettings holds user customization for chart views.
+type ChartSettings struct {
+	// WordCloud settings
+	ExcludedWords []string `yaml:"excluded_words,omitempty" json:"excludedWords,omitempty"`
+	// Affiliation deduplication map: key is canonical name, value is list of aliases
+	AffiliationMap map[string][]string `yaml:"affiliation_map,omitempty" json:"affiliationMap,omitempty"`
+}
+
 // Config holds the complete configuration with multiple data sources.
 type Config struct {
 	ActiveDataSource ActiveDataSource          `yaml:"data-source"`
 	Cache            *CacheConfig              `yaml:"cache,omitempty"`
 	APITokens        []APITokenEntry           `yaml:"api-tokens,omitempty"`
+	ChartSettings    *ChartSettings            `yaml:"chart-settings,omitempty"`
 	DataSources      map[string]map[string]any `yaml:",inline"`
 }
 
@@ -241,6 +250,33 @@ func LoadConfigFromBytes(b []byte) (*Config, error) {
 		delete(rawConfig, "api-tokens")
 	}
 
+	// Extract chart-settings section
+	if chartSettingsSection, ok := rawConfig["chart-settings"].(map[string]any); ok {
+		cfg.ChartSettings = &ChartSettings{}
+		if excludedWords, ok := chartSettingsSection["excluded_words"].([]any); ok {
+			for _, w := range excludedWords {
+				if word, ok := w.(string); ok {
+					cfg.ChartSettings.ExcludedWords = append(cfg.ChartSettings.ExcludedWords, word)
+				}
+			}
+		}
+		if affiliationMap, ok := chartSettingsSection["affiliation_map"].(map[string]any); ok {
+			cfg.ChartSettings.AffiliationMap = make(map[string][]string)
+			for key, val := range affiliationMap {
+				if aliases, ok := val.([]any); ok {
+					var aliasList []string
+					for _, alias := range aliases {
+						if a, ok := alias.(string); ok {
+							aliasList = append(aliasList, a)
+						}
+					}
+					cfg.ChartSettings.AffiliationMap[key] = aliasList
+				}
+			}
+		}
+		delete(rawConfig, "chart-settings")
+	}
+
 	// All remaining sections are data sources
 	for name, val := range rawConfig {
 		if section, ok := val.(map[string]any); ok {
@@ -295,7 +331,8 @@ type ConfigDataUI struct {
 	Cache                *CacheConfig   `json:"cache,omitempty"`
 	PathInfo             ConfigPathInfo `json:"pathInfo"`
 	// Include APITokens so the UI can present/manage named tokens
-	APITokens []APITokenEntry `json:"apiTokens,omitempty"`
+	APITokens     []APITokenEntry `json:"apiTokens,omitempty"`
+	ChartSettings *ChartSettings  `json:"chartSettings,omitempty"`
 }
 
 // GetStructuredConfigUI converts a Config to structured format for the UI.
@@ -306,6 +343,7 @@ func GetStructuredConfigUI(cfg *Config, pathInfo ConfigPathInfo) *ConfigDataUI {
 		Cache:                cfg.Cache,
 		PathInfo:             pathInfo,
 		APITokens:            cfg.APITokens,
+		ChartSettings:        cfg.ChartSettings,
 	}
 
 	// Use GetDataSource to build each entry
@@ -328,9 +366,10 @@ func BuildConfigFromStructuredUI(configData *ConfigDataUI) *Config {
 		ActiveDataSource: ActiveDataSource{
 			Use: configData.ActiveDataSourceName,
 		},
-		Cache:       configData.Cache,
-		DataSources: make(map[string]map[string]any),
-		APITokens:   configData.APITokens,
+		Cache:         configData.Cache,
+		DataSources:   make(map[string]map[string]any),
+		APITokens:     configData.APITokens,
+		ChartSettings: configData.ChartSettings,
 	}
 
 	// Convert each data source
