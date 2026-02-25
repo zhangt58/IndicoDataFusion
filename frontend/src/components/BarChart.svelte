@@ -140,6 +140,13 @@
   });
 
   $effect(() => {
+    // Explicitly track all props to ensure reactivity
+    labels;
+    series;
+    colors;
+    title;
+    height;
+
     if (chart) setOptions();
   });
 </script>

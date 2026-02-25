@@ -1,8 +1,10 @@
 <script>
   import { onMount, onDestroy } from 'svelte';
   import cloud from 'd3-cloud';
-  import { GetWordFrequencies } from '../../wailsjs/go/main/App';
-  import { Select, Toggle } from 'flowbite-svelte';
+  import { GetWordFrequencies, GetStructuredConfigUI } from '../../wailsjs/go/main/App';
+  import { Select, Toggle, Button } from 'flowbite-svelte';
+  import Icon from '@iconify/svelte';
+  import WordCloudExcludedDialog from './WordCloudExcludedDialog.svelte';
 
   let {
     text = '',
@@ -25,6 +27,26 @@
 
   // plural normalization toggle
   let enablePluralNorm = $state(false);
+
+  // Custom excluded words management
+  let useCustomExcluded = $state(false);
+  let customExcludedWords = $state([]); // All words in config (persisted)
+  let selectedExcludedWords = $state([]); // Currently active/selected words
+  let showExcludedWordsDialog = $state(false);
+
+  // Load custom excluded words from config on mount
+  async function loadCustomExcludedWords() {
+    try {
+      const config = await GetStructuredConfigUI();
+      if (config?.chartSettings?.excludedWords) {
+        customExcludedWords = config.chartSettings.excludedWords;
+        // Initialize all words as selected
+        selectedExcludedWords = [...customExcludedWords];
+      }
+    } catch (err) {
+      console.error('Failed to load custom excluded words:', err);
+    }
+  }
 
   let colorScheme = [
     '#1f77b4',
@@ -76,7 +98,15 @@
     error = null;
     try {
       // Ensure maxWords is a number (Select emits string values)
-      words = await GetWordFrequencies(inputText, minLength, Number(maxWords), enablePluralNorm);
+      // Use only selected words for filtering
+      const excludedList = useCustomExcluded ? selectedExcludedWords : [];
+      words = await GetWordFrequencies(
+        inputText,
+        minLength,
+        Number(maxWords),
+        enablePluralNorm,
+        excludedList,
+      );
     } catch (err) {
       console.error('Failed to fetch word frequencies:', err);
       error = err.message || 'Failed to fetch word frequencies';
@@ -173,13 +203,15 @@
     }
   }
 
-  // Watch for text changes
+  // Watch for text/filter changes
   $effect(() => {
     // reference reactive inputs so the effect re-runs when they change
     extractedText();
     minLength;
     maxWords;
     enablePluralNorm;
+    useCustomExcluded;
+    selectedExcludedWords;
     fetchWordFrequencies();
   });
 
@@ -191,6 +223,7 @@
   });
 
   onMount(() => {
+    loadCustomExcludedWords();
     updateDimensions();
 
     // Watch for container resize
@@ -221,13 +254,26 @@
   {/if}
 
   <div
-    class="flex flex-row items-center justify-center w-full gap-10 shadow-sm py-1 px-2 rounded-md"
+    class="flex flex-row items-center justify-center w-full gap-4 shadow-sm py-1 px-2 rounded-md"
   >
     <div class="flex-1">
       <Select size="sm" bind:value={maxWords} items={maxWordsOptions} />
     </div>
-    <div class="ml-auto">
-      <Toggle size="small" bind:checked={enablePluralNorm}>Merge Plural?</Toggle>
+    <div>
+      <Toggle size="small" bind:checked={enablePluralNorm}>Merge Plural</Toggle>
+    </div>
+    <div>
+      <Toggle size="small" bind:checked={useCustomExcluded}>Use Custom Filter</Toggle>
+    </div>
+    <div>
+      <Button
+        size="xs"
+        color="light"
+        onclick={() => (showExcludedWordsDialog = true)}
+        title="Manage excluded words"
+      >
+        <Icon icon="mdi:cog" class="w-4 h-4" />
+      </Button>
     </div>
   </div>
 
@@ -251,3 +297,10 @@
     <svg bind:this={svgElement} width={actualWidth} height={actualHeight} class="block"> </svg>
   {/if}
 </div>
+
+<!-- Excluded Words Management Dialog -->
+<WordCloudExcludedDialog
+  bind:open={showExcludedWordsDialog}
+  bind:customExcludedWords
+  bind:selectedExcludedWords
+/>

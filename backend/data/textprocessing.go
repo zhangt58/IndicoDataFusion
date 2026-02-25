@@ -43,7 +43,8 @@ func normalizeWord(word string) string {
 // New optional parameter: enablePluralNormalization ...bool
 // If provided and true, plural forms will be normalized to singular before counting.
 // When omitted (default) plural normalization is disabled.
-func GetWordFrequencies(text string, minLength int, topN int, enablePluralNorm bool) []WordFrequency {
+// customExcludedWords: additional words to exclude from the result (case-insensitive)
+func GetWordFrequencies(text string, minLength int, topN int, enablePluralNorm bool, customExcludedWords []string) []WordFrequency {
 
 	// Common English stopwords to filter out
 	stopwords := map[string]bool{
@@ -69,6 +70,13 @@ func GetWordFrequencies(text string, minLength int, topN int, enablePluralNorm b
 		"these": true, "give": true, "day": true, "most": true, "us": true,
 		"is": true, "was": true, "are": true, "been": true, "has": true,
 		"had": true, "were": true, "said": true, "did": true, "having": true,
+	}
+
+	// Add custom excluded words to stopwords map (case-insensitive)
+	for _, word := range customExcludedWords {
+		if word != "" {
+			stopwords[strings.ToLower(strings.TrimSpace(word))] = true
+		}
 	}
 
 	// Count word frequencies

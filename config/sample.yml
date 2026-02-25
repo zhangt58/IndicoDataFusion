@@ -21,6 +21,23 @@ api-tokens:
     username: <username>
     token: ""
 
+# chart settings (optional)
+chart-settings:
+  # Words to exclude from word cloud (in addition to built-in stopwords)
+  excluded_words:
+    - example
+    - test
+    - placeholder
+  # Affiliation deduplication map: canonical name -> list of aliases
+  # This helps group variations of the same institution
+  affiliation_map:
+    "MIT":
+      - "Massachusetts Institute of Technology"
+      - "MIT, USA"
+    "Stanford University":
+      - "Stanford"
+      - "Stanford U"
+
 # the data source defines an actual Indico conference: <conference-name>
 ConfName:
   # the base URL of the Indico server, e.g. https://indico.jacow.org
