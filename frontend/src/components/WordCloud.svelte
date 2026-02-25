@@ -476,7 +476,7 @@
     <div class="space-y-2">
       <div class="flex items-center justify-between">
         <h4 class="text-sm font-semibold text-gray-700 dark:text-gray-300">
-          Currently Selected for Filtering
+          Currently Selected for Filtering (click to deselect)
         </h4>
         <span class="text-xs text-gray-500">
           {selectedExcludedWords.length} selected
@@ -492,20 +492,19 @@
         {:else}
           <div class="flex flex-wrap gap-2">
             {#each selectedExcludedWords as word}
-              <div
-                class="inline-flex items-center gap-1 bg-blue-500 text-white rounded-lg px-2 py-1 text-sm"
+              <button
+                type="button"
+                onclick={() => toggleWordSelection(word)}
+                class="inline-flex items-center gap-1 bg-blue-500 text-white rounded-lg px-2 py-1 text-sm hover:bg-blue-600 transition-colors cursor-pointer"
+                title="Click to deselect"
               >
                 <Icon icon="mdi:check-circle" class="w-3.5 h-3.5" />
                 <span>{word}</span>
-              </div>
+              </button>
             {/each}
           </div>
         {/if}
       </div>
-    </div>
-
-    <div class="flex justify-end gap-2 pt-2 border-t border-gray-200 dark:border-gray-700">
-      <Button color="light" onclick={() => (showExcludedWordsDialog = false)}>Close</Button>
     </div>
   </div>
 </Modal>
