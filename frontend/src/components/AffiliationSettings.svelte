@@ -1,12 +1,31 @@
 <script>
+  import { onMount } from 'svelte';
   import { Modal, Button, Input, Label } from 'flowbite-svelte';
   import Icon from '@iconify/svelte';
   import { GetStructuredConfigUI, ApplyStructuredConfigUI } from '../../wailsjs/go/main/App';
 
-  let { open = $bindable(false), onSave = null } = $props();
+  let {
+    open = $bindable(false),
+    /** @type {Record<string, string>} */
+    aliasToCanonical = $bindable({}),
+    onSave = null,
+  } = $props();
 
   /** @type {{ canonical: string; aliases: string[]; enabled: boolean }[]} */
   let mappings = $state([]);
+
+  // Keep aliasToCanonical in sync with the current (possibly unsaved) mappings state
+  $effect(() => {
+    /** @type {Record<string, string>} */
+    const lookup = {};
+    for (const m of mappings) {
+      if (!m.enabled || !m.canonical) continue;
+      for (const alias of m.aliases || []) {
+        if (alias) lookup[alias] = m.canonical;
+      }
+    }
+    aliasToCanonical = lookup;
+  });
   let loading = $state(false);
   let saving = $state(false);
 
@@ -29,16 +48,9 @@
     try {
       const config = await GetStructuredConfigUI();
       const cs = config?.chartSettings || {};
-      if (Array.isArray(cs.affiliationMap)) {
-        mappings = cs.affiliationMap.map((m) => ({
-          canonical: String(m.canonical || '').trim(),
-          aliases: Array.isArray(m.aliases)
-            ? m.aliases.map((a) => String(a || '').trim()).filter(Boolean)
-            : [],
-          enabled: typeof m.enabled === 'boolean' ? m.enabled : true,
-        }));
-      } else if (cs.affiliationMap && typeof cs.affiliationMap === 'object') {
-        // legacy shape: { canonical: [aliases...] }
+
+      if (cs.affiliationMap && typeof cs.affiliationMap === 'object') {
+        // Legacy shape: { canonical: [aliases...] }
         const arr = [];
         for (const [canonical, aliases] of Object.entries(cs.affiliationMap)) {
           arr.push({
@@ -95,15 +107,6 @@
       /** @type {any} */
       const cs = config.chartSettings;
       cs.affiliationMappings = withCanonical;
-
-      // Also write legacy shape for compatibility
-      /** @type {Record<string, string[]>} */
-      const legacyMap = {};
-      for (const m of withCanonical) {
-        if (!m.enabled) continue;
-        legacyMap[m.canonical] = m.aliases || [];
-      }
-      cs.affiliationMap = legacyMap;
 
       await ApplyStructuredConfigUI(config);
       open = false;
@@ -165,7 +168,12 @@
     );
   }
 
-  // Load when dialog opens
+  // Load on mount so aliasToCanonical is available immediately (before dialog is opened)
+  onMount(() => {
+    loadAffiliationMap();
+  });
+
+  // Reload and reset when dialog opens
   $effect(() => {
     if (open) {
       loadAffiliationMap();
