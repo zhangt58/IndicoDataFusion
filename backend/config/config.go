@@ -80,12 +80,19 @@ type APITokenEntry struct {
 	Token    string `yaml:"token" json:"token"`
 }
 
+// AffiliationMapEntry represents a single affiliation mapping with canonical name, aliases, and enabled state
+type AffiliationMapEntry struct {
+	Canonical string   `yaml:"canonical" json:"canonical"`
+	Aliases   []string `yaml:"aliases" json:"aliases"`
+	Enabled   bool     `yaml:"enabled" json:"enabled"`
+}
+
 // ChartSettings holds user customization for chart views.
 type ChartSettings struct {
 	// WordCloud settings
 	ExcludedWords []string `yaml:"excluded_words,omitempty" json:"excludedWords,omitempty"`
-	// Affiliation deduplication map: key is canonical name, value is list of aliases
-	AffiliationMap map[string][]string `yaml:"affiliation_map,omitempty" json:"affiliationMap,omitempty"`
+	// Affiliation deduplication map: array of mappings with canonical name, aliases, and enabled state
+	AffiliationMap []AffiliationMapEntry `yaml:"affiliation_map,omitempty" json:"affiliationMap,omitempty"`
 }
 
 // Config holds the complete configuration with multiple data sources.
@@ -260,17 +267,31 @@ func LoadConfigFromBytes(b []byte) (*Config, error) {
 				}
 			}
 		}
-		if affiliationMap, ok := chartSettingsSection["affiliation_map"].(map[string]any); ok {
-			cfg.ChartSettings.AffiliationMap = make(map[string][]string)
-			for key, val := range affiliationMap {
-				if aliases, ok := val.([]any); ok {
-					var aliasList []string
-					for _, alias := range aliases {
-						if a, ok := alias.(string); ok {
-							aliasList = append(aliasList, a)
+
+		// Handle affiliation_map: support both old map format and new array format
+		if affiliationMapRaw := chartSettingsSection["affiliation_map"]; affiliationMapRaw != nil {
+			// Try new array format first: [{ canonical, aliases, enabled }]
+			if affiliationMapArray, ok := affiliationMapRaw.([]any); ok {
+				for _, item := range affiliationMapArray {
+					if entry, ok := item.(map[string]any); ok {
+						mapEntry := AffiliationMapEntry{
+							Enabled: true, // default to enabled if not specified
 						}
+						if canonical, ok := entry["canonical"].(string); ok {
+							mapEntry.Canonical = canonical
+						}
+						if aliases, ok := entry["aliases"].([]any); ok {
+							for _, alias := range aliases {
+								if a, ok := alias.(string); ok {
+									mapEntry.Aliases = append(mapEntry.Aliases, a)
+								}
+							}
+						}
+						if enabled, ok := entry["enabled"].(bool); ok {
+							mapEntry.Enabled = enabled
+						}
+						cfg.ChartSettings.AffiliationMap = append(cfg.ChartSettings.AffiliationMap, mapEntry)
 					}
-					cfg.ChartSettings.AffiliationMap[key] = aliasList
 				}
 			}
 		}

@@ -42,26 +42,22 @@
     return c ? mappings.some((m) => m.canonical === c) : false;
   });
 
-  // Load affiliation mappings from config (backwards compatible)
+  // Load affiliation mappings from config
   async function loadAffiliationMap() {
     loading = true;
     try {
       const config = await GetStructuredConfigUI();
       const cs = config?.chartSettings || {};
 
-      if (cs.affiliationMap && typeof cs.affiliationMap === 'object') {
-        // Legacy shape: { canonical: [aliases...] }
-        const arr = [];
-        for (const [canonical, aliases] of Object.entries(cs.affiliationMap)) {
-          arr.push({
-            canonical: String(canonical || '').trim(),
-            aliases: Array.isArray(aliases)
-              ? aliases.map((a) => String(a || '').trim()).filter(Boolean)
-              : [],
-            enabled: true,
-          });
-        }
-        mappings = arr;
+      if (cs.affiliationMap && Array.isArray(cs.affiliationMap)) {
+        // array of { canonical, aliases, enabled }
+        mappings = cs.affiliationMap.map((m) => ({
+          canonical: String(m.canonical || '').trim(),
+          aliases: Array.isArray(m.aliases)
+            ? m.aliases.map((a) => String(a || '').trim()).filter(Boolean)
+            : [],
+          enabled: m.enabled !== false,
+        }));
       } else {
         mappings = [];
       }
@@ -106,7 +102,7 @@
       }
       /** @type {any} */
       const cs = config.chartSettings;
-      cs.affiliationMappings = withCanonical;
+      cs.affiliationMap = withCanonical;
 
       await ApplyStructuredConfigUI(config);
       open = false;
