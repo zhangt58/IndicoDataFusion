@@ -217,6 +217,14 @@
 
   // update chart when props change
   $effect(() => {
+    // Explicitly track all props to ensure reactivity
+    labels;
+    series;
+    colors;
+    title;
+    height;
+    legendPosition;
+
     if (chart) setOptions();
   });
 </script>
