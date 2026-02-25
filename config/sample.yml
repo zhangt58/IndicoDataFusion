@@ -28,16 +28,18 @@ chart-settings:
     - example
     - test
     - placeholder
-  # Affiliation deduplication map: canonical name -> list of aliases
-  # This helps group variations of the same institution
+  # Affiliation deduplication map: canonical name -> list of aliases with enabled flag
   affiliation_map:
-    "MIT":
-      - "Massachusetts Institute of Technology"
-      - "MIT, USA"
-    "Stanford University":
-      - "Stanford"
-      - "Stanford U"
-
+    - canonical: MIT
+      aliases:
+        - Massachusetts Institute of Technology
+        - MIT, USA
+      enabled: true
+    - canonical: Standord University
+      aliases:
+        - Stanford
+        - Stanford U
+      enabled: false
 # the data source defines an actual Indico conference: <conference-name>
 ConfName:
   # the base URL of the Indico server, e.g. https://indico.jacow.org
