@@ -37,6 +37,7 @@
   let selectedExcludedWords = $state([]); // Currently selected/active words
   let showExcludedWordsDialog = $state(false);
   let newExcludedWord = $state('');
+  let wordsMgmtDlgPlacement = $state('top-center');
 
   // Check if input word exists in config
   const isExistingWord = $derived(() => {
@@ -376,7 +377,12 @@
 </div>
 
 <!-- Excluded Words Management Dialog -->
-<Modal bind:open={showExcludedWordsDialog} size="lg" title="Manage Excluded Words">
+<Modal
+  bind:open={showExcludedWordsDialog}
+  size="lg"
+  title="Manage Excluded Words"
+  placement={wordsMgmtDlgPlacement}
+>
   <div class="space-y-2">
     <p class="text-sm text-gray-600 dark:text-gray-400">
       Add/Remove words to/from your exclusion list.
