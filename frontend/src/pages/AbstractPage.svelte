@@ -63,16 +63,18 @@
       console.error('Failed to check test mode', e);
     }
 
-    // Query backend whether current user has assigned review abstracts
-    try {
-      const c = await GetAssignedReviewCount();
-      hasAssignedReviews = (c && c > 0) || false;
-    } catch (e) {
-      console.warn('Failed to get assigned review count', e);
-      hasAssignedReviews = false;
-    }
-
+    // Load abstract data first to show page immediately
     await loadData();
+
+    // Load review count asynchronously after page is shown (non-blocking)
+    GetAssignedReviewCount()
+      .then((c) => {
+        hasAssignedReviews = (c && c > 0) || false;
+      })
+      .catch((e) => {
+        console.warn('Failed to get assigned review count', e);
+        hasAssignedReviews = false;
+      });
 
     EventsOn('cache:updated', async (...data) => {
       const ev = (data && data.length ? data[0] : data) || {};
