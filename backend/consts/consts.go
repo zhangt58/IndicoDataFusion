@@ -3,7 +3,7 @@ package consts
 const (
 	AppName     = "IndicoDataFusion"
 	AppNameAbbr = "IDF"
-	AppVersion  = "v1.3.2"
+	AppVersion  = "v1.4.0"
 	Author      = "Tong Zhang"
 	Department  = "Facility for Rare Isotope Beams"
 	Company     = "Michigan State University"
