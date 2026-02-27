@@ -395,6 +395,15 @@ func (a *App) ApplyStructuredConfigUI(configData *config.ConfigDataUI) error {
 		return errors.Wrap(err, "failed to save config")
 	}
 
+	// Shutdown the old handler to stop its expiry notification worker
+	if a.handler != nil {
+		shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		if err := a.handler.Shutdown(shutdownCtx); err != nil {
+			log.Printf("Warning: error shutting down old handler: %v", err)
+		}
+	}
+
 	// Reload handler
 	h, err := data.NewDataSourceHandlerFromConfigFile(a.configPath)
 	if err != nil {
