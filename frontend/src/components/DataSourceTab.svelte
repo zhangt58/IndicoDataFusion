@@ -753,7 +753,7 @@
 <PasswordDialog
   bind:open={showExportPasswordDialog}
   title="Export Configuration"
-  message="Enter a password to encrypt your configuration export. This password will be required to import the file."
+  message="Enter a password to encrypt your configuration export. This password will be required to import the file. Export includes data sources, API tokens, cache settings, affiliation map, and word cloud exclusions."
   confirmLabel="Export"
   working={exportingConfig}
   onConfirm={handleExport}
@@ -767,7 +767,7 @@
 <PasswordDialog
   bind:open={showImportPasswordDialog}
   title="Import Configuration"
-  message="Enter the password used to encrypt this configuration file."
+  message="Enter the password used to encrypt this configuration file. Import will restore data sources, API tokens, cache settings, affiliation map, and word cloud exclusions."
   confirmLabel="Import"
   working={importingConfig}
   onConfirm={handleImport}
