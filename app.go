@@ -572,7 +572,20 @@ func (a *App) GetCacheEntries() map[string][]*cache.CacheEntry {
 	return a.handler.GetCacheEntries()
 }
 
-// AddAPIToken stores the token secret in OS keyring and updates the config metadata (without storing the raw token in YAML).
+// GetCacheEntryMetadata retrieves metadata for a specific cache entry
+func (a *App) GetCacheEntryMetadata(key string) *cache.CacheEntry {
+	if a.handler == nil {
+		return nil
+	}
+	entry, found := a.handler.GetCacheEntryMetadata(key)
+	if !found {
+		return nil
+	}
+	return entry
+}
+
+// AddAPIToken stores the token secret in OS keyring and updates the config metadata
+// (without storing the raw token in YAML).
 func (a *App) AddAPIToken(entry config.APITokenEntry, rawToken string) error {
 	// store in keyring
 	if err := utils.SetAPITokenSecret(entry.Name, rawToken); err != nil {

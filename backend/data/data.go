@@ -1147,6 +1147,14 @@ func (h *DataSourceHandler) GetCacheEntries() map[string][]*cache.CacheEntry {
 	return h.cache.GetAllEntriesWithMetadata()
 }
 
+// GetCacheEntryMetadata retrieves metadata for a specific cache entry
+func (h *DataSourceHandler) GetCacheEntryMetadata(key string) (*cache.CacheEntry, bool) {
+	if h.cache == nil {
+		return nil, false
+	}
+	return h.cache.GetWithMetadata(key)
+}
+
 // SetCacheOnExpiry allows higher-level code (e.g., App) to register a callback when cache entries expire.
 // Note: This does NOT delete the entry, it only notifies about expiry.
 func (h *DataSourceHandler) SetCacheOnExpiry(cb func(fullKey string)) {
