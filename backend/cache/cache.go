@@ -39,6 +39,7 @@ type Cache struct {
 	currentSize    int64       // Current cache size in bytes
 	saveQueue      chan string // Queue for async saves
 	stopChan       chan struct{}
+	expiryStopChan chan struct{} // Separate stop channel for expiry worker
 	dataSourceName string
 
 	// Callbacks invoked when an entry is expired or evicted. These are optional and run
@@ -90,6 +91,7 @@ func NewCache(opts CacheOptions) (*Cache, error) {
 		currentSize:    0,
 		saveQueue:      make(chan string, 100), // Buffered channel for async saves
 		stopChan:       make(chan struct{}),
+		expiryStopChan: make(chan struct{}),
 		dataSourceName: opts.DataSourceName,
 	}
 
@@ -172,7 +174,8 @@ func (c *Cache) expiryNotificationWorker() {
 		select {
 		case <-ticker.C:
 			checkAndNotify()
-		case <-c.stopChan:
+		case <-c.expiryStopChan:
+			log.Printf("expiryNotificationWorker stopped for data source: %s", c.dataSourceName)
 			return
 		}
 	}
@@ -522,8 +525,25 @@ func (c *Cache) Shutdown(_ context.Context) error {
 	// Stop async save worker
 	close(c.stopChan)
 
+	// Stop expiry worker if it's running
+	c.StopExpiryWorker()
+
 	// Final save to disk
 	return c.SaveToDisk()
+}
+
+// StopExpiryWorker stops the expiry notification worker goroutine.
+// This is useful when switching data sources to ensure only one worker is active.
+// Safe to call multiple times.
+func (c *Cache) StopExpiryWorker() {
+	// Only stop if the channel is not already closed
+	select {
+	case <-c.expiryStopChan:
+		// Already closed
+	default:
+		close(c.expiryStopChan)
+		log.Printf("Stopped expiry worker for data source: %s", c.dataSourceName)
+	}
 }
 
 // GetCachePath returns the directory where cache files are stored

@@ -395,6 +395,15 @@ func (a *App) ApplyStructuredConfigUI(configData *config.ConfigDataUI) error {
 		return errors.Wrap(err, "failed to save config")
 	}
 
+	// Shutdown the old handler to stop its expiry notification worker
+	if a.handler != nil {
+		shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		if err := a.handler.Shutdown(shutdownCtx); err != nil {
+			log.Printf("Warning: error shutting down old handler: %v", err)
+		}
+	}
+
 	// Reload handler
 	h, err := data.NewDataSourceHandlerFromConfigFile(a.configPath)
 	if err != nil {
@@ -572,7 +581,20 @@ func (a *App) GetCacheEntries() map[string][]*cache.CacheEntry {
 	return a.handler.GetCacheEntries()
 }
 
-// AddAPIToken stores the token secret in OS keyring and updates the config metadata (without storing the raw token in YAML).
+// GetCacheEntryMetadata retrieves metadata for a specific cache entry
+func (a *App) GetCacheEntryMetadata(key string) *cache.CacheEntry {
+	if a.handler == nil {
+		return nil
+	}
+	entry, found := a.handler.GetCacheEntryMetadata(key)
+	if !found {
+		return nil
+	}
+	return entry
+}
+
+// AddAPIToken stores the token secret in OS keyring and updates the config metadata
+// (without storing the raw token in YAML).
 func (a *App) AddAPIToken(entry config.APITokenEntry, rawToken string) error {
 	// store in keyring
 	if err := utils.SetAPITokenSecret(entry.Name, rawToken); err != nil {

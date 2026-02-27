@@ -1,9 +1,15 @@
 <script>
   import { onMount, onDestroy } from 'svelte';
-  import { GetEventInfo, IsTestMode, GetCacheStats } from '../../wailsjs/go/main/App';
+  import {
+    GetEventInfo,
+    IsTestMode,
+    GetCacheStats,
+    GetCacheEntryMetadata,
+  } from '../../wailsjs/go/main/App';
   import { EventsOn, EventsOff } from '../../wailsjs/runtime/runtime';
   import { convertDateTimeToLocal } from '../utils/dateUtils.js';
   import { createCachePage } from '../utils/cacheUtils.js';
+  import { formatRelativeTime, formatFullDateTime } from '../utils/timeUtils.js';
   import Icon from '@iconify/svelte';
   import LoadErrorHint from './LoadErrorHint.svelte';
   import AttachmentGrid from '../components/AttachmentGrid.svelte';
@@ -14,16 +20,29 @@
   let errorString = $state(null);
   let isTestMode = $state(false);
   let cacheExpired = $state(false);
+  let lastRefreshed = $state(null);
 
   let eventInfo = $state(null);
   // Toggle to show dates converted to the user's local timezone
   let showLocal = $state(false);
+
+  async function updateCacheTimestamp() {
+    try {
+      const metadata = await GetCacheEntryMetadata('event_info');
+      if (metadata && metadata.timestamp) {
+        lastRefreshed = metadata.timestamp;
+      }
+    } catch (e) {
+      console.warn('Failed to get cache metadata', e);
+    }
+  }
 
   async function loadData() {
     loading = true;
     error = null;
     try {
       eventInfo = await GetEventInfo();
+      await updateCacheTimestamp();
     } catch (e) {
       console.error('GetEventInfo failed', e);
       error = e;
@@ -79,6 +98,7 @@
       // Handle refresh/delete/clear actions
       if (ev.action === 'refreshed' && ev.key === 'event_info') {
         cacheExpired = false;
+        await updateCacheTimestamp();
       }
 
       handleCacheEvent(ev);
@@ -157,7 +177,11 @@
               onclick={() => handleRefresh()}
               disabled={refreshing}
               class="p-2 rounded-lg bg-white/20 hover:bg-white/30 transition-colors disabled:opacity-50"
-              title={cacheExpired ? 'Cache expired - Click to refresh' : 'Refresh from API'}
+              title={cacheExpired
+                ? 'Cache expired - Click to refresh'
+                : lastRefreshed
+                  ? `Last refreshed: ${formatRelativeTime(lastRefreshed)}\n${formatFullDateTime(lastRefreshed)}`
+                  : 'Refresh from API'}
             >
               <Icon
                 icon="mdi:refresh"
