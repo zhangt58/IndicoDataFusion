@@ -8,6 +8,7 @@
   import ConfigurationTab from './ConfigurationTab.svelte';
   import CacheTab from './CacheTab.svelte';
   import AffiliationMapTab from './AffiliationMapTab.svelte';
+  import WordCloudExclusionTab from './WordCloudExclusionTab.svelte';
 
   let { open = $bindable(false), activeTab = $bindable('about') } = $props();
 
@@ -122,6 +123,17 @@
       <Icon icon="mdi:office-building" class="w-4 h-4" />
       Affiliation Map
     </button>
+    <button
+      type="button"
+      class="flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors {activeTab ===
+      'wordcloud'
+        ? 'text-blue-600 dark:text-blue-500'
+        : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'}"
+      onclick={() => setTab('wordcloud')}
+    >
+      <Icon icon="mdi:cloud-outline" class="w-4 h-4" />
+      Word Cloud
+    </button>
   </div>
 
   <!-- Tab Content -->
@@ -145,6 +157,8 @@
       <CacheTab />
     {:else if activeTab === 'affiliation'}
       <AffiliationMapTab active={true} />
+    {:else if activeTab === 'wordcloud'}
+      <WordCloudExclusionTab active={true} />
     {/if}
   </div>
 </Modal>
