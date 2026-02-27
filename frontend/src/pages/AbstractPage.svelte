@@ -1,10 +1,16 @@
 <script>
   import { onMount, onDestroy } from 'svelte';
   import Icon from '@iconify/svelte';
-  import { GetAbstracts, IsTestMode, GetCacheStats } from '../../wailsjs/go/main/App';
+  import {
+    GetAbstracts,
+    IsTestMode,
+    GetCacheStats,
+    GetCacheEntryMetadata,
+  } from '../../wailsjs/go/main/App';
   import { GetAssignedReviewCount } from '../../wailsjs/go/main/App';
   import { EventsOn, EventsOff } from '../../wailsjs/runtime/runtime';
   import { createCachePage } from '../utils/cacheUtils.js';
+  import { formatRelativeTime, formatFullDateTime } from '../utils/timeUtils.js';
   import AbstractCardView from './AbstractCardView.svelte';
   import AbstractTableView from './AbstractTableView.svelte';
   import AbstractChartView from './AbstractChartView.svelte';
@@ -18,16 +24,29 @@
   let viewMode = $state('card');
   let isTestMode = $state(false);
   let cacheExpired = $state(false);
+  let lastRefreshed = $state(null);
   let showReviewPanel = $state(false);
   let selectedReviewTrackID = $state(null);
   let reviewButton = $state(null);
   let hasAssignedReviews = $state(false);
+
+  async function updateCacheTimestamp() {
+    try {
+      const metadata = await GetCacheEntryMetadata('abstracts');
+      if (metadata && metadata.timestamp) {
+        lastRefreshed = metadata.timestamp;
+      }
+    } catch (e) {
+      console.warn('Failed to get cache metadata', e);
+    }
+  }
 
   async function loadData() {
     loading = true;
     error = null;
     try {
       abstractData = (await GetAbstracts()) || [];
+      await updateCacheTimestamp();
     } catch (e) {
       console.error('GetAbstracts failed', e);
       abstractData = [];
@@ -101,6 +120,7 @@
       // Handle refresh/delete/clear actions
       if (ev.action === 'refreshed' && ev.key === 'abstracts') {
         cacheExpired = false;
+        await updateCacheTimestamp();
       }
 
       // If abstracts refreshed, re-check assigned review count as assignments may have changed
@@ -143,7 +163,11 @@
             onclick={() => handleRefresh()}
             disabled={refreshing}
             class="p-1.5 rounded transition-colors hover:bg-sky-100 disabled:opacity-50"
-            title={cacheExpired ? 'Cache expired - Click to refresh' : 'Refresh from API'}
+            title={cacheExpired
+              ? 'Cache expired - Click to refresh'
+              : lastRefreshed
+                ? `Last refreshed: ${formatRelativeTime(lastRefreshed)}\n${formatFullDateTime(lastRefreshed)}`
+                : 'Refresh from API'}
           >
             <Icon
               icon="mdi:refresh"
