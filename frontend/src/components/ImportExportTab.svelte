@@ -162,8 +162,7 @@
       configuration.
     </p>
     <p class="text-sm text-gray-600 dark:text-gray-400 mb-2">
-    Includes data sources, API tokens, cache settings, affiliation map, and word
-    cloud exclusions.
+      Includes data sources, API tokens, cache settings, affiliation map, and word cloud exclusions.
     </p>
 
     <div class="flex items-center gap-3">
