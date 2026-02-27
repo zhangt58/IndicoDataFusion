@@ -21,12 +21,12 @@ var (
 // CacheEntry represents a cached item with metadata
 type CacheEntry struct {
 	Data           interface{} `json:"data"`
-	Timestamp      time.Time   `json:"timestamp"`
+	Timestamp      time.Time   `json:"timestamp" ts_type:"string"`
 	Key            string      `json:"key"`
-	ExpiresAt      time.Time   `json:"expires_at"`
+	ExpiresAt      time.Time   `json:"expires_at" ts_type:"string"`
 	Size           int64       `json:"size"` // Approximate size in bytes
 	DataSourceName string      `json:"data_source_name"`
-	LastNotified   time.Time   `json:"last_notified,omitempty"`
+	LastNotified   time.Time   `json:"last_notified,omitempty" ts_type:"string"`
 }
 
 // Cache provides thread-safe in-memory and disk-backed caching
