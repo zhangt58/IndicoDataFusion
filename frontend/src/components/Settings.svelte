@@ -5,7 +5,8 @@
   import { GetAppInfo, OpenSafeURL } from '../../wailsjs/go/main/App';
   import AboutTab from './AboutTab.svelte';
   import WindowTab from './WindowTab.svelte';
-  import ConfigurationTab from './ConfigurationTab.svelte';
+  import DataSourceTab from './DataSourceTab.svelte';
+  import ImportExportTab from './ImportExportTab.svelte';
   import CacheTab from './CacheTab.svelte';
   import AffiliationMapTab from './AffiliationMapTab.svelte';
   import WordCloudExclusionTab from './WordCloudExclusionTab.svelte';
@@ -59,7 +60,7 @@
   });
 </script>
 
-<Modal bind:open size="lg" dismissable={true} class="max-w-2xl mx-auto">
+<Modal bind:open size="lg" dismissable={true} class="max-w-fit">
   <div
     class="flex justify-between items-center mb-4 border-b border-gray-200 dark:border-gray-700 pb-4"
   >
@@ -98,8 +99,19 @@
         : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'}"
       onclick={() => setTab('config')}
     >
-      <Icon icon="mdi:cog" class="w-4 h-4" />
-      Configuration
+      <Icon icon="mdi:database-cog" class="w-4 h-4" />
+      Data Sources
+    </button>
+    <button
+      type="button"
+      class="flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors {activeTab ===
+      'importexport'
+        ? 'text-blue-600 dark:text-blue-500'
+        : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'}"
+      onclick={() => setTab('importexport')}
+    >
+      <Icon icon="mdi:swap-horizontal" class="w-4 h-4" />
+      Import/Export
     </button>
     <button
       type="button"
@@ -152,7 +164,9 @@
     {:else if activeTab === 'window'}
       <WindowTab active={true} />
     {:else if activeTab === 'config'}
-      <ConfigurationTab />
+      <DataSourceTab />
+    {:else if activeTab === 'importexport'}
+      <ImportExportTab />
     {:else if activeTab === 'cache'}
       <CacheTab />
     {:else if activeTab === 'affiliation'}
