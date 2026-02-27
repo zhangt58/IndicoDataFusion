@@ -7,6 +7,7 @@
   import WindowTab from './WindowTab.svelte';
   import ConfigurationTab from './ConfigurationTab.svelte';
   import CacheTab from './CacheTab.svelte';
+  import AffiliationMapTab from './AffiliationMapTab.svelte';
 
   let { open = $bindable(false), activeTab = $bindable('about') } = $props();
 
@@ -110,6 +111,17 @@
       <Icon icon="mdi:database" class="w-4 h-4" />
       Cache
     </button>
+    <button
+      type="button"
+      class="flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors {activeTab ===
+      'affiliation'
+        ? 'text-blue-600 dark:text-blue-500'
+        : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'}"
+      onclick={() => setTab('affiliation')}
+    >
+      <Icon icon="mdi:office-building" class="w-4 h-4" />
+      Affiliation Map
+    </button>
   </div>
 
   <!-- Tab Content -->
@@ -131,6 +143,8 @@
       <ConfigurationTab />
     {:else if activeTab === 'cache'}
       <CacheTab />
+    {:else if activeTab === 'affiliation'}
+      <AffiliationMapTab active={true} />
     {/if}
   </div>
 </Modal>
