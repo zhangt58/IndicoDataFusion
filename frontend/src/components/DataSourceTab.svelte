@@ -1,16 +1,10 @@
 <script>
   import { onMount, tick } from 'svelte';
-  import {
-    GetStructuredConfigUI,
-    ApplyStructuredConfigUI,
-    ExportConfig,
-    ImportConfig,
-  } from '../../wailsjs/go/main/App';
+  import { GetStructuredConfigUI, ApplyStructuredConfigUI } from '../../wailsjs/go/main/App';
   import DataSources from './DataSources.svelte';
   import IndicoConfig from './IndicoConfig.svelte';
   import ApiTokens from './ApiTokens.svelte';
   import ConfirmDialog from './ConfirmDialog.svelte';
-  import PasswordDialog from './PasswordDialog.svelte';
   import {
     collectAllTags,
     collectAllBaseUrls,
@@ -68,7 +62,6 @@
   // track active selection by index so we can rename sources safely
   let currentActiveIndex = $state(0);
   let selectedActiveIndex = $state(0);
-  let showConfigFile = $state(false);
   // top-level advanced panel that groups API tokens
   let showAdvanced = $state(false);
   // name validation errors keyed by data-source index
@@ -411,97 +404,6 @@
       // apply() will have already shown an error toast
     }
   }
-
-  // Export/Import state
-  let showExportPasswordDialog = $state(false);
-  let showImportPasswordDialog = $state(false);
-  let importFileData = $state('');
-  let fileInputRef = $state(null);
-  let exportingConfig = $state(false);
-  let importingConfig = $state(false);
-
-  // Export configuration
-  async function handleExport(password) {
-    exportingConfig = true;
-    try {
-      const encryptedData = await ExportConfig(password);
-
-      // Download the file
-      const blob = new Blob([encryptedData], { type: 'application/json' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `idf-config-export-${new Date().toISOString().split('T')[0]}.json`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-
-      showToastMsg('Configuration exported successfully', 'success');
-      showExportPasswordDialog = false;
-    } catch (e) {
-      throw new Error(`Export failed: ${e}`);
-    } finally {
-      exportingConfig = false;
-    }
-  }
-
-  // Import configuration
-  async function handleImport(password) {
-    if (!importFileData) {
-      throw new Error('No file selected');
-    }
-
-    importingConfig = true;
-    try {
-      await ImportConfig(importFileData, password);
-
-      // Reload the configuration from backend
-      await loadConfig();
-
-      showToastMsg('Configuration imported successfully', 'success');
-      showImportPasswordDialog = false;
-      importFileData = '';
-    } catch (e) {
-      throw new Error(`Import failed: ${e}`);
-    } finally {
-      importingConfig = false;
-    }
-  }
-
-  // Handle file selection for import
-  function handleFileSelect(event) {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const result = e.target?.result;
-      if (typeof result === 'string') {
-        importFileData = result;
-        showImportPasswordDialog = true;
-      }
-    };
-    reader.onerror = () => {
-      showToastMsg('Failed to read file', 'error');
-    };
-    reader.readAsText(file);
-
-    // Reset file input so the same file can be selected again
-    if (event.target) {
-      event.target.value = '';
-    }
-  }
-
-  function openExportDialog() {
-    showExportPasswordDialog = true;
-  }
-
-  function openImportDialog() {
-    if (fileInputRef) {
-      fileInputRef.click();
-    }
-  }
 </script>
 
 <div class="p-2 space-y-2 max-w-5xl mx-auto">
@@ -613,39 +515,7 @@
       {/if}
     </div>
     <!-- CLOSE: Advanced container -->
-    <div class="flex items-center justify-between gap-2">
-      <!-- Export/Import buttons on the left -->
-      <div class="flex items-center gap-2">
-        <button
-          type="button"
-          class="px-2 py-1.5 rounded-lg bg-gray-600 text-white text-sm font-medium hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed dark:bg-gray-500 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-offset-2 transition-colors"
-          onclick={openExportDialog}
-          disabled={applying || exportingConfig}
-          title="Export configuration with encrypted API tokens"
-        >
-          <Icon icon="mdi:export" class="w-4 h-4 inline-block mr-1" />
-          Export
-        </button>
-        <button
-          type="button"
-          class="px-2 py-1.5 rounded-lg bg-gray-600 text-white text-sm font-medium hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed dark:bg-gray-500 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-offset-2 transition-colors"
-          onclick={openImportDialog}
-          disabled={applying || importingConfig}
-          title="Import configuration from encrypted file"
-        >
-          <Icon icon="mdi:import" class="w-4 h-4 inline-block mr-1" />
-          Import
-        </button>
-        <!-- Hidden file input for import -->
-        <input
-          type="file"
-          bind:this={fileInputRef}
-          onchange={handleFileSelect}
-          accept=".json"
-          class="hidden"
-        />
-      </div>
-
+    <div class="flex items-center justify-end gap-2">
       <!-- Right side: Toast and Apply button -->
       <div class="flex items-center gap-2">
         <!-- Toast (inline, left of Apply) -->
@@ -694,46 +564,6 @@
         </div>
       </div>
     </div>
-
-    <!-- Configuration File Path Info (Collapsible) -->
-    <div
-      class="bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden"
-    >
-      <div
-        role="button"
-        tabindex="0"
-        onclick={() => (showConfigFile = !showConfigFile)}
-        onkeydown={(e) => {
-          if (e.key === 'Enter' || e.key === ' ') {
-            e.preventDefault();
-            showConfigFile = !showConfigFile;
-          }
-        }}
-        class="w-full flex items-center justify-between p-1 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-      >
-        <h4 class="text-sm font-medium text-gray-700 dark:text-gray-300">Configuration File</h4>
-        <svg
-          class="w-5 h-5 text-gray-500 dark:text-gray-400 transform transition-transform"
-          class:rotate-180={showConfigFile}
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-        >
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"
-          ></path>
-        </svg>
-      </div>
-      {#if showConfigFile}
-        <div class="px-2 pb-1 border-t border-gray-200 dark:border-gray-700 space-y-0.5">
-          <div class="flex flex-wrap items-center gap-2 text-sm pt-1">
-            <span class="text-gray-600 dark:text-gray-400">Path:</span>
-            <span class="text-gray-800 dark:text-gray-200 font-mono text-xs break-all"
-              >{configData.pathInfo?.path || configData.path || 'Not set'}</span
-            >
-          </div>
-        </div>
-      {/if}
-    </div>
   {/if}
 </div>
 
@@ -747,33 +577,4 @@
   {apiTokens}
   onCreate={handleCreateIndico}
   onCancel={cancelCreateIndico}
-/>
-
-<!-- Export Password Dialog -->
-<PasswordDialog
-  bind:open={showExportPasswordDialog}
-  title="Export Configuration"
-  message="Enter a password to encrypt your configuration export. This password will be required to import the file."
-  confirmLabel="Export"
-  working={exportingConfig}
-  onConfirm={handleExport}
-  onCancel={() => {
-    showExportPasswordDialog = false;
-    exportingConfig = false;
-  }}
-/>
-
-<!-- Import Password Dialog -->
-<PasswordDialog
-  bind:open={showImportPasswordDialog}
-  title="Import Configuration"
-  message="Enter the password used to encrypt this configuration file."
-  confirmLabel="Import"
-  working={importingConfig}
-  onConfirm={handleImport}
-  onCancel={() => {
-    showImportPasswordDialog = false;
-    importingConfig = false;
-    importFileData = '';
-  }}
 />

@@ -28,7 +28,7 @@
     try {
       const config = await GetStructuredConfigUI();
       if (!config.chartSettings) {
-        config.chartSettings = { excludedWords: [], affiliationMap: {} };
+        config.chartSettings = { excludedWords: [], affiliationMap: [] };
       }
       config.chartSettings.excludedWords = customExcludedWords;
       await ApplyStructuredConfigUI(config);

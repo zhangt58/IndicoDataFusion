@@ -46,6 +46,7 @@ func ExportConfig(cfg *Config, password string, tokenRetriever TokenRetriever) (
 		Cache:            cfg.Cache,
 		DataSources:      cfg.DataSources,
 		APITokens:        make([]APITokenEntry, len(cfg.APITokens)),
+		ChartSettings:    cfg.ChartSettings,
 	}
 
 	// Retrieve actual token values from secure storage
