@@ -31,6 +31,9 @@ type DataSourceHandler struct {
 	initProblems []string
 	// userID is the ID of the current user, populated from the Indico client after fetching review tracks
 	userID int
+	// abstractsFile is the optional override path set via --abstracts-file. When non-empty,
+	// GetAbstracts reads directly from this file instead of the configured data source or API.
+	abstractsFile string
 
 	// Per-handler maps (moved from package scope)
 	questions    map[int]*indico.QuestionData
@@ -180,6 +183,131 @@ func (h *DataSourceHandler) GetInitProblems() []string {
 		return nil
 	}
 	return h.initProblems
+}
+
+// SetAbstractsFile sets a file path that overrides abstract data retrieval.
+// When non-empty, all GetAbstracts calls read from this file instead of the
+// configured data source or the Indico API.  The file must be a JSON file in
+// the format returned by IndicoClient.FetchAbstractsData (i.e. an object with
+// top-level "abstracts" and optional "questions" arrays).
+func (h *DataSourceHandler) SetAbstractsFile(path string) {
+	h.abstractsFile = path
+}
+
+// getAbstractsFromOverrideFile reads abstract data from the file specified by
+// h.abstractsFile.  The file is expected to contain the raw JSON payload
+// returned by FetchAbstractsData – an object with "abstracts" (array) and
+// optional "questions" (array) fields.
+// When an Indico client is available it also fetches the caller's review
+// assignments (via GetReviewTracks) and merges IsMyReview / MyReview into
+// each abstract, mirrors the post-processing done by getAbstractsFromAPI.
+func (h *DataSourceHandler) getAbstractsFromOverrideFile(ctx context.Context) ([]indico.AbstractData, error) {
+	filePath := h.abstractsFile
+	log.Printf("Reading abstract data from override file: %v\n", filePath)
+
+	rawBytes, err := os.ReadFile(filePath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read abstracts override file %s: %w", filePath, err)
+	}
+
+	var response indico.AbstractsResponse
+	if err := json.Unmarshal(rawBytes, &response); err != nil {
+		return nil, fmt.Errorf("failed to parse abstracts override file %s: %w", filePath, err)
+	}
+
+	// Build question lookup map
+	if len(response.Questions) > 0 {
+		h.mu.Lock()
+		for i := range response.Questions {
+			q := &response.Questions[i]
+			h.questions[q.ID] = q
+		}
+		h.mu.Unlock()
+	}
+
+	// Build contribution types map from abstracts
+	if len(response.Abstracts) > 0 {
+		h.mu.Lock()
+		for i := range response.Abstracts {
+			if ct := response.Abstracts[i].AcceptedContribType; ct != nil {
+				h.contribTypes[ct.Name] = ct.ID
+			}
+			if ct := response.Abstracts[i].SubmittedContribType; ct != nil {
+				h.contribTypes[ct.Name] = ct.ID
+			}
+			for j := range response.Abstracts[i].Reviews {
+				if ct := response.Abstracts[i].Reviews[j].ProposedContribType; ct != nil {
+					h.contribTypes[ct.Name] = ct.ID
+				}
+			}
+		}
+		h.mu.Unlock()
+	}
+
+	// Expand question details in reviews and populate shared maps
+	for i := range response.Abstracts {
+		h.mu.RLock()
+		response.Abstracts[i].Questions = h.questions
+		response.Abstracts[i].ContribTypesMap = &h.contribTypes
+		h.mu.RUnlock()
+
+		for j := range response.Abstracts[i].Reviews {
+			for k := range response.Abstracts[i].Reviews[j].Ratings {
+				rating := &response.Abstracts[i].Reviews[j].Ratings[k]
+				h.mu.RLock()
+				if q, ok := h.questions[rating.Question]; ok {
+					rating.QuestionDetails = q
+				}
+				h.mu.RUnlock()
+			}
+		}
+		response.Abstracts[i].FirstPriority = response.Abstracts[i].GetAggregatedRatingByTitle("First priority")
+		response.Abstracts[i].SecondPriority = response.Abstracts[i].GetAggregatedRatingByTitle("Second priority")
+	}
+
+	// Fetch the caller's review assignments and merge IsMyReview / MyReview into
+	// each abstract.  getReviewIDsSet requires a live client; it returns nil when
+	// none is available, in which case we leave IsMyReview at its zero value.
+	myReviewIDsSet := getReviewIDsSet(h, ctx)
+	if myReviewIDsSet != nil {
+		for i := range response.Abstracts {
+			response.Abstracts[i].IsMyReview = myReviewIDsSet[response.Abstracts[i].FriendlyID]
+			populateMyReview(h, &response.Abstracts[i])
+		}
+	}
+
+	// The following enrichments require a live Indico client; skip when running
+	// in pure test/offline mode (no client configured).
+	if h.client != nil {
+		// Set IndicoURL for each abstract
+		for i := range response.Abstracts {
+			response.Abstracts[i].IndicoURL = fmt.Sprintf("%s/event/%d/abstracts/%d", h.client.BaseURL, h.client.EventID, response.Abstracts[i].ID)
+		}
+
+		// Ensure avatar URLs are absolute by prefixing the client BaseURL
+		for i := range response.Abstracts {
+			for j := range response.Abstracts[i].Reviews {
+				av := response.Abstracts[i].Reviews[j].User.AvatarURL
+				if av != "" && !strings.HasPrefix(av, "http") {
+					response.Abstracts[i].Reviews[j].User.AvatarURL = h.client.BaseURL + av
+				}
+			}
+			if response.Abstracts[i].Submitter != nil {
+				sav := response.Abstracts[i].Submitter.AvatarURL
+				if sav != "" && !strings.HasPrefix(sav, "http") {
+					response.Abstracts[i].Submitter.AvatarURL = h.client.BaseURL + sav
+				}
+			}
+			if response.Abstracts[i].Judge != nil {
+				jav := response.Abstracts[i].Judge.AvatarURL
+				if jav != "" && !strings.HasPrefix(jav, "http") {
+					response.Abstracts[i].Judge.AvatarURL = h.client.BaseURL + jav
+				}
+			}
+		}
+	}
+
+	return response.Abstracts, nil
 }
 
 // parseSize parses size strings like "100MB", "1GB", "512KB"
@@ -341,6 +469,11 @@ func (h *DataSourceHandler) getInfoFromAPI(ctx context.Context) (*indico.Event, 
 
 // GetAbstracts retrieves abstract data from the configured data source.
 func (h *DataSourceHandler) GetAbstracts(ctx context.Context) ([]indico.AbstractData, error) {
+	// --abstracts-file override: bypass all data sources and read from the local file.
+	if h.abstractsFile != "" {
+		return h.getAbstractsFromOverrideFile(ctx)
+	}
+
 	if h.isTestMode {
 		return h.getAbstractsFromFile()
 	}
