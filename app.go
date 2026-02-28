@@ -33,6 +33,10 @@ type App struct {
 	ctx        context.Context
 	handler    *data.DataSourceHandler
 	configPath string
+	// abstractsFile is the optional path from the --abstracts-file CLI flag.
+	// When non-empty, all GetAbstracts calls read from this file instead of the
+	// configured data source.
+	abstractsFile string
 	// DataSourceName caches the active data source name from the handler
 	DataSourceName string
 }
@@ -63,6 +67,13 @@ func (a *App) startup(ctx context.Context, configPath string) {
 	}
 	a.handler = handler
 	a.configPath = configPath
+
+	// Apply the abstracts file override if one was provided via --abstracts-file.
+	if a.abstractsFile != "" {
+		log.Printf("Abstracts override file: %s\n", a.abstractsFile)
+		a.handler.SetAbstractsFile(a.abstractsFile)
+	}
+
 	// Cache the active data source name on startup
 	if a.handler != nil {
 		a.DataSourceName = a.handler.GetDataSourceName()
