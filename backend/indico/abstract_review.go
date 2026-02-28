@@ -84,6 +84,12 @@ func (c *IndicoClient) GetReviewTracks(ctx context.Context) (*ReviewTracks, erro
 		return ""
 	}
 
+	// required if the abstract data is provided through --abstracts-file, otherwise
+	// it is set when GetAbstracts is called.
+	if _, csrf := parseAbstractIDsAndCSRFFromRoot(doc); csrf != "" {
+		c.csrfToken = csrf
+	}
+
 	// Extract user ID from body tag's data-user-id attribute
 	var findBody func(*xhtml.Node) *xhtml.Node
 	findBody = func(n *xhtml.Node) *xhtml.Node {
