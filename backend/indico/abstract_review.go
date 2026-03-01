@@ -330,6 +330,358 @@ func (c *IndicoClient) GetReviewAbstractIDs(ctx context.Context, reviewTrackID i
 	return ids, nil
 }
 
+// ParseReviewFromHTML extracts the current user's review from an already-parsed
+// abstract display page (HTML document node). The page is the one served at
+// /event/{event-id}/abstracts/{abstract-id} and contains a "proposal-review-{id}"
+// div for each review left by the current user.
+//
+// questionsByTitle maps a lower-cased question title (e.g. "first priority") to its
+// numeric question ID so that ratings can be populated with the correct IDs.
+// Pass nil or an empty map if question ID resolution is not needed.
+//
+// The function returns nil, nil when no review block is found on the page.
+func ParseReviewFromHTML(doc *xhtml.Node, questionsByTitle map[string]int) (*Review, error) {
+	// ── helpers ────────────────────────────────────────────────────────────────
+
+	getAttr := func(attrs []xhtml.Attribute, name string) string {
+		for _, a := range attrs {
+			if strings.EqualFold(a.Key, name) {
+				return a.Val
+			}
+		}
+		return ""
+	}
+
+	hasClassToken := func(attrs []xhtml.Attribute, token string) bool {
+		cls := getAttr(attrs, "class")
+		for _, t := range strings.Fields(cls) {
+			if t == token {
+				return true
+			}
+		}
+		return false
+	}
+
+	// textContent returns all text-node descendants concatenated and normalised.
+	var textContent func(*xhtml.Node) string
+	textContent = func(n *xhtml.Node) string {
+		var b strings.Builder
+		var walk func(*xhtml.Node)
+		walk = func(cur *xhtml.Node) {
+			if cur.Type == xhtml.TextNode {
+				b.WriteString(cur.Data)
+				b.WriteByte(' ')
+			}
+			for c := cur.FirstChild; c != nil; c = c.NextSibling {
+				walk(c)
+			}
+		}
+		walk(n)
+		return strings.Join(strings.Fields(b.String()), " ")
+	}
+
+	// findFirst performs a depth-first search and returns the first node that
+	// satisfies the predicate.
+	var findFirst func(*xhtml.Node, func(*xhtml.Node) bool) *xhtml.Node
+	findFirst = func(n *xhtml.Node, pred func(*xhtml.Node) bool) *xhtml.Node {
+		if pred(n) {
+			return n
+		}
+		for c := n.FirstChild; c != nil; c = c.NextSibling {
+			if r := findFirst(c, pred); r != nil {
+				return r
+			}
+		}
+		return nil
+	}
+
+	// findAll returns all nodes matching the predicate (depth-first).
+	var findAll func(*xhtml.Node, func(*xhtml.Node) bool) []*xhtml.Node
+	findAll = func(n *xhtml.Node, pred func(*xhtml.Node) bool) []*xhtml.Node {
+		var res []*xhtml.Node
+		var walk func(*xhtml.Node)
+		walk = func(cur *xhtml.Node) {
+			if pred(cur) {
+				res = append(res, cur)
+			}
+			for c := cur.FirstChild; c != nil; c = c.NextSibling {
+				walk(c)
+			}
+		}
+		walk(n)
+		return res
+	}
+
+	isElem := func(n *xhtml.Node, tag string) bool {
+		return n.Type == xhtml.ElementNode && strings.EqualFold(n.Data, tag)
+	}
+
+	// ── locate the proposal-review-{id} div ────────────────────────────────────
+	// The div has id="proposal-review-{reviewID}".
+	reviewDiv := findFirst(doc, func(n *xhtml.Node) bool {
+		if !isElem(n, "div") {
+			return false
+		}
+		id := getAttr(n.Attr, "id")
+		return strings.HasPrefix(id, "proposal-review-")
+	})
+	if reviewDiv == nil {
+		// No review found on this page.
+		return nil, nil
+	}
+
+	// ── extract review ID ──────────────────────────────────────────────────────
+	reviewIDStr := strings.TrimPrefix(getAttr(reviewDiv.Attr, "id"), "proposal-review-")
+	reviewID, _ := strconv.Atoi(reviewIDStr)
+
+	// ── extract created_dt from <time datetime="..."> ──────────────────────────
+	var createdDT string
+	timeNode := findFirst(reviewDiv, func(n *xhtml.Node) bool {
+		return isElem(n, "time") && getAttr(n.Attr, "datetime") != ""
+	})
+	if timeNode != nil {
+		createdDT = getAttr(timeNode.Attr, "datetime")
+	}
+
+	// ── extract reviewer name from <strong> ────────────────────────────────────
+	var reviewerFullName string
+	strongNode := findFirst(reviewDiv, func(n *xhtml.Node) bool {
+		return isElem(n, "strong")
+	})
+	if strongNode != nil {
+		reviewerFullName = textContent(strongNode)
+	}
+
+	// ── extract reviewer user ID from avatar img src (/user/{id}/...) ─────────
+	var reviewerUserID int
+	var reviewerAvatarURL string
+	imgNode := findFirst(reviewDiv, func(n *xhtml.Node) bool {
+		return isElem(n, "img") && strings.Contains(getAttr(n.Attr, "class"), "profile-picture")
+	})
+	if imgNode != nil {
+		reviewerAvatarURL = getAttr(imgNode.Attr, "src")
+		// Path pattern: /user/{id}/picture-...
+		parts := strings.Split(strings.Trim(reviewerAvatarURL, "/"), "/")
+		if len(parts) >= 2 && parts[0] == "user" {
+			reviewerUserID, _ = strconv.Atoi(parts[1])
+		}
+	}
+
+	// ── extract review-group (track) link and title ────────────────────────────
+	var track Track
+	reviewGroupDiv := findFirst(reviewDiv, func(n *xhtml.Node) bool {
+		return isElem(n, "div") && hasClassToken(n.Attr, "review-group")
+	})
+	if reviewGroupDiv != nil {
+		aNode := findFirst(reviewGroupDiv, func(n *xhtml.Node) bool {
+			return isElem(n, "a")
+		})
+		if aNode != nil {
+			fullTitle := getAttr(aNode.Attr, "title") // long title e.g. "MC7 ...: MC7.1 - MC7.1 First Track..."
+			href := getAttr(aNode.Attr, "href")       // e.g. /event/37/abstracts/reviewing/88/
+			// Extract track ID from href (last numeric path segment)
+			if href != "" {
+				if pu, err := url.Parse(href); err == nil {
+					seg := strings.Trim(pu.Path, "/")
+					parts := strings.Split(seg, "/")
+					last := parts[len(parts)-1]
+					track.ID, _ = strconv.Atoi(last)
+				}
+			}
+			// Parse "GroupName: TrackCode - TrackTitle" or just display text
+			// title attr: "MC7 Accelerator Technology Main Systems: MC7.1 - MC7.1 First Track..."
+			// We store the full title in track.Title and try to extract code.
+			if fullTitle != "" {
+				// Try to split on " - " to get "GroupName: Code" and "Title"
+				parts := strings.SplitN(fullTitle, " - ", 2)
+				if len(parts) == 2 {
+					// parts[0] = "MC7 ...: MC7.1", parts[1] = "MC7.1 First Track..."
+					colonParts := strings.SplitN(parts[0], ": ", 2)
+					if len(colonParts) == 2 {
+						track.Code = strings.TrimSpace(colonParts[1])
+					}
+					track.Title = strings.TrimSpace(parts[1])
+				} else {
+					track.Title = fullTitle
+				}
+			} else {
+				track.Title = textContent(aNode)
+			}
+		}
+	}
+
+	// ── extract proposed action ────────────────────────────────────────────────
+	var proposedAction string
+	reviewBadgesDiv := findFirst(reviewDiv, func(n *xhtml.Node) bool {
+		return isElem(n, "div") && hasClassToken(n.Attr, "review-badges")
+	})
+	if reviewBadgesDiv != nil {
+		// Look for a <span> inside review-badges that contains the action word
+		// The HTML has: Proposed to <span class="bold underline semantic-text error">reject</span>
+		actionSpan := findFirst(reviewBadgesDiv, func(n *xhtml.Node) bool {
+			return isElem(n, "span") && hasClassToken(n.Attr, "bold")
+		})
+		if actionSpan != nil {
+			proposedAction = strings.ToLower(strings.TrimSpace(textContent(actionSpan)))
+		}
+	}
+
+	// ── extract ratings ────────────────────────────────────────────────────────
+	var ratings []Rating
+	reviewQuestionsUL := findFirst(reviewDiv, func(n *xhtml.Node) bool {
+		return isElem(n, "ul") && hasClassToken(n.Attr, "review-questions")
+	})
+	if reviewQuestionsUL != nil {
+		// Each <li class="flexrow"> contains question index, question text, and value
+		liNodes := findAll(reviewQuestionsUL, func(n *xhtml.Node) bool {
+			return isElem(n, "li") && hasClassToken(n.Attr, "flexrow")
+		})
+		for _, li := range liNodes {
+			// question text
+			qtextDiv := findFirst(li, func(n *xhtml.Node) bool {
+				return isElem(n, "div") && hasClassToken(n.Attr, "question-text")
+			})
+			var questionTitle string
+			if qtextDiv != nil {
+				questionTitle = textContent(qtextDiv)
+			}
+
+			// value: the last <div> child (after index and question-text divs) holds "Yes" or "No"
+			// We walk direct div children and pick the third one.
+			var valueDivs []*xhtml.Node
+			for c := li.FirstChild; c != nil; c = c.NextSibling {
+				if isElem(c, "div") {
+					valueDivs = append(valueDivs, c)
+				}
+			}
+			var valueStr string
+			if len(valueDivs) >= 3 {
+				valueStr = strings.TrimSpace(textContent(valueDivs[len(valueDivs)-1]))
+			}
+
+			// Resolve value to bool
+			var ratingValue interface{}
+			switch strings.ToLower(valueStr) {
+			case "yes":
+				ratingValue = true
+			case "no":
+				ratingValue = false
+			default:
+				// Try numeric
+				if n, err := strconv.Atoi(valueStr); err == nil {
+					ratingValue = n
+				} else {
+					ratingValue = valueStr
+				}
+			}
+
+			// Resolve question ID from title
+			questionID := 0
+			if questionsByTitle != nil {
+				if id, ok := questionsByTitle[strings.ToLower(questionTitle)]; ok {
+					questionID = id
+				}
+			}
+
+			var qDetails *QuestionData
+			if questionTitle != "" {
+				qDetails = &QuestionData{
+					ID:    questionID,
+					Title: questionTitle,
+				}
+			}
+
+			ratings = append(ratings, Rating{
+				Question:        questionID,
+				Value:           ratingValue,
+				QuestionDetails: qDetails,
+			})
+		}
+	}
+
+	// ── extract comment ────────────────────────────────────────────────────────
+	var comment string
+	markdownDiv := findFirst(reviewDiv, func(n *xhtml.Node) bool {
+		return isElem(n, "div") && hasClassToken(n.Attr, "markdown-text")
+	})
+	if markdownDiv != nil {
+		comment = strings.TrimSpace(textContent(markdownDiv))
+	}
+
+	// ── assemble the Review struct ─────────────────────────────────────────────
+	review := &Review{
+		ID:             reviewID,
+		CreatedDT:      createdDT,
+		ProposedAction: proposedAction,
+		Ratings:        ratings,
+		Comment:        comment,
+		Track:          track,
+		User: Reviewer{
+			ID:        reviewerUserID,
+			FullName:  reviewerFullName,
+			AvatarURL: reviewerAvatarURL,
+		},
+		ProposedTracks: []Track{},
+	}
+
+	return review, nil
+}
+
+// GetReviewFromAbstractPage fetches the abstract display page for the given
+// abstract database ID and parses the current user's review from it.
+// questionsByTitle maps lower-cased question titles to their numeric IDs so that
+// Rating.Question fields can be populated correctly.
+// Returns nil, nil when the page exists but contains no review by this user.
+func (c *IndicoClient) GetReviewFromAbstractPage(ctx context.Context, abstractID int, questionsByTitle map[string]int) (*Review, error) {
+	u, err := url.Parse(c.BaseURL)
+	if err != nil {
+		return nil, err
+	}
+	path := fmt.Sprintf("/event/%d/abstracts/%d", c.EventID, abstractID)
+	u.Path = joinPaths(u.Path, path)
+
+	ctxReq, cancel := context.WithTimeout(ctx, c.Timeout)
+	defer cancel()
+
+	req, err := http.NewRequestWithContext(ctxReq, http.MethodGet, u.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Set("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8")
+	if c.APIToken != "" {
+		req.Header.Set("Authorization", "Bearer "+c.APIToken)
+	}
+
+	resp, err := c.Client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = resp.Body.Close() }()
+
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		b, _ := io.ReadAll(io.LimitReader(resp.Body, 8*1024))
+		return nil, fmt.Errorf("api error: status %d: %s", resp.StatusCode, string(b))
+	}
+
+	b, err := io.ReadAll(io.LimitReader(resp.Body, 10*1024*1024))
+	if err != nil {
+		return nil, fmt.Errorf("read body: %w", err)
+	}
+
+	doc, err := xhtml.Parse(strings.NewReader(string(b)))
+	if err != nil {
+		return nil, fmt.Errorf("parse html: %w", err)
+	}
+
+	// Cache CSRF token if available
+	if _, csrf := parseAbstractIDsAndCSRFFromRoot(doc); csrf != "" {
+		c.csrfToken = csrf
+	}
+
+	return ParseReviewFromHTML(doc, questionsByTitle)
+}
+
 // AggRatings aggregates ratings from a single review by question ID.
 func (r *Review) AggRatings() map[int]float64 {
 	agg := make(map[int]float64)
