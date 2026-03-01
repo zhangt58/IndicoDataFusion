@@ -584,6 +584,16 @@ func (a *App) IsTestMode() bool {
 	return a.handler.IsTestMode()
 }
 
+// IsAbstractsFileMode returns true when abstract data is being served from
+// an --abstracts-file override.  The frontend uses this to hide the refresh
+// button, since there is no live API to refresh from in this mode.
+func (a *App) IsAbstractsFileMode() bool {
+	if a.handler == nil {
+		return false
+	}
+	return a.handler.IsAbstractsFileMode()
+}
+
 // GetCacheEntries returns all cache entries with metadata grouped by data source
 func (a *App) GetCacheEntries() map[string][]*cache.CacheEntry {
 	if a.handler == nil {

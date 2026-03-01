@@ -4,6 +4,7 @@
   import {
     GetAbstracts,
     IsTestMode,
+    IsAbstractsFileMode,
     GetCacheStats,
     GetCacheEntryMetadata,
   } from '../../wailsjs/go/main/App';
@@ -23,6 +24,7 @@
   let error = $state(null);
   let viewMode = $state('card');
   let isTestMode = $state(false);
+  let isAbstractsFileMode = $state(false);
   let cacheExpired = $state(false);
   let lastRefreshed = $state(null);
   let showReviewPanel = $state(false);
@@ -80,6 +82,11 @@
       isTestMode = await IsTestMode();
     } catch (e) {
       console.error('Failed to check test mode', e);
+    }
+    try {
+      isAbstractsFileMode = await IsAbstractsFileMode();
+    } catch (e) {
+      console.warn('Failed to check abstracts file mode', e);
     }
 
     // Load abstract data first to show page immediately
@@ -157,7 +164,7 @@
       Abstracts ({abstractData.length})
     </h2>
     <div class="flex gap-1 ml-2">
-      {#if !isTestMode}
+      {#if !isTestMode && !isAbstractsFileMode}
         <div class="relative">
           <button
             onclick={() => handleRefresh()}
