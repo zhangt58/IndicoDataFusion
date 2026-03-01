@@ -215,98 +215,8 @@ func (h *DataSourceHandler) getAbstractsFromOverrideFile(ctx context.Context) ([
 		return nil, fmt.Errorf("failed to parse abstracts override file %s: %w", filePath, err)
 	}
 
-	// Build question lookup map
-	if len(response.Questions) > 0 {
-		h.mu.Lock()
-		for i := range response.Questions {
-			q := &response.Questions[i]
-			h.questions[q.ID] = q
-		}
-		h.mu.Unlock()
-	}
-
-	// Build contribution types map from abstracts
-	if len(response.Abstracts) > 0 {
-		h.mu.Lock()
-		for i := range response.Abstracts {
-			if ct := response.Abstracts[i].AcceptedContribType; ct != nil {
-				h.contribTypes[ct.Name] = ct.ID
-			}
-			if ct := response.Abstracts[i].SubmittedContribType; ct != nil {
-				h.contribTypes[ct.Name] = ct.ID
-			}
-			for j := range response.Abstracts[i].Reviews {
-				if ct := response.Abstracts[i].Reviews[j].ProposedContribType; ct != nil {
-					h.contribTypes[ct.Name] = ct.ID
-				}
-			}
-		}
-		h.mu.Unlock()
-	}
-
-	// Expand question details in reviews and populate shared maps
-	for i := range response.Abstracts {
-		h.mu.RLock()
-		response.Abstracts[i].Questions = h.questions
-		response.Abstracts[i].ContribTypesMap = &h.contribTypes
-		h.mu.RUnlock()
-
-		for j := range response.Abstracts[i].Reviews {
-			for k := range response.Abstracts[i].Reviews[j].Ratings {
-				rating := &response.Abstracts[i].Reviews[j].Ratings[k]
-				h.mu.RLock()
-				if q, ok := h.questions[rating.Question]; ok {
-					rating.QuestionDetails = q
-				}
-				h.mu.RUnlock()
-			}
-		}
-		response.Abstracts[i].FirstPriority = response.Abstracts[i].GetAggregatedRatingByTitle("First priority")
-		response.Abstracts[i].SecondPriority = response.Abstracts[i].GetAggregatedRatingByTitle("Second priority")
-	}
-
-	// Fetch the caller's review assignments and merge IsMyReview / MyReview into
-	// each abstract.  getReviewIDsSet requires a live client; it returns nil when
-	// none is available, in which case we leave IsMyReview at its zero value.
-	myReviewIDsSet := getReviewIDsSet(h, ctx)
-	if myReviewIDsSet != nil {
-		for i := range response.Abstracts {
-			response.Abstracts[i].IsMyReview = myReviewIDsSet[response.Abstracts[i].FriendlyID]
-			populateMyReview(h, &response.Abstracts[i])
-		}
-	}
-
-	// The following enrichments require a live Indico client; skip when running
-	// in pure test/offline mode (no client configured).
-	if h.client != nil {
-		// Set IndicoURL for each abstract
-		for i := range response.Abstracts {
-			response.Abstracts[i].IndicoURL = fmt.Sprintf("%s/event/%d/abstracts/%d", h.client.BaseURL, h.client.EventID, response.Abstracts[i].ID)
-		}
-
-		// Ensure avatar URLs are absolute by prefixing the client BaseURL
-		for i := range response.Abstracts {
-			for j := range response.Abstracts[i].Reviews {
-				av := response.Abstracts[i].Reviews[j].User.AvatarURL
-				if av != "" && !strings.HasPrefix(av, "http") {
-					response.Abstracts[i].Reviews[j].User.AvatarURL = h.client.BaseURL + av
-				}
-			}
-			if response.Abstracts[i].Submitter != nil {
-				sav := response.Abstracts[i].Submitter.AvatarURL
-				if sav != "" && !strings.HasPrefix(sav, "http") {
-					response.Abstracts[i].Submitter.AvatarURL = h.client.BaseURL + sav
-				}
-			}
-			if response.Abstracts[i].Judge != nil {
-				jav := response.Abstracts[i].Judge.AvatarURL
-				if jav != "" && !strings.HasPrefix(jav, "http") {
-					response.Abstracts[i].Judge.AvatarURL = h.client.BaseURL + jav
-				}
-			}
-		}
-	}
-
+	h.parseAbstractsResponse(&response)
+	h.enrichAbstractsWithClient(ctx, response.Abstracts)
 	return response.Abstracts, nil
 }
 
@@ -538,66 +448,11 @@ func (h *DataSourceHandler) getAbstractsFromFile() ([]indico.AbstractData, error
 		return nil, fmt.Errorf("failed to parse %s: %w", filePath, err)
 	}
 
-	// Build question lookup map
-	if len(response.Questions) > 0 {
-		h.mu.Lock()
-		for i := range response.Questions {
-			q := &response.Questions[i]
-			h.questions[q.ID] = q
-		}
-		h.mu.Unlock()
-	}
-
-	// Build contribution types map from abstracts
-	if len(response.Abstracts) > 0 {
-		h.mu.Lock()
-		for i := range response.Abstracts {
-			// Collect from accepted, submitted contrib types
-			if ct := response.Abstracts[i].AcceptedContribType; ct != nil {
-				h.contribTypes[ct.Name] = ct.ID
-			}
-			if ct := response.Abstracts[i].SubmittedContribType; ct != nil {
-				h.contribTypes[ct.Name] = ct.ID
-			}
-			// Also from reviews
-			for j := range response.Abstracts[i].Reviews {
-				if ct := response.Abstracts[i].Reviews[j].ProposedContribType; ct != nil {
-					h.contribTypes[ct.Name] = ct.ID
-				}
-			}
-		}
-		h.mu.Unlock()
-	}
-
-	// Expand question details in reviews and populate shared maps
-	for i := range response.Abstracts {
-		// Set the shared question map for this abstract
-		h.mu.RLock()
-		response.Abstracts[i].Questions = h.questions
-		// Set the shared contrib types map
-		response.Abstracts[i].ContribTypesMap = &h.contribTypes
-		h.mu.RUnlock()
-
-		for j := range response.Abstracts[i].Reviews {
-			for k := range response.Abstracts[i].Reviews[j].Ratings {
-				rating := &response.Abstracts[i].Reviews[j].Ratings[k]
-				h.mu.RLock()
-				if q, ok := h.questions[rating.Question]; ok {
-					rating.QuestionDetails = q
-				}
-				h.mu.RUnlock()
-			}
-		}
-		// Compute aggregated ratings for frontend
-		response.Abstracts[i].FirstPriority = response.Abstracts[i].GetAggregatedRatingByTitle("First priority")
-		response.Abstracts[i].SecondPriority = response.Abstracts[i].GetAggregatedRatingByTitle("Second priority")
-	}
-
+	h.parseAbstractsResponse(&response)
 	return response.Abstracts, nil
 }
 
 // getAbstractsFromAPI fetches abstracts from the Indico API.
-// This is a placeholder for future implementation that would fetch from the live API.
 func (h *DataSourceHandler) getAbstractsFromAPI(ctx context.Context) ([]indico.AbstractData, error) {
 	if h.client == nil {
 		return nil, fmt.Errorf("indico client not initialized")
@@ -605,7 +460,6 @@ func (h *DataSourceHandler) getAbstractsFromAPI(ctx context.Context) ([]indico.A
 
 	log.Printf("Reading abstract data from Indico API\n")
 
-	// Fetch the abstracts list page to get all IDs and cache CSRF token internally
 	ids, err := h.client.GetAbstractIDsAndCSRFFromList(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get abstract IDs: %w", err)
@@ -615,36 +469,48 @@ func (h *DataSourceHandler) getAbstractsFromAPI(ctx context.Context) ([]indico.A
 		return []indico.AbstractData{}, nil
 	}
 
-	// Fetch the abstracts data
 	rawData, err := h.client.FetchAbstractsData(ctx, ids)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch abstracts data: %w", err)
 	}
 
-	// Parse the response
+	response, err := h.unmarshalAbstractsRaw(rawData)
+	if err != nil {
+		return nil, err
+	}
+
+	h.parseAbstractsResponse(response)
+	h.enrichAbstractsWithClient(ctx, response.Abstracts)
+	return response.Abstracts, nil
+}
+
+// unmarshalAbstractsRaw converts the raw map[string]any returned by FetchAbstractsData
+// into an AbstractsResponse via a JSON round-trip.
+func (h *DataSourceHandler) unmarshalAbstractsRaw(rawData map[string]any) (*indico.AbstractsResponse, error) {
 	abstractsIface, ok := rawData["abstracts"]
 	if !ok {
 		return nil, fmt.Errorf("no abstracts field in response")
 	}
-
-	// Also get questions if available
-	questionsIface := rawData["questions"]
-
-	// Convert to JSON and back to properly deserialize
 	jsonData, err := json.Marshal(map[string]any{
 		"abstracts": abstractsIface,
-		"questions": questionsIface,
+		"questions": rawData["questions"],
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to marshal abstracts: %w", err)
 	}
-
 	var response indico.AbstractsResponse
 	if err := json.Unmarshal(jsonData, &response); err != nil {
 		return nil, fmt.Errorf("failed to unmarshal abstracts: %w", err)
 	}
+	return &response, nil
+}
 
-	// Build question lookup map
+// parseAbstractsResponse populates the handler's question and contrib-type lookup maps
+// from the response, then expands question details into every review rating and
+// computes the aggregated priority ratings for each abstract.
+// It is safe to call from any fetch path (file, API, override).
+func (h *DataSourceHandler) parseAbstractsResponse(response *indico.AbstractsResponse) {
+	// Build question lookup map.
 	if len(response.Questions) > 0 {
 		h.mu.Lock()
 		for i := range response.Questions {
@@ -654,7 +520,7 @@ func (h *DataSourceHandler) getAbstractsFromAPI(ctx context.Context) ([]indico.A
 		h.mu.Unlock()
 	}
 
-	// Build contribution types map from abstracts
+	// Build contribution types map.
 	if len(response.Abstracts) > 0 {
 		h.mu.Lock()
 		for i := range response.Abstracts {
@@ -672,12 +538,11 @@ func (h *DataSourceHandler) getAbstractsFromAPI(ctx context.Context) ([]indico.A
 		}
 		h.mu.Unlock()
 	}
-	// Expand question details in reviews and populate shared maps
+
+	// Expand question details into ratings and attach shared maps.
 	for i := range response.Abstracts {
-		// Set the shared question map
 		h.mu.RLock()
 		response.Abstracts[i].Questions = h.questions
-		// Set the shared contrib types map
 		response.Abstracts[i].ContribTypesMap = &h.contribTypes
 		h.mu.RUnlock()
 
@@ -691,50 +556,48 @@ func (h *DataSourceHandler) getAbstractsFromAPI(ctx context.Context) ([]indico.A
 				h.mu.RUnlock()
 			}
 		}
-		// Compute aggregated ratings for frontend
 		response.Abstracts[i].FirstPriority = response.Abstracts[i].GetAggregatedRatingByTitle("First priority")
 		response.Abstracts[i].SecondPriority = response.Abstracts[i].GetAggregatedRatingByTitle("Second priority")
 	}
+}
 
+// enrichAbstractsWithClient merges review-assignment data (IsMyReview / MyReview) and,
+// when a live client is available, also sets IndicoURL and absolutises avatar URLs.
+// It is a no-op when h.client is nil (test / offline mode).
+func (h *DataSourceHandler) enrichAbstractsWithClient(ctx context.Context, abstracts []indico.AbstractData) {
 	myReviewIDsSet := getReviewIDsSet(h, ctx)
 	if myReviewIDsSet != nil {
-		// Mark abstracts that are in my review list
-		for i := range response.Abstracts {
-			response.Abstracts[i].IsMyReview = myReviewIDsSet[response.Abstracts[i].FriendlyID]
-			populateMyReview(h, &response.Abstracts[i])
+		for i := range abstracts {
+			abstracts[i].IsMyReview = myReviewIDsSet[abstracts[i].FriendlyID]
+			populateMyReview(h, &abstracts[i])
 		}
 	}
 
-	// Set IndicoURL for each abstract
-	for i := range response.Abstracts {
-		response.Abstracts[i].IndicoURL = fmt.Sprintf("%s/event/%d/abstracts/%d", h.client.BaseURL, h.client.EventID, response.Abstracts[i].ID)
+	if h.client == nil {
+		return
 	}
 
-	// Ensure reviewer avatar URLs are absolute by prefixing the client's BaseURL
-	for i := range response.Abstracts {
-		for j := range response.Abstracts[i].Reviews {
-			av := response.Abstracts[i].Reviews[j].User.AvatarURL
+	for i := range abstracts {
+		abstracts[i].IndicoURL = fmt.Sprintf("%s/event/%d/abstracts/%d",
+			h.client.BaseURL, h.client.EventID, abstracts[i].ID)
+
+		for j := range abstracts[i].Reviews {
+			av := abstracts[i].Reviews[j].User.AvatarURL
 			if av != "" && !strings.HasPrefix(av, "http") {
-				response.Abstracts[i].Reviews[j].User.AvatarURL = h.client.BaseURL + av
+				abstracts[i].Reviews[j].User.AvatarURL = h.client.BaseURL + av
 			}
 		}
-		// Submitter avatar
-		if response.Abstracts[i].Submitter != nil {
-			sav := response.Abstracts[i].Submitter.AvatarURL
-			if sav != "" && !strings.HasPrefix(sav, "http") {
-				response.Abstracts[i].Submitter.AvatarURL = h.client.BaseURL + sav
+		if abstracts[i].Submitter != nil {
+			if sav := abstracts[i].Submitter.AvatarURL; sav != "" && !strings.HasPrefix(sav, "http") {
+				abstracts[i].Submitter.AvatarURL = h.client.BaseURL + sav
 			}
 		}
-		// Judge avatar
-		if response.Abstracts[i].Judge != nil {
-			jav := response.Abstracts[i].Judge.AvatarURL
-			if jav != "" && !strings.HasPrefix(jav, "http") {
-				response.Abstracts[i].Judge.AvatarURL = h.client.BaseURL + jav
+		if abstracts[i].Judge != nil {
+			if jav := abstracts[i].Judge.AvatarURL; jav != "" && !strings.HasPrefix(jav, "http") {
+				abstracts[i].Judge.AvatarURL = h.client.BaseURL + jav
 			}
 		}
 	}
-
-	return response.Abstracts, nil
 }
 
 // GetContributions retrieves contribution data from the configured data source.
@@ -932,122 +795,37 @@ func (h *DataSourceHandler) RefreshAbstractByID(ctx context.Context, id int) (*i
 
 	log.Printf("Refreshing abstract %d from Indico API\n", id)
 
-	// Fetch the single abstract data
 	rawData, err := h.client.FetchAbstractsData(ctx, []string{fmt.Sprintf("%d", id)})
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch abstract %d: %w", id, err)
 	}
 
-	// Parse the response
-	abstractsIface, ok := rawData["abstracts"]
-	if !ok {
-		return nil, fmt.Errorf("no abstracts field in response")
-	}
-
-	// Also get questions if available
-	questionsIface := rawData["questions"]
-
-	// Convert to JSON and back to properly deserialize
-	jsonData, err := json.Marshal(map[string]any{
-		"abstracts": abstractsIface,
-		"questions": questionsIface,
-	})
+	response, err := h.unmarshalAbstractsRaw(rawData)
 	if err != nil {
-		return nil, fmt.Errorf("failed to marshal abstract: %w", err)
-	}
-
-	var response indico.AbstractsResponse
-	if err := json.Unmarshal(jsonData, &response); err != nil {
-		return nil, fmt.Errorf("failed to unmarshal abstract: %w", err)
+		return nil, fmt.Errorf("failed to parse abstract %d: %w", id, err)
 	}
 
 	if len(response.Abstracts) == 0 {
 		return nil, fmt.Errorf("abstract with ID %d not found in API response", id)
 	}
 
-	// Build question lookup map
-	if len(response.Questions) > 0 {
-		h.mu.Lock()
-		for i := range response.Questions {
-			q := &response.Questions[i]
-			h.questions[q.ID] = q
-		}
-		h.mu.Unlock()
-	}
+	h.parseAbstractsResponse(response)
+	h.enrichAbstractsWithClient(ctx, response.Abstracts)
 
-	// Expand question details in reviews for the single abstract
 	abstract := &response.Abstracts[0]
-	// Set the shared question map for this abstract
-	h.mu.RLock()
-	abstract.Questions = h.questions
-	// Set the shared contrib types map, no need to rebuild it since it should be the same for all abstracts
-	abstract.ContribTypesMap = &h.contribTypes
-	h.mu.RUnlock()
 
-	for j := range abstract.Reviews {
-		for k := range abstract.Reviews[j].Ratings {
-			rating := &abstract.Reviews[j].Ratings[k]
-			h.mu.RLock()
-			if q, ok := h.questions[rating.Question]; ok {
-				rating.QuestionDetails = q
-			}
-			h.mu.RUnlock()
-		}
-	}
-
-	// Compute aggregated ratings for frontend
-	abstract.FirstPriority = abstract.GetAggregatedRatingByTitle("First priority")
-	abstract.SecondPriority = abstract.GetAggregatedRatingByTitle("Second priority")
-
-	myReviewIDsSet := getReviewIDsSet(h, ctx)
-	if myReviewIDsSet != nil {
-		abstract.IsMyReview = myReviewIDsSet[abstract.FriendlyID]
-		populateMyReview(h, abstract)
-	}
-
-	// Ensure avatar URLs are absolute for single-abstract refresh as well
-	for j := range abstract.Reviews {
-		av := abstract.Reviews[j].User.AvatarURL
-		if av != "" && !strings.HasPrefix(av, "http") {
-			abstract.Reviews[j].User.AvatarURL = h.client.BaseURL + av
-		}
-	}
-	if abstract.Submitter != nil {
-		sav := abstract.Submitter.AvatarURL
-		if sav != "" && !strings.HasPrefix(sav, "http") {
-			abstract.Submitter.AvatarURL = h.client.BaseURL + sav
-		}
-	}
-	if abstract.Judge != nil {
-		jav := abstract.Judge.AvatarURL
-		if jav != "" && !strings.HasPrefix(jav, "http") {
-			abstract.Judge.AvatarURL = h.client.BaseURL + jav
-		}
-	}
-
-	// Ensure IndicoURL is set for the refreshed single abstract
-	if h.client != nil {
-		abstract.IndicoURL = fmt.Sprintf("%s/event/%d/abstracts/%d", h.client.BaseURL, h.client.EventID, abstract.ID)
-	}
-
-	// Update the cache if available
+	// Update the abstract in the cache if present.
 	if h.cache != nil {
-		// Get current cached abstracts
 		if cached, found := h.cache.Get("abstracts"); found {
 			var abstracts []indico.AbstractData
-
-			// Try direct type assertion first
 			if cachedAbstracts, ok := cached.([]indico.AbstractData); ok {
 				abstracts = cachedAbstracts
 			} else {
-				// Try JSON conversion
-				jsonData, err := json.Marshal(cached)
+				b, err := json.Marshal(cached)
 				if err == nil {
-					_ = json.Unmarshal(jsonData, &abstracts)
+					_ = json.Unmarshal(b, &abstracts)
 				}
 			}
-
-			// Update the abstract in the cache
 			updated := false
 			for i := range abstracts {
 				if abstracts[i].ID == id {
@@ -1056,19 +834,15 @@ func (h *DataSourceHandler) RefreshAbstractByID(ctx context.Context, id int) (*i
 					break
 				}
 			}
-
-			// If not found in cache, append it
 			if !updated {
 				abstracts = append(abstracts, *abstract)
 			}
-
-			// Save back to cache
 			h.cache.Set("abstracts", abstracts)
 			log.Printf("Updated abstract %d in cache\n", id)
 		}
 	}
 
-	log.Printf("Successfully refreshed abstract %d from API: %v\n", id, abstract)
+	log.Printf("Successfully refreshed abstract %d from API\n", id)
 	return abstract, nil
 }
 
@@ -1190,7 +964,9 @@ func (h *DataSourceHandler) RefreshCache(ctx context.Context, key string) error 
 		}
 		h.cache.Set(key, event)
 	case "abstracts":
-		abstracts, err := h.getAbstractsFromAPI(ctx)
+		// Route through GetAbstracts so that the --abstracts-file override is
+		// respected; it already handles file, test, and API modes.
+		abstracts, err := h.GetAbstracts(ctx)
 		if err != nil {
 			return fmt.Errorf("failed to refresh abstracts: %w", err)
 		}
@@ -1262,6 +1038,14 @@ func (h *DataSourceHandler) GetCacheKeys() []string {
 // IsTestMode returns true if the data source is in test mode (local files)
 func (h *DataSourceHandler) IsTestMode() bool {
 	return h.isTestMode
+}
+
+// IsAbstractsFileMode returns true when abstract data is served from the
+// --abstracts-file override rather than from the Indico API or test fixtures.
+// In this mode the refresh button should be hidden because there is no live
+// API to refresh from.
+func (h *DataSourceHandler) IsAbstractsFileMode() bool {
+	return h.abstractsFile != ""
 }
 
 // GetDataSourceName returns the name of the data source
