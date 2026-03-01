@@ -33,6 +33,10 @@ type App struct {
 	ctx        context.Context
 	handler    *data.DataSourceHandler
 	configPath string
+	// abstractsFile is the optional path from the --abstracts-file CLI flag.
+	// When non-empty, all GetAbstracts calls read from this file instead of the
+	// configured data source.
+	abstractsFile string
 	// DataSourceName caches the active data source name from the handler
 	DataSourceName string
 }
@@ -63,6 +67,13 @@ func (a *App) startup(ctx context.Context, configPath string) {
 	}
 	a.handler = handler
 	a.configPath = configPath
+
+	// Apply the abstracts file override if one was provided via --abstracts-file.
+	if a.abstractsFile != "" {
+		log.Printf("Abstracts override file: %s\n", a.abstractsFile)
+		a.handler.SetAbstractsFile(a.abstractsFile)
+	}
+
 	// Cache the active data source name on startup
 	if a.handler != nil {
 		a.DataSourceName = a.handler.GetDataSourceName()
@@ -571,6 +582,16 @@ func (a *App) IsTestMode() bool {
 		return false
 	}
 	return a.handler.IsTestMode()
+}
+
+// IsAbstractsFileMode returns true when abstract data is being served from
+// an --abstracts-file override.  The frontend uses this to hide the refresh
+// button, since there is no live API to refresh from in this mode.
+func (a *App) IsAbstractsFileMode() bool {
+	if a.handler == nil {
+		return false
+	}
+	return a.handler.IsAbstractsFileMode()
 }
 
 // GetCacheEntries returns all cache entries with metadata grouped by data source
