@@ -524,6 +524,11 @@ func ParseReviewFromHTML(doc *xhtml.Node, questionsByTitle map[string]int) (*Rev
 		if actionSpan != nil {
 			proposedAction = strings.ToLower(strings.TrimSpace(textContent(actionSpan)))
 		}
+		if proposedAction == "duplicate" {
+			proposedAction = "mark_as_duplicate"
+		} else if proposedAction == "change tracks" {
+			proposedAction = "change_tracks"
+		}
 	}
 
 	// ── extract ratings ────────────────────────────────────────────────────────
