@@ -223,36 +223,80 @@ func (h *DataSourceHandler) getAbstractsFromOverrideFile(ctx context.Context) ([
 	// the file is static the in-file review data may be stale, so we scrape the
 	// live review page for every abstract assigned to the current user and upsert
 	// the result so that MyReview always reflects the latest submitted state.
+	// Up to 8 goroutines run in parallel to amortise per-abstract HTTP latency.
 	if h.client != nil {
+		type scrapeResult struct {
+			idx    int
+			review *indico.Review // nil → not yet reviewed
+			err    error
+		}
+
+		const maxWorkers = 8
+
+		// Collect indices of abstracts that need scraping.
+		var targets []int
 		for i := range response.Abstracts {
-			if !response.Abstracts[i].IsMyReview {
-				continue
+			if response.Abstracts[i].IsMyReview {
+				targets = append(targets, i)
 			}
-			review, err := h.scrapeMyReview(ctx, response.Abstracts[i].ID)
-			if err != nil {
-				log.Printf("Warning: getAbstractsFromOverrideFile: failed to scrape review for abstract %d: %v", response.Abstracts[i].ID, err)
-				continue
+		}
+
+		if len(targets) > 0 {
+			log.Printf("getAbstractsFromOverrideFile: scraping live reviews for %d abstracts (up to %d goroutines)", len(targets), maxWorkers)
+
+			workCh := make(chan int, len(targets))
+			for _, idx := range targets {
+				workCh <- idx
 			}
-			if review == nil {
-				// Not yet reviewed – clear any stale MyReview from the file.
-				response.Abstracts[i].MyReview = nil
-				continue
+			close(workCh)
+
+			resultCh := make(chan scrapeResult, len(targets))
+
+			nWorkers := maxWorkers
+			if len(targets) < nWorkers {
+				nWorkers = len(targets)
 			}
-			// Upsert the live review into Reviews[] by review ID.
-			upserted := false
-			for j := range response.Abstracts[i].Reviews {
-				if response.Abstracts[i].Reviews[j].ID == review.ID {
-					response.Abstracts[i].Reviews[j] = *review
-					upserted = true
-					break
+			var wg sync.WaitGroup
+			for range nWorkers {
+				wg.Add(1)
+				go func() {
+					defer wg.Done()
+					for idx := range workCh {
+						review, err := h.scrapeMyReview(ctx, response.Abstracts[idx].ID)
+						resultCh <- scrapeResult{idx: idx, review: review, err: err}
+					}
+				}()
+			}
+			wg.Wait()
+			close(resultCh)
+
+			// Apply results sequentially – no concurrent writes to response.Abstracts.
+			for r := range resultCh {
+				if r.err != nil {
+					log.Printf("Warning: getAbstractsFromOverrideFile: failed to scrape review for abstract %d: %v", response.Abstracts[r.idx].ID, r.err)
+					continue
 				}
+				if r.review == nil {
+					// Not yet reviewed – clear any stale MyReview from the file.
+					response.Abstracts[r.idx].MyReview = nil
+					continue
+				}
+				// Upsert the live review into Reviews[] by review ID.
+				upserted := false
+				for j := range response.Abstracts[r.idx].Reviews {
+					if response.Abstracts[r.idx].Reviews[j].ID == r.review.ID {
+						response.Abstracts[r.idx].Reviews[j] = *r.review
+						upserted = true
+						break
+					}
+				}
+				if !upserted {
+					response.Abstracts[r.idx].Reviews = append(response.Abstracts[r.idx].Reviews, *r.review)
+				}
+				reviewCopy := *r.review
+				response.Abstracts[r.idx].MyReview = &reviewCopy
+				log.Printf("getAbstractsFromOverrideFile: scraped live review %d for abstract %d", r.review.ID, response.Abstracts[r.idx].ID)
 			}
-			if !upserted {
-				response.Abstracts[i].Reviews = append(response.Abstracts[i].Reviews, *review)
-			}
-			reviewCopy := *review
-			response.Abstracts[i].MyReview = &reviewCopy
-			log.Printf("getAbstractsFromOverrideFile: scraped live review %d for abstract %d", review.ID, response.Abstracts[i].ID)
 		}
 	}
 
