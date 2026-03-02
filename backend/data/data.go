@@ -217,6 +217,45 @@ func (h *DataSourceHandler) getAbstractsFromOverrideFile(ctx context.Context) ([
 
 	h.parseAbstractsResponse(&response)
 	h.enrichAbstractsWithClient(ctx, response.Abstracts)
+
+	// enrichAbstractsWithClient sets IsMyReview by querying review-track assignments
+	// and populates MyReview from Reviews[] already in the file snapshot.  Because
+	// the file is static the in-file review data may be stale, so we scrape the
+	// live review page for every abstract assigned to the current user and upsert
+	// the result so that MyReview always reflects the latest submitted state.
+	if h.client != nil {
+		for i := range response.Abstracts {
+			if !response.Abstracts[i].IsMyReview {
+				continue
+			}
+			review, err := h.scrapeMyReview(ctx, response.Abstracts[i].ID)
+			if err != nil {
+				log.Printf("Warning: getAbstractsFromOverrideFile: failed to scrape review for abstract %d: %v", response.Abstracts[i].ID, err)
+				continue
+			}
+			if review == nil {
+				// Not yet reviewed – clear any stale MyReview from the file.
+				response.Abstracts[i].MyReview = nil
+				continue
+			}
+			// Upsert the live review into Reviews[] by review ID.
+			upserted := false
+			for j := range response.Abstracts[i].Reviews {
+				if response.Abstracts[i].Reviews[j].ID == review.ID {
+					response.Abstracts[i].Reviews[j] = *review
+					upserted = true
+					break
+				}
+			}
+			if !upserted {
+				response.Abstracts[i].Reviews = append(response.Abstracts[i].Reviews, *review)
+			}
+			reviewCopy := *review
+			response.Abstracts[i].MyReview = &reviewCopy
+			log.Printf("getAbstractsFromOverrideFile: scraped live review %d for abstract %d", review.ID, response.Abstracts[i].ID)
+		}
+	}
+
 	return response.Abstracts, nil
 }
 
@@ -379,9 +418,29 @@ func (h *DataSourceHandler) getInfoFromAPI(ctx context.Context) (*indico.Event, 
 
 // GetAbstracts retrieves abstract data from the configured data source.
 func (h *DataSourceHandler) GetAbstracts(ctx context.Context) ([]indico.AbstractData, error) {
-	// --abstracts-file override: bypass all data sources and read from the local file.
+	// --abstracts-file override: read from the local file and enrich with live review
+	// data, then cache.  The cache is populated the same way as API mode so that
+	// RefreshCache (triggered by the Refresh button) can invalidate it and force a
+	// re-read of both the file and the live review-assignment API.
 	if h.abstractsFile != "" {
-		return h.getAbstractsFromOverrideFile(ctx)
+		if h.cache != nil {
+			if cached, found := h.cache.Get("abstracts"); found {
+				if abstracts, ok := cached.([]indico.AbstractData); ok {
+					log.Printf("Using cached abstracts (abstracts-file mode): %d entries", len(abstracts))
+					return abstracts, nil
+				}
+				// Stale/corrupt entry – discard and re-read.
+				h.cache.Delete("abstracts")
+			}
+		}
+		abstracts, err := h.getAbstractsFromOverrideFile(ctx)
+		if err != nil {
+			return nil, err
+		}
+		if h.cache != nil {
+			h.cache.Set("abstracts", abstracts)
+		}
+		return abstracts, nil
 	}
 
 	if h.isTestMode {
@@ -786,9 +845,130 @@ func populateMyReview(h *DataSourceHandler, abstract *indico.AbstractData) {
 	}
 }
 
+// scrapeMyReview fetches the current user's review for a single abstract by
+// visiting its display page, expands question details from the handler's
+// question map, and returns the populated Review (or nil when not yet reviewed).
+// It is a no-op when h.client is nil.
+func (h *DataSourceHandler) scrapeMyReview(ctx context.Context, abstractID int) (*indico.Review, error) {
+	if h.client == nil {
+		return nil, fmt.Errorf("indico client not initialized")
+	}
+
+	h.mu.RLock()
+	questionsByTitle := make(map[string]int, len(h.questions))
+	for qid, q := range h.questions {
+		questionsByTitle[strings.ToLower(q.Title)] = qid
+	}
+	h.mu.RUnlock()
+
+	review, err := h.client.GetReviewFromAbstractPage(ctx, abstractID, questionsByTitle)
+	if err != nil {
+		return nil, err
+	}
+	if review == nil {
+		return nil, nil
+	}
+
+	// Expand question details from the handler's question map.
+	h.mu.RLock()
+	for k := range review.Ratings {
+		if qd, ok := h.questions[review.Ratings[k].Question]; ok {
+			review.Ratings[k].QuestionDetails = qd
+		}
+	}
+	h.mu.RUnlock()
+
+	return review, nil
+}
+
+// upsertAbstractInCache updates or appends an abstract in the cached abstracts
+// slice.  It is a no-op when no cache is configured or the "abstracts" cache
+// entry does not exist yet.
+func (h *DataSourceHandler) upsertAbstractInCache(abstract indico.AbstractData) {
+	if h.cache == nil {
+		return
+	}
+	cached, found := h.cache.Get("abstracts")
+	if !found {
+		return
+	}
+	var abstracts []indico.AbstractData
+	if cachedAbstracts, ok := cached.([]indico.AbstractData); ok {
+		abstracts = cachedAbstracts
+	} else {
+		b, err := json.Marshal(cached)
+		if err == nil {
+			_ = json.Unmarshal(b, &abstracts)
+		}
+	}
+	for i := range abstracts {
+		if abstracts[i].ID == abstract.ID {
+			abstracts[i] = abstract
+			h.cache.Set("abstracts", abstracts)
+			log.Printf("Updated abstract %d in cache", abstract.ID)
+			return
+		}
+	}
+	abstracts = append(abstracts, abstract)
+	h.cache.Set("abstracts", abstracts)
+	log.Printf("Inserted abstract %d into cache", abstract.ID)
+}
+
 // RefreshAbstractByID fetches fresh data for a single abstract from the API.
 // This bypasses the cache and always fetches from the live API.
+//
+// Special case – abstractsFile mode (--abstracts-file flag):
+// When abstract data is served from a local file the abstract fields themselves
+// are not re-fetched from the API; instead the existing abstract is taken from
+// the current data set.  The review page is still fetched so that MyReview is
+// updated after a submit / update, allowing the UI to show "Submit review" vs
+// "Update review" correctly.
 func (h *DataSourceHandler) RefreshAbstractByID(ctx context.Context, id int) (*indico.AbstractData, error) {
+	// ── abstractsFile mode: keep abstract data from file, refresh review only ─
+	if h.abstractsFile != "" {
+		if h.client == nil {
+			return nil, fmt.Errorf("indico client not initialized (cannot refresh review in abstracts-file mode)")
+		}
+
+		log.Printf("RefreshAbstractByID (abstracts-file mode): refreshing review for abstract %d", id)
+
+		// Retrieve existing abstract from the cached/file data set.
+		existing, err := h.GetAbstractByID(ctx, id)
+		if err != nil {
+			return nil, fmt.Errorf("abstracts-file mode: abstract %d not found: %w", id, err)
+		}
+		// Work on a copy so we don't mutate the cached slice in place.
+		abstract := *existing
+
+		review, err := h.scrapeMyReview(ctx, abstract.ID)
+		if err != nil {
+			log.Printf("Warning: RefreshAbstractByID (abstracts-file mode): failed to fetch review page for abstract %d: %v", abstract.ID, err)
+		} else if review != nil {
+			// Upsert into abstract.Reviews by review ID.
+			upserted := false
+			for j := range abstract.Reviews {
+				if abstract.Reviews[j].ID == review.ID {
+					abstract.Reviews[j] = *review
+					upserted = true
+					break
+				}
+			}
+			if !upserted {
+				abstract.Reviews = append(abstract.Reviews, *review)
+			}
+			reviewCopy := *review
+			abstract.MyReview = &reviewCopy
+			abstract.IsMyReview = true
+			log.Printf("RefreshAbstractByID (abstracts-file mode): updated MyReview (review %d) for abstract %d", review.ID, abstract.ID)
+		} else {
+			abstract.MyReview = nil
+		}
+
+		h.upsertAbstractInCache(abstract)
+		return &abstract, nil
+	}
+
+	// ── normal API mode ────────────────────────────────────────────────────────
 	if h.client == nil {
 		return nil, fmt.Errorf("indico client not initialized (test mode or no API access)")
 	}
@@ -812,38 +992,11 @@ func (h *DataSourceHandler) RefreshAbstractByID(ctx context.Context, id int) (*i
 	h.parseAbstractsResponse(response)
 	h.enrichAbstractsWithClient(ctx, response.Abstracts)
 
-	abstract := &response.Abstracts[0]
-
-	// Update the abstract in the cache if present.
-	if h.cache != nil {
-		if cached, found := h.cache.Get("abstracts"); found {
-			var abstracts []indico.AbstractData
-			if cachedAbstracts, ok := cached.([]indico.AbstractData); ok {
-				abstracts = cachedAbstracts
-			} else {
-				b, err := json.Marshal(cached)
-				if err == nil {
-					_ = json.Unmarshal(b, &abstracts)
-				}
-			}
-			updated := false
-			for i := range abstracts {
-				if abstracts[i].ID == id {
-					abstracts[i] = *abstract
-					updated = true
-					break
-				}
-			}
-			if !updated {
-				abstracts = append(abstracts, *abstract)
-			}
-			h.cache.Set("abstracts", abstracts)
-			log.Printf("Updated abstract %d in cache\n", id)
-		}
-	}
+	abstract := response.Abstracts[0]
+	h.upsertAbstractInCache(abstract)
 
 	log.Printf("Successfully refreshed abstract %d from API\n", id)
-	return abstract, nil
+	return &abstract, nil
 }
 
 // GetAbstractsByState filters abstracts by their state.
@@ -910,6 +1063,17 @@ func (h *DataSourceHandler) GetReviewTracks(ctx context.Context) (*indico.Review
 	}
 
 	return h.client.GetReviewTracks(ctx)
+}
+
+// GetMyReviewForAbstract fetches the current user's review for a single abstract
+// by database ID. It scrapes the abstract display page and populates
+// Rating.QuestionDetails from the handler's question map.
+// Returns nil (no error) when the abstract has not been reviewed yet.
+func (h *DataSourceHandler) GetMyReviewForAbstract(ctx context.Context, abstractID int) (*indico.Review, error) {
+	if h.isTestMode {
+		return nil, fmt.Errorf("cannot fetch live review in test mode")
+	}
+	return h.scrapeMyReview(ctx, abstractID)
 }
 
 // GetAssignedReviewCount returns the number of unique abstracts assigned to the current user
