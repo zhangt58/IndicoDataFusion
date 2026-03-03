@@ -233,6 +233,11 @@ func (h *DataSourceHandler) getAbstractsFromOverrideFile(ctx context.Context) ([
 
 		const maxWorkers = 8
 
+		// Build lookup maps from the already-loaded abstract slice so that
+		// scrapeMyReviewWithMaps can resolve friendly_id and track codes without
+		// relying on the cache, which has not been written yet at this point.
+		abstractsByDBID, tracksByCode := buildAbstractLookupMaps(response.Abstracts)
+
 		// Collect indices of abstracts that need scraping.
 		var targets []int
 		for i := range response.Abstracts {
@@ -262,7 +267,7 @@ func (h *DataSourceHandler) getAbstractsFromOverrideFile(ctx context.Context) ([
 				go func() {
 					defer wg.Done()
 					for idx := range workCh {
-						review, err := h.scrapeMyReview(ctx, response.Abstracts[idx].ID)
+						review, err := h.scrapeMyReviewWithMaps(ctx, response.Abstracts[idx].ID, abstractsByDBID, tracksByCode)
 						resultCh <- scrapeResult{idx: idx, review: review, err: err}
 					}
 				}()
@@ -934,11 +939,72 @@ func populateMyReview(h *DataSourceHandler, abstract *indico.AbstractData) {
 	}
 }
 
+// buildAbstractLookupMaps builds the abstractsByDBID and tracksByCode maps used
+// by ParseReviewFromHTML from a slice of AbstractData.
+// abstractsByDBID maps DB ID → RelatedAbstract (friendly_id + title) for
+// mark_as_duplicate / merge proposed-related-abstract resolution.
+// tracksByCode maps track code → Track for change_tracks proposed tracks.
+// Returns (nil, nil) for an empty slice.
+func buildAbstractLookupMaps(abstracts []indico.AbstractData) (map[int]*indico.RelatedAbstract, map[string]*indico.Track) {
+	if len(abstracts) == 0 {
+		return nil, nil
+	}
+	abstractsByDBID := make(map[int]*indico.RelatedAbstract, len(abstracts))
+	tracksByCode := make(map[string]*indico.Track)
+	for i := range abstracts {
+		a := &abstracts[i]
+		abstractsByDBID[a.ID] = &indico.RelatedAbstract{
+			ID:         a.ID,
+			FriendlyID: a.FriendlyID,
+			Title:      a.Title,
+		}
+		for j := range a.SubmittedForTracks {
+			t := &a.SubmittedForTracks[j]
+			if t.Code != "" {
+				tracksByCode[t.Code] = t
+			}
+		}
+		for j := range a.ReviewedForTracks {
+			t := &a.ReviewedForTracks[j]
+			if t.Code != "" {
+				tracksByCode[t.Code] = t
+			}
+		}
+	}
+	return abstractsByDBID, tracksByCode
+}
+
 // scrapeMyReview fetches the current user's review for a single abstract by
-// visiting its display page, expands question details from the handler's
-// question map, and returns the populated Review (or nil when not yet reviewed).
+// visiting its display page. It builds abstractsByDBID and tracksByCode from
+// the cache. Use scrapeMyReviewWithMaps when the caller already has the abstract
+// slice in memory (e.g. getAbstractsFromOverrideFile) to avoid relying on a
+// cache that has not yet been populated.
 // It is a no-op when h.client is nil.
 func (h *DataSourceHandler) scrapeMyReview(ctx context.Context, abstractID int) (*indico.Review, error) {
+	if h.client == nil {
+		return nil, fmt.Errorf("indico client not initialized")
+	}
+	var abstracts []indico.AbstractData
+	if h.cache != nil {
+		if cached, found := h.cache.Get("abstracts"); found {
+			if typed, ok := cached.([]indico.AbstractData); ok {
+				abstracts = typed
+			} else {
+				if jsonData, err := json.Marshal(cached); err == nil {
+					_ = json.Unmarshal(jsonData, &abstracts)
+				}
+			}
+		}
+	}
+	abstractsByDBID, tracksByCode := buildAbstractLookupMaps(abstracts)
+	return h.scrapeMyReviewWithMaps(ctx, abstractID, abstractsByDBID, tracksByCode)
+}
+
+// scrapeMyReviewWithMaps is the core scrape implementation. It calls
+// GetReviewFromAbstractPage with the supplied lookup maps and expands question
+// details. The caller supplies correctly built abstractsByDBID and tracksByCode;
+// pass nil for either if not available.
+func (h *DataSourceHandler) scrapeMyReviewWithMaps(ctx context.Context, abstractID int, abstractsByDBID map[int]*indico.RelatedAbstract, tracksByCode map[string]*indico.Track) (*indico.Review, error) {
 	if h.client == nil {
 		return nil, fmt.Errorf("indico client not initialized")
 	}
@@ -955,52 +1021,6 @@ func (h *DataSourceHandler) scrapeMyReview(ctx context.Context, abstractID int) 
 		contribTypesByName[name] = id
 	}
 	h.mu.RUnlock()
-
-	// Build lookup maps for ParseReviewFromHTML from cached abstracts.
-	// abstractsByDBID maps abstract DB ID → RelatedAbstract (for mark_as_duplicate/merge).
-	// tracksByCode maps track code → Track (for change_tracks proposed tracks).
-	var abstractsByDBID map[int]*indico.RelatedAbstract
-	var tracksByCode map[string]*indico.Track
-	if h.cache != nil {
-		if cached, found := h.cache.Get("abstracts"); found {
-			// Mirror the same type-assertion + JSON-fallback logic used in
-			// GetAbstracts so friendly_id is resolved correctly even after a
-			// cache JSON round-trip (where the value may be []interface{}).
-			var abstracts []indico.AbstractData
-			if typed, ok := cached.([]indico.AbstractData); ok {
-				abstracts = typed
-			} else {
-				if jsonData, err := json.Marshal(cached); err == nil {
-					_ = json.Unmarshal(jsonData, &abstracts)
-				}
-			}
-			if len(abstracts) > 0 {
-				abstractsByDBID = make(map[int]*indico.RelatedAbstract, len(abstracts))
-				tracksByCode = make(map[string]*indico.Track)
-				for i := range abstracts {
-					a := &abstracts[i]
-					abstractsByDBID[a.ID] = &indico.RelatedAbstract{
-						ID:         a.ID,
-						FriendlyID: a.FriendlyID,
-						Title:      a.Title,
-					}
-					// Collect tracks from submitted_for_tracks and reviewed_for_tracks.
-					for j := range a.SubmittedForTracks {
-						t := &a.SubmittedForTracks[j]
-						if t.Code != "" {
-							tracksByCode[t.Code] = t
-						}
-					}
-					for j := range a.ReviewedForTracks {
-						t := &a.ReviewedForTracks[j]
-						if t.Code != "" {
-							tracksByCode[t.Code] = t
-						}
-					}
-				}
-			}
-		}
-	}
 
 	review, err := h.client.GetReviewFromAbstractPage(ctx, abstractID, questionsByTitle, abstractsByDBID, tracksByCode, contribTypesByName)
 	if err != nil {
@@ -1094,7 +1114,12 @@ func (h *DataSourceHandler) RefreshAbstractByID(ctx context.Context, id int) (*i
 			}
 		}
 
-		review, err := h.scrapeMyReview(ctx, abstract.ID)
+		// Build lookup maps from the full abstract list.  GetAbstractByID already
+		// called GetAbstracts above, so the cache is populated and this is cheap.
+		allAbstracts, _ := h.GetAbstracts(ctx)
+		abstractsByDBID, tracksByCode := buildAbstractLookupMaps(allAbstracts)
+
+		review, err := h.scrapeMyReviewWithMaps(ctx, abstract.ID, abstractsByDBID, tracksByCode)
 		if err != nil {
 			log.Printf("Warning: RefreshAbstractByID (abstracts-file mode): failed to fetch review page for abstract %d: %v", abstract.ID, err)
 		} else if review != nil {
