@@ -666,13 +666,23 @@ func (h *DataSourceHandler) parseAbstractsResponse(response *indico.AbstractsRes
 
 // enrichAbstractsWithClient merges review-assignment data (IsMyReview / MyReview) and,
 // when a live client is available, also sets IndicoURL and absolutises avatar URLs.
+// It also overrides ReviewedForTracks from the live review track assignments so
+// that abstracts loaded from a static file (--abstracts-file) carry up-to-date
+// track info.
 // It is a no-op when h.client is nil (test / offline mode).
 func (h *DataSourceHandler) enrichAbstractsWithClient(ctx context.Context, abstracts []indico.AbstractData) {
-	myReviewIDsSet := getReviewIDsSet(h, ctx)
-	if myReviewIDsSet != nil {
+	ra := getReviewAssignments(h, ctx)
+	if ra != nil {
 		for i := range abstracts {
-			abstracts[i].IsMyReview = myReviewIDsSet[abstracts[i].FriendlyID]
+			abstracts[i].IsMyReview = ra.isMyReview[abstracts[i].FriendlyID]
 			populateMyReview(h, &abstracts[i])
+
+			// Override ReviewedForTracks with tracks from the live review
+			// assignments.
+			if assignedTracks, ok := ra.tracksByAbstract[abstracts[i].FriendlyID]; ok {
+				abstracts[i].ReviewedForTracks = make([]indico.Track, len(assignedTracks))
+				copy(abstracts[i].ReviewedForTracks, assignedTracks)
+			}
 		}
 	}
 
@@ -835,8 +845,26 @@ func (h *DataSourceHandler) GetAbstractByID(ctx context.Context, id int) (*indic
 	return nil, fmt.Errorf("abstract with ID %d not found", id)
 }
 
-// getReviewIDsSet returns a map of abstract friendly IDs that are on my review list or not.
-func getReviewIDsSet(h *DataSourceHandler, ctx context.Context) map[int]bool {
+// reviewAssignments holds the result of fetching review track assignments:
+// a set of abstract friendly IDs on the review list, and a mapping from
+// each friendly ID to the review tracks it belongs to.
+type reviewAssignments struct {
+	// isMyReview maps abstract friendly_id → true for abstracts on the review list.
+	isMyReview map[int]bool
+	// tracksByAbstract maps abstract friendly_id → review Track(s) the abstract
+	// is assigned to for this reviewer.  Used to update ReviewedForTracks when
+	// the abstract data comes from a static file (--abstracts-file mode).
+	tracksByAbstract map[int][]indico.Track
+}
+
+// getReviewAssignments fetches the reviewer's track assignments via
+// GetReviewTracks + GetReviewAbstractIDs and returns both the review-ID set
+// and per-abstract track mappings.  Returns nil when h.client is nil or when
+// GetReviewTracks fails.
+func getReviewAssignments(h *DataSourceHandler, ctx context.Context) *reviewAssignments {
+	if h.client == nil {
+		return nil
+	}
 
 	// Fetch review tracks and mark abstracts that are on my review list
 	reviewTracks, err := h.client.GetReviewTracks(ctx)
@@ -845,24 +873,41 @@ func getReviewIDsSet(h *DataSourceHandler, ctx context.Context) map[int]bool {
 		return nil
 	}
 
-	if reviewTracks != nil && len(reviewTracks.Tracks) > 0 {
-		myReviewIDsSet := make(map[int]bool)
-		for _, track := range reviewTracks.Tracks {
-			if track.Link == "" {
-				continue
-			}
-			abstractIDs, err := h.client.GetReviewAbstractIDs(ctx, track.TrackID)
-			if err != nil {
-				log.Printf("Warning: failed to get abstract IDs for track %d: %v", track.TrackID, err)
-				continue
-			}
-			for _, aid := range abstractIDs {
-				myReviewIDsSet[aid] = true
-			}
-		}
-		return myReviewIDsSet
+	if reviewTracks == nil || len(reviewTracks.Tracks) == 0 {
+		return nil
 	}
-	return nil
+
+	ra := &reviewAssignments{
+		isMyReview:       make(map[int]bool),
+		tracksByAbstract: make(map[int][]indico.Track),
+	}
+	for _, rt := range reviewTracks.Tracks {
+		if rt.Link == "" {
+			continue
+		}
+		abstractIDs, err := h.client.GetReviewAbstractIDs(ctx, rt.TrackID)
+		if err != nil {
+			log.Printf("Warning: failed to get abstract IDs for track %d: %v", rt.TrackID, err)
+			continue
+		}
+		// Build a Track from the ReviewTrack info.
+		// ReviewTrack.Name is e.g. "MC7 Accelerator Technology Main Systems: MC7.2"
+		// Extract the track code (the part after the last ": ").
+		trackCode := ""
+		if idx := strings.LastIndex(rt.Name, ": "); idx >= 0 {
+			trackCode = strings.TrimSpace(rt.Name[idx+2:])
+		}
+		track := indico.Track{
+			ID:    rt.TrackID,
+			Code:  trackCode,
+			Title: rt.Name,
+		}
+		for _, aid := range abstractIDs {
+			ra.isMyReview[aid] = true
+			ra.tracksByAbstract[aid] = append(ra.tracksByAbstract[aid], track)
+		}
+	}
+	return ra
 }
 
 // populateMyReview finds and sets the current user's review in the abstract.
@@ -905,7 +950,53 @@ func (h *DataSourceHandler) scrapeMyReview(ctx context.Context, abstractID int) 
 	}
 	h.mu.RUnlock()
 
-	review, err := h.client.GetReviewFromAbstractPage(ctx, abstractID, questionsByTitle)
+	// Build lookup maps for ParseReviewFromHTML from cached abstracts.
+	// abstractsByDBID maps abstract DB ID → RelatedAbstract (for mark_as_duplicate/merge).
+	// tracksByCode maps track code → Track (for change_tracks proposed tracks).
+	var abstractsByDBID map[int]*indico.RelatedAbstract
+	var tracksByCode map[string]*indico.Track
+	if h.cache != nil {
+		if cached, found := h.cache.Get("abstracts"); found {
+			// Mirror the same type-assertion + JSON-fallback logic used in
+			// GetAbstracts so friendly_id is resolved correctly even after a
+			// cache JSON round-trip (where the value may be []interface{}).
+			var abstracts []indico.AbstractData
+			if typed, ok := cached.([]indico.AbstractData); ok {
+				abstracts = typed
+			} else {
+				if jsonData, err := json.Marshal(cached); err == nil {
+					_ = json.Unmarshal(jsonData, &abstracts)
+				}
+			}
+			if len(abstracts) > 0 {
+				abstractsByDBID = make(map[int]*indico.RelatedAbstract, len(abstracts))
+				tracksByCode = make(map[string]*indico.Track)
+				for i := range abstracts {
+					a := &abstracts[i]
+					abstractsByDBID[a.ID] = &indico.RelatedAbstract{
+						ID:         a.ID,
+						FriendlyID: a.FriendlyID,
+						Title:      a.Title,
+					}
+					// Collect tracks from submitted_for_tracks and reviewed_for_tracks.
+					for j := range a.SubmittedForTracks {
+						t := &a.SubmittedForTracks[j]
+						if t.Code != "" {
+							tracksByCode[t.Code] = t
+						}
+					}
+					for j := range a.ReviewedForTracks {
+						t := &a.ReviewedForTracks[j]
+						if t.Code != "" {
+							tracksByCode[t.Code] = t
+						}
+					}
+				}
+			}
+		}
+	}
+
+	review, err := h.client.GetReviewFromAbstractPage(ctx, abstractID, questionsByTitle, abstractsByDBID, tracksByCode)
 	if err != nil {
 		return nil, err
 	}
@@ -983,6 +1074,19 @@ func (h *DataSourceHandler) RefreshAbstractByID(ctx context.Context, id int) (*i
 		}
 		// Work on a copy so we don't mutate the cached slice in place.
 		abstract := *existing
+
+		// Override ReviewedForTracks and IsMyReview from the live review track
+		// assignments so the abstract carries the same enrichment as when
+		// loaded via getAbstractsFromOverrideFile.
+		ra := getReviewAssignments(h, ctx)
+		if ra != nil {
+			abstract.IsMyReview = ra.isMyReview[abstract.FriendlyID]
+			if assignedTracks, ok := ra.tracksByAbstract[abstract.FriendlyID]; ok {
+				// override ReviewedForTracks with the latest assignments (not append)
+				abstract.ReviewedForTracks = make([]indico.Track, len(assignedTracks))
+				copy(abstract.ReviewedForTracks, assignedTracks)
+			}
+		}
 
 		review, err := h.scrapeMyReview(ctx, abstract.ID)
 		if err != nil {
@@ -1132,12 +1236,12 @@ func (h *DataSourceHandler) GetAssignedReviewCount(ctx context.Context) (int, er
 		return 0, fmt.Errorf("indico client not initialized")
 	}
 
-	myReviewIDsSet := getReviewIDsSet(h, ctx)
-	if myReviewIDsSet == nil {
+	ra := getReviewAssignments(h, ctx)
+	if ra == nil {
 		return 0, nil
 	}
 
-	return len(myReviewIDsSet), nil
+	return len(ra.isMyReview), nil
 }
 
 // GetReviewAbstractIDs returns the list of abstract IDs (friendly_id) for a given review track ID.
