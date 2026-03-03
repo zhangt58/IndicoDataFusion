@@ -948,6 +948,12 @@ func (h *DataSourceHandler) scrapeMyReview(ctx context.Context, abstractID int) 
 	for qid, q := range h.questions {
 		questionsByTitle[strings.ToLower(q.Title)] = qid
 	}
+	// Build contribTypesByName: name → ID, for resolving ProposedContribType in
+	// accept reviews that carry "as <strong>Name</strong>" in the HTML badge.
+	contribTypesByName := make(map[string]int, len(h.contribTypes))
+	for name, id := range h.contribTypes {
+		contribTypesByName[name] = id
+	}
 	h.mu.RUnlock()
 
 	// Build lookup maps for ParseReviewFromHTML from cached abstracts.
@@ -996,7 +1002,7 @@ func (h *DataSourceHandler) scrapeMyReview(ctx context.Context, abstractID int) 
 		}
 	}
 
-	review, err := h.client.GetReviewFromAbstractPage(ctx, abstractID, questionsByTitle, abstractsByDBID, tracksByCode)
+	review, err := h.client.GetReviewFromAbstractPage(ctx, abstractID, questionsByTitle, abstractsByDBID, tracksByCode, contribTypesByName)
 	if err != nil {
 		return nil, err
 	}
