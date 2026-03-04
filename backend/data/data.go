@@ -939,18 +939,20 @@ func populateMyReview(h *DataSourceHandler, abstract *indico.AbstractData) {
 	}
 }
 
-// buildAbstractLookupMaps builds the abstractsByDBID and tracksByCode maps used
+// buildAbstractLookupMaps builds the abstractsByDBID and tracksByTitle maps used
 // by ParseReviewFromHTML from a slice of AbstractData.
 // abstractsByDBID maps DB ID → RelatedAbstract (friendly_id + title) for
 // mark_as_duplicate / merge proposed-related-abstract resolution.
-// tracksByCode maps track code → Track for change_tracks proposed tracks.
+// tracksByTitle maps track title → Track for change_tracks proposed track
+// resolution.  Title is used instead of Code because Code is often empty in
+// Indico abstract data while Title is always present.
 // Returns (nil, nil) for an empty slice.
 func buildAbstractLookupMaps(abstracts []indico.AbstractData) (map[int]*indico.RelatedAbstract, map[string]*indico.Track) {
 	if len(abstracts) == 0 {
 		return nil, nil
 	}
 	abstractsByDBID := make(map[int]*indico.RelatedAbstract, len(abstracts))
-	tracksByCode := make(map[string]*indico.Track)
+	tracksByTitle := make(map[string]*indico.Track)
 	for i := range abstracts {
 		a := &abstracts[i]
 		abstractsByDBID[a.ID] = &indico.RelatedAbstract{
@@ -960,18 +962,18 @@ func buildAbstractLookupMaps(abstracts []indico.AbstractData) (map[int]*indico.R
 		}
 		for j := range a.SubmittedForTracks {
 			t := &a.SubmittedForTracks[j]
-			if t.Code != "" {
-				tracksByCode[t.Code] = t
+			if t.Title != "" {
+				tracksByTitle[t.Title] = t
 			}
 		}
 		for j := range a.ReviewedForTracks {
 			t := &a.ReviewedForTracks[j]
-			if t.Code != "" {
-				tracksByCode[t.Code] = t
+			if t.Title != "" {
+				tracksByTitle[t.Title] = t
 			}
 		}
 	}
-	return abstractsByDBID, tracksByCode
+	return abstractsByDBID, tracksByTitle
 }
 
 // scrapeMyReview fetches the current user's review for a single abstract by
@@ -1002,9 +1004,9 @@ func (h *DataSourceHandler) scrapeMyReview(ctx context.Context, abstractID int) 
 
 // scrapeMyReviewWithMaps is the core scrape implementation. It calls
 // GetReviewFromAbstractPage with the supplied lookup maps and expands question
-// details. The caller supplies correctly built abstractsByDBID and tracksByCode;
+// details. The caller supplies correctly built abstractsByDBID and tracksByTitle;
 // pass nil for either if not available.
-func (h *DataSourceHandler) scrapeMyReviewWithMaps(ctx context.Context, abstractID int, abstractsByDBID map[int]*indico.RelatedAbstract, tracksByCode map[string]*indico.Track) (*indico.Review, error) {
+func (h *DataSourceHandler) scrapeMyReviewWithMaps(ctx context.Context, abstractID int, abstractsByDBID map[int]*indico.RelatedAbstract, tracksByTitle map[string]*indico.Track) (*indico.Review, error) {
 	if h.client == nil {
 		return nil, fmt.Errorf("indico client not initialized")
 	}
@@ -1022,7 +1024,7 @@ func (h *DataSourceHandler) scrapeMyReviewWithMaps(ctx context.Context, abstract
 	}
 	h.mu.RUnlock()
 
-	review, err := h.client.GetReviewFromAbstractPage(ctx, abstractID, questionsByTitle, abstractsByDBID, tracksByCode, contribTypesByName)
+	review, err := h.client.GetReviewFromAbstractPage(ctx, abstractID, questionsByTitle, abstractsByDBID, tracksByTitle, contribTypesByName)
 	if err != nil {
 		return nil, err
 	}

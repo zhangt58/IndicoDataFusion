@@ -344,8 +344,11 @@ func (c *IndicoClient) GetReviewAbstractIDs(ctx context.Context, reviewTrackID i
 // and title. Used to resolve proposed_related_abstract for mark_as_duplicate/merge.
 // Pass nil if this information is not available.
 //
-// tracksByCode maps a track code (e.g. "MC8.1") to a Track carrying the numeric ID.
-// Used to resolve proposed_tracks for change_tracks reviews.
+// tracksByTitle maps a track title (e.g. "MC8.1 First Track in MC8 Track Group…")
+// to the full Track struct carrying the numeric ID and code. The title is extracted
+// from the span's title attribute as the part after the " - " separator
+// ("GroupName: Code - Title"). This key is used instead of Code because the Code
+// field is often empty in Indico abstract data while Title is always present.
 // Pass nil if this information is not available.
 //
 // contribTypesByName maps a contribution type name (e.g. "Contributed Oral
@@ -354,7 +357,7 @@ func (c *IndicoClient) GetReviewAbstractIDs(ctx context.Context, reviewTrackID i
 // Pass nil if this information is not available.
 //
 // The function returns nil, nil when no review block is found on the page.
-func ParseReviewFromHTML(doc *xhtml.Node, questionsByTitle map[string]int, abstractsByDBID map[int]*RelatedAbstract, tracksByCode map[string]*Track, contribTypesByName map[string]int) (*Review, error) {
+func ParseReviewFromHTML(doc *xhtml.Node, questionsByTitle map[string]int, abstractsByDBID map[int]*RelatedAbstract, tracksByTitle map[string]*Track, contribTypesByName map[string]int) (*Review, error) {
 	// ── helpers ────────────────────────────────────────────────────────────────
 
 	getAttr := func(attrs []xhtml.Attribute, name string) string {
@@ -694,19 +697,28 @@ func ParseReviewFromHTML(doc *xhtml.Node, questionsByTitle map[string]int, abstr
 	}
 
 	// ── extract proposed_tracks (change_tracks action only) ───────────────────
-	// HTML structure (inside i-box-content, after ratings-details):
-	//   Possible destination tracks:
+	// HTML structure produced by the Indico template:
+	//
+	//   <div>
+	//     Possible destination tracks:
 	//     <div class="review-group truncate-text">
 	//       <span title="GroupName: TrackCode - TrackTitle">display text</span>
-	//     </div>, ...
-	// These review-group divs hold a <span title="..."> (no anchor), which
-	// distinguishes them from the reviewer's own track review-group (which uses
-	// <a href="...reviewing/{id}/">).
+	//     </div>, …
+	//   </div>
+	//
+	// The span's title attribute has the format "GroupName: Code - Title".
+	// We extract:
+	//   • Code  — the part between ": " and " - " (may be empty in some events)
+	//   • Title — the part after " - " (always present; used as lookup key)
+	//
+	// We locate the container by finding the first <div> whose direct text
+	// nodes begin with "Possible destination tracks" rather than relying on
+	// class names, making the search robust against template changes.
 	var proposedTracks []Track
 	if proposedAction == "change_tracks" {
-		// Search root: prefer i-box-content so we avoid the reviewer-track
-		// review-group in i-timeline-item-metadata, but fall back to the full
-		// reviewDiv if i-box-content is not found.
+		// Prefer searching inside i-box-content so we don't accidentally pick
+		// up review-group divs from i-timeline-item-metadata (reviewer's own
+		// track).  Fall back to the whole reviewDiv if not found.
 		searchRoot := findFirst(reviewDiv, func(n *xhtml.Node) bool {
 			return isElem(n, "div") && hasClassToken(n.Attr, "i-box-content")
 		})
@@ -714,16 +726,38 @@ func ParseReviewFromHTML(doc *xhtml.Node, questionsByTitle map[string]int, abstr
 			searchRoot = reviewDiv
 		}
 
-		reviewGroupDivs := findAll(searchRoot, func(n *xhtml.Node) bool {
+		// Find the container <div> whose visible text starts with
+		// "Possible destination tracks".
+		containerDiv := findFirst(searchRoot, func(n *xhtml.Node) bool {
+			if !isElem(n, "div") {
+				return false
+			}
+			// Check direct text-node children only (not all descendants) so we
+			// don't match a parent that merely contains this text somewhere deep.
+			for c := n.FirstChild; c != nil; c = c.NextSibling {
+				if c.Type == xhtml.TextNode {
+					if strings.Contains(strings.ToLower(c.Data), "possible destination track") {
+						return true
+					}
+				}
+			}
+			return false
+		})
+		if containerDiv == nil {
+			// Fallback: collect every review-group with a span-title (no anchor),
+			// skipping the reviewer's own track group.
+			containerDiv = searchRoot
+		}
+
+		reviewGroupDivs := findAll(containerDiv, func(n *xhtml.Node) bool {
 			return isElem(n, "div") && hasClassToken(n.Attr, "review-group")
 		})
 		for _, rgDiv := range reviewGroupDivs {
-			// Skip any review-group that contains an <a> element — those are the
-			// reviewer's own track group, not proposed destination tracks.
+			// Skip any review-group that contains an <a> — those are the
+			// reviewer's own track, not proposed destination tracks.
 			if findFirst(rgDiv, func(n *xhtml.Node) bool { return isElem(n, "a") }) != nil {
 				continue
 			}
-			// Find the <span title="..."> that carries the full track description.
 			spanNode := findFirst(rgDiv, func(n *xhtml.Node) bool {
 				return isElem(n, "span") && getAttr(n.Attr, "title") != ""
 			})
@@ -731,8 +765,9 @@ func ParseReviewFromHTML(doc *xhtml.Node, questionsByTitle map[string]int, abstr
 				continue
 			}
 			fullTitle := getAttr(spanNode.Attr, "title")
-			// title format: "GroupName: TrackCode - TrackTitle"
-			// e.g. "MC8 Applications...: MC8.1 - MC8.1 First Track in MC8..."
+			// Parse "GroupName: Code - Title"
+			//   dashParts[0] = "GroupName: Code"
+			//   dashParts[1] = "Title"  ← used as the lookup key
 			var tCode, tTitle string
 			dashParts := strings.SplitN(fullTitle, " - ", 2)
 			if len(dashParts) == 2 {
@@ -746,13 +781,14 @@ func ParseReviewFromHTML(doc *xhtml.Node, questionsByTitle map[string]int, abstr
 			}
 
 			t := Track{Code: tCode, Title: tTitle}
-			// Resolve track ID from lookup map if available.
-			if tracksByCode != nil && tCode != "" {
-				if lt, ok := tracksByCode[tCode]; ok {
+			// Resolve the full Track (ID, canonical Title) from the lookup map.
+			// The map is keyed by Track.Title because Track.Code is often empty
+			// in the abstract data returned by Indico.
+			if tracksByTitle != nil && tTitle != "" {
+				if lt, ok := tracksByTitle[tTitle]; ok {
 					t.ID = lt.ID
-					if t.Title == "" {
-						t.Title = lt.Title
-					}
+					t.Code = lt.Code
+					t.Title = lt.Title
 				}
 			}
 			proposedTracks = append(proposedTracks, t)
@@ -796,11 +832,11 @@ func ParseReviewFromHTML(doc *xhtml.Node, questionsByTitle map[string]int, abstr
 // abstract database ID and parses the current user's review from it.
 // questionsByTitle maps lower-cased question titles to their numeric IDs so that
 // Rating.Question fields can be populated correctly.
-// abstractsByDBID, tracksByCode, and contribTypesByName are optional lookup maps
+// abstractsByDBID, tracksByTitle, and contribTypesByName are optional lookup maps
 // forwarded to ParseReviewFromHTML to resolve proposed_related_abstract,
 // proposed_tracks, and proposed_contrib_type respectively.
 // Returns nil, nil when the page exists but contains no review by this user.
-func (c *IndicoClient) GetReviewFromAbstractPage(ctx context.Context, abstractID int, questionsByTitle map[string]int, abstractsByDBID map[int]*RelatedAbstract, tracksByCode map[string]*Track, contribTypesByName map[string]int) (*Review, error) {
+func (c *IndicoClient) GetReviewFromAbstractPage(ctx context.Context, abstractID int, questionsByTitle map[string]int, abstractsByDBID map[int]*RelatedAbstract, tracksByTitle map[string]*Track, contribTypesByName map[string]int) (*Review, error) {
 	u, err := url.Parse(c.BaseURL)
 	if err != nil {
 		return nil, err
@@ -847,7 +883,7 @@ func (c *IndicoClient) GetReviewFromAbstractPage(ctx context.Context, abstractID
 		c.csrfToken = csrf
 	}
 
-	return ParseReviewFromHTML(doc, questionsByTitle, abstractsByDBID, tracksByCode, contribTypesByName)
+	return ParseReviewFromHTML(doc, questionsByTitle, abstractsByDBID, tracksByTitle, contribTypesByName)
 }
 
 // AggRatings aggregates ratings from a single review by question ID.
