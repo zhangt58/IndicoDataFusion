@@ -18,6 +18,7 @@
     currentIndex = 0,
     totalCount = 0,
     onNavigate = null,
+    visibilityConfig = null,
   } = $props();
 
   // Close dialog
@@ -96,6 +97,6 @@
     </div>
   </div>
   {#if abstract}
-    <AbstractCardItem bind:abstract onRefresh={handleRefresh} {isMyReview} />
+    <AbstractCardItem bind:abstract onRefresh={handleRefresh} {isMyReview} {visibilityConfig} />
   {/if}
 </Modal>

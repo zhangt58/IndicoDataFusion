@@ -654,6 +654,7 @@
   currentIndex={currentDialogIndex}
   totalCount={sortedItems.length}
   onNavigate={navigateDialog}
+  {visibilityConfig}
 />
 
 <!-- Track Details Dialog -->

@@ -9,6 +9,7 @@
     useAffiliationMap = $bindable(false),
     /** @type {Record<string, string>} flat alias→canonical lookup */
     aliasToCanonical = {},
+    visibilityConfig = null,
   } = $props();
 
   // Table controls state
@@ -437,5 +438,6 @@
     currentIndex={currentDialogIndex}
     totalCount={selectedAffiliationAbstractIds.length}
     onNavigate={(direction) => navigateDialog(direction)}
+    {visibilityConfig}
   />
 {/if}
