@@ -10,6 +10,8 @@
   import TrackBadge from '../pages/TrackBadge.svelte';
   import TypeBadge from '../pages/TypeBadge.svelte';
   import StateBadge from '../pages/StateBadge.svelte';
+  import AffiliationBadge from './AffiliationBadge.svelte';
+  import AffiliationDialog from './AffiliationDialog.svelte';
   import { getAllTracks } from '../pages/AbstractTableItem.js';
   import { formatDate, ACTION_STYLES } from '../lib/reviewUtils.js';
 
@@ -42,6 +44,8 @@
 
   // Reviewer dialog
   let showReviewerDialog = $state(false);
+  // Affiliation dialog for primary author
+  let showAffiliationDialog = $state(false);
 
   // ── Derived ─────────────────────────────────────────────────────────────────
   const isEditMode = $derived(abstract?.my_review != null);
@@ -423,10 +427,10 @@
             {/if}
           </div>
           {#if primaryAuthor.affiliation}
-            <div class="text-gray-600 dark:text-gray-400 mt-0.5">
-              <Icon icon="mdi:domain" class="w-3 h-3 inline" />
-              {primaryAuthor.affiliation}
-            </div>
+            <AffiliationBadge
+              affiliation={primaryAuthor.affiliation}
+              onclick={() => (showAffiliationDialog = true)}
+            />
           {/if}
         </div>
       </div>
@@ -951,6 +955,8 @@
     </button>
   </div>
 </div>
+
+<AffiliationDialog bind:open={showAffiliationDialog} affiliation={primaryAuthor.affiliation} />
 
 <!-- ReviewerDialog — opened when clicking the ReviewerCard -->
 {#if isEditMode && currentReview?.user}
