@@ -1385,11 +1385,11 @@ func (h *DataSourceHandler) IsTestMode() bool {
 	return h.isTestMode
 }
 
-// IsAbstractsFileMode returns true when abstract data is served from the
+// ReviewMode returns true when abstract data is served from the
 // --abstracts-file override rather than from the Indico API or test fixtures.
-// In this mode the refresh button should be hidden because there is no live
-// API to refresh from.
-func (h *DataSourceHandler) IsAbstractsFileMode() bool {
+// In this mode certain UI elements should be hidden (e.g., priority ratings,
+// submission tab, and some review analytics tabs).
+func (h *DataSourceHandler) ReviewMode() bool {
 	return h.abstractsFile != ""
 }
 
