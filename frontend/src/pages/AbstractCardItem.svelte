@@ -12,7 +12,12 @@
   import RawJsonDialog from '../components/RawJsonDialog.svelte';
   import ReviewButton from '../components/ReviewButton.svelte';
 
-  let { abstract = $bindable({}), onRefresh = null, isMyReview = false } = $props();
+  let {
+    abstract = $bindable({}),
+    onRefresh = null,
+    isMyReview = false,
+    visibilityConfig = null,
+  } = $props();
 
   // Dialog state
   let showAffiliationDialog = $state(false);
@@ -230,11 +235,11 @@
   </div>
 
   <!-- Ratings Summary -->
-  {#if abstract.reviews && abstract.reviews.length > 0 && (firstPriorityTotal > 0 || secondPriorityTotal > 0)}
+  {#if abstract.reviews && abstract.reviews.length > 0 && (firstPriorityTotal > 0 || secondPriorityTotal > 0) && (visibilityConfig?.ShowFirstPriority !== false || visibilityConfig?.ShowSecondPriority !== false)}
     <div class="mt-1">
       <p class="text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1">Ratings:</p>
       <div class="text-sm flex gap-4 items-center">
-        {#if firstPriorityTotal > 0}
+        {#if firstPriorityTotal > 0 && visibilityConfig?.ShowFirstPriority !== false}
           <div class="flex items-center gap-2">
             <span class="text-gray-600 dark:text-gray-400">First Priority:</span>
             <span class="font-semibold text-blue-600 dark:text-blue-400">
@@ -242,7 +247,7 @@
             </span>
           </div>
         {/if}
-        {#if secondPriorityTotal > 0}
+        {#if secondPriorityTotal > 0 && visibilityConfig?.ShowSecondPriority !== false}
           <div class="flex items-center gap-2">
             <span class="text-gray-600 dark:text-gray-400">Second Priority:</span>
             <span class="font-semibold text-green-600 dark:text-green-400">

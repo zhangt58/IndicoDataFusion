@@ -9,7 +9,7 @@
   import ReviewMatrixView from './ReviewMatrixView.svelte';
 
   // Props: expects an array of abstracts with reviews data
-  let { abstractData = [] } = $props();
+  let { abstractData = [], visibilityConfig = null } = $props();
 
   // ── Shared weights: lifted state so Matrix and Ratings chart stay in sync ──
   let firstPriorityWeight = $state(1);
@@ -220,96 +220,108 @@
 
   <!-- Tabs for different visualizations -->
   <Tabs tabStyle="underline">
-    <TabItem open title="By Reviewer">
-      <div class="p-0.5 last:-mt-4">
-        {#if reviewerOptions && reviewerOptions.series && reviewerOptions.series.length}
-          <BarChart
-            labels={reviewerOptions.labels}
-            series={reviewerOptions.series}
-            colors={reviewerOptions.colors}
-            title="Reviews per Reviewer"
-            height={chartHeight}
-            onItemClick={handleReviewerClick}
-          />
-        {:else}
-          <div class="text-sm text-gray-500 text-center py-8">No review data available</div>
-        {/if}
-      </div>
-    </TabItem>
+    {#if visibilityConfig?.ShowByReviewerTab !== false}
+      <TabItem open title="By Reviewer">
+        <div class="p-0.5 last:-mt-4">
+          {#if reviewerOptions && reviewerOptions.series && reviewerOptions.series.length}
+            <BarChart
+              labels={reviewerOptions.labels}
+              series={reviewerOptions.series}
+              colors={reviewerOptions.colors}
+              title="Reviews per Reviewer"
+              height={chartHeight}
+              onItemClick={handleReviewerClick}
+            />
+          {:else}
+            <div class="text-sm text-gray-500 text-center py-8">No review data available</div>
+          {/if}
+        </div>
+      </TabItem>
+    {/if}
 
-    <TabItem title="By Track">
-      <div class="p-0.5 last:-mt-4">
-        {#if trackOptions && trackOptions.series && trackOptions.series.length}
-          <div class="flex flex-col md:flex-row gap-0.5">
-            <div class="w-full md:w-1/2">
-              <DonutChart
-                labels={trackOptions.labels}
-                series={trackOptions.series}
-                colors={trackOptions.colors}
-                title="Reviews by Track"
-                height={chartHeight}
-                legendPosition="bottom"
-              />
+    {#if visibilityConfig?.ShowByTrackTab !== false}
+      <TabItem title="By Track">
+        <div class="p-0.5 last:-mt-4">
+          {#if trackOptions && trackOptions.series && trackOptions.series.length}
+            <div class="flex flex-col md:flex-row gap-0.5">
+              <div class="w-full md:w-1/2">
+                <DonutChart
+                  labels={trackOptions.labels}
+                  series={trackOptions.series}
+                  colors={trackOptions.colors}
+                  title="Reviews by Track"
+                  height={chartHeight}
+                  legendPosition="bottom"
+                />
+              </div>
+              <div class="w-full md:w-1/2">
+                <BarChart
+                  labels={trackOptions.labels}
+                  series={trackOptions.series}
+                  colors={trackOptions.colors}
+                  title=""
+                  height={chartHeight}
+                />
+              </div>
             </div>
-            <div class="w-full md:w-1/2">
-              <BarChart
-                labels={trackOptions.labels}
-                series={trackOptions.series}
-                colors={trackOptions.colors}
-                title=""
-                height={chartHeight}
-              />
-            </div>
-          </div>
-        {:else}
-          <div class="text-sm text-gray-500 text-center py-8">No track data available</div>
-        {/if}
-      </div>
-    </TabItem>
+          {:else}
+            <div class="text-sm text-gray-500 text-center py-8">No track data available</div>
+          {/if}
+        </div>
+      </TabItem>
+    {/if}
 
-    <TabItem title="By Action">
-      <div class="p-0.5 last:-mt-4">
-        {#if actionOptions && actionOptions.series && actionOptions.series.length}
-          <DonutChart
-            labels={actionOptions.labels}
-            series={actionOptions.series}
-            colors={actionOptions.colors}
-            title="Proposed Actions Distribution"
+    {#if visibilityConfig?.ShowByActionTab !== false}
+      <TabItem title="By Action">
+        <div class="p-0.5 last:-mt-4">
+          {#if actionOptions && actionOptions.series && actionOptions.series.length}
+            <DonutChart
+              labels={actionOptions.labels}
+              series={actionOptions.series}
+              colors={actionOptions.colors}
+              title="Proposed Actions Distribution"
+              height={chartHeight}
+              legendPosition="bottom"
+            />
+          {:else}
+            <div class="text-sm text-gray-500 text-center py-8">No action data available</div>
+          {/if}
+        </div>
+      </TabItem>
+    {/if}
+
+    {#if visibilityConfig?.ShowRatingsTab !== false}
+      <TabItem title="Ratings">
+        <div class="p-0.5 last:-mt-4">
+          <RatingsBarChart
+            {abstractData}
             height={chartHeight}
-            legendPosition="bottom"
+            bind:firstPriorityWeight
+            bind:secondPriorityWeight
           />
-        {:else}
-          <div class="text-sm text-gray-500 text-center py-8">No action data available</div>
-        {/if}
-      </div>
-    </TabItem>
+        </div>
+      </TabItem>
+    {/if}
 
-    <TabItem title="Ratings">
-      <div class="p-0.5 last:-mt-4">
-        <RatingsBarChart
-          {abstractData}
-          height={chartHeight}
-          bind:firstPriorityWeight
-          bind:secondPriorityWeight
-        />
-      </div>
-    </TabItem>
+    {#if visibilityConfig?.ShowTimelineTab !== false}
+      <TabItem title="Timeline">
+        <div class="p-0.5 last:-mt-4">
+          <ReviewTimeline reviews={allReviews} height={chartHeight} />
+        </div>
+      </TabItem>
+    {/if}
 
-    <TabItem title="Timeline">
-      <div class="p-0.5 last:-mt-4">
-        <ReviewTimeline reviews={allReviews} height={chartHeight} />
-      </div>
-    </TabItem>
-
-    <TabItem title="Matrix">
-      <div class="p-0.5 last:-mt-6">
-        <ReviewMatrixView
-          abstracts={abstractData}
-          bind:firstPriorityWeight
-          bind:secondPriorityWeight
-        />
-      </div>
-    </TabItem>
+    {#if visibilityConfig?.ShowMatrixTab !== false}
+      <TabItem title="Matrix">
+        <div class="p-0.5 last:-mt-6">
+          <ReviewMatrixView
+            abstracts={abstractData}
+            bind:firstPriorityWeight
+            bind:secondPriorityWeight
+          />
+        </div>
+      </TabItem>
+    {/if}
 
     {#if hasMyReviews}
       <TabItem title="My Reviews">

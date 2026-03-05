@@ -2,12 +2,13 @@
   import { onMount, onDestroy } from 'svelte';
   import { DarkMode } from 'flowbite-svelte';
   import { EventsOn, EventsOff } from '../../wailsjs/runtime/runtime.js';
-  import { GetAppInfo } from '../../wailsjs/go/main/App';
+  import { GetAppInfo, ReviewMode } from '../../wailsjs/go/main/App';
 
   let dataSource = $state('');
   let loading = $state(true);
   let appName = $state('');
   let appVersion = $state('');
+  let reviewMode = $state(false);
 
   // Live clock state
   let currentTime = $state('');
@@ -60,6 +61,13 @@
       }, 1000);
     } catch (e) {
       console.debug('Failed to start clock timer', e);
+    }
+
+    // Check review mode
+    try {
+      reviewMode = await ReviewMode();
+    } catch (e) {
+      console.debug('Failed to check review mode', e);
     }
 
     // No blocking cache lookup here; rely primarily on backend events, but try to
@@ -141,6 +149,26 @@
         role="group"
         aria-label={`Data source in use: ${dataSource}`}
       >
+        {#if reviewMode}
+          <span
+            class="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200 text-xs font-semibold shadow-sm"
+            title="Review Mode: Limited data visibility for reviewers"
+          >
+            <svg
+              class="w-3 h-3"
+              fill="currentColor"
+              viewBox="0 0 20 20"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                fill-rule="evenodd"
+                d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+                clip-rule="evenodd"
+              ></path>
+            </svg>
+            Review Mode
+          </span>
+        {/if}
         <span class="text-sm text-gray-500 dark:text-gray-400">Data source:</span>
 
         <button

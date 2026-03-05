@@ -4,7 +4,8 @@
   import {
     GetAbstracts,
     IsTestMode,
-    IsAbstractsFileMode,
+    ReviewMode,
+    GetVisibilityConfig,
     GetCacheStats,
     GetCacheEntryMetadata,
   } from '../../wailsjs/go/main/App';
@@ -24,7 +25,8 @@
   let error = $state(null);
   let viewMode = $state('card');
   let isTestMode = $state(false);
-  let isAbstractsFileMode = $state(false);
+  let reviewMode = $state(false);
+  let visibilityConfig = $state(null);
   let cacheExpired = $state(false);
   let lastRefreshed = $state(null);
   let showReviewPanel = $state(false);
@@ -84,9 +86,10 @@
       console.error('Failed to check test mode', e);
     }
     try {
-      isAbstractsFileMode = await IsAbstractsFileMode();
+      reviewMode = await ReviewMode();
+      visibilityConfig = await GetVisibilityConfig();
     } catch (e) {
-      console.warn('Failed to check abstracts file mode', e);
+      console.error('Failed to check review mode', e);
     }
 
     // Load abstract data first to show page immediately
@@ -164,7 +167,7 @@
       Abstracts ({abstractData.length})
     </h2>
     <div class="flex gap-1 ml-2">
-      {#if !isTestMode }
+      {#if !isTestMode && !reviewMode}
         <div class="relative">
           <button
             onclick={() => handleRefresh()}
@@ -251,15 +254,15 @@
               mt-8 mb-4 h-[calc(100vh-9rem)]"
   >
     {#if viewMode === 'table'}
-      <AbstractTableView bind:abstractData {selectedReviewTrackID} />
+      <AbstractTableView bind:abstractData {selectedReviewTrackID} {visibilityConfig} />
     {:else if viewMode === 'chart'}
       {#if abstractData && abstractData.length > 0}
-        <AbstractChartView {abstractData} />
+        <AbstractChartView {abstractData} {visibilityConfig} />
       {:else}
         <div class="p-4 text-center text-slate-500">No abstracts to display for chart.</div>
       {/if}
     {:else}
-      <AbstractCardView bind:abstractData />
+      <AbstractCardView bind:abstractData {visibilityConfig} />
     {/if}
   </div>
 {/if}

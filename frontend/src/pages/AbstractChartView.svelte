@@ -10,7 +10,7 @@
   import Icon from '@iconify/svelte';
 
   // Props: array of abstract objects (same shape returned by GetAbstracts)
-  let { abstractData = [] } = $props();
+  let { abstractData = [], visibilityConfig = null } = $props();
 
   // Affiliation deduplication state — aliasToCanonical is managed by AffiliationSettings
   let useAffiliationMap = $state(false);
@@ -342,20 +342,22 @@
       </div>
     </TabItem>
 
-    <TabItem title="Submission">
-      <div class="p-0.5 last:-mt-4">
-        {#if abstractData && abstractData.length}
-          <AbstractSubmissionTrend submittedTimes={abstractData} title={''} height={'40vh'} />
-        {:else}
-          <div class="text-sm text-gray-500 text-center py-8">No abstracts to display.</div>
-        {/if}
-      </div>
-    </TabItem>
+    {#if visibilityConfig?.ShowSubmissionTab !== false}
+      <TabItem title="Submission">
+        <div class="p-0.5 last:-mt-4">
+          {#if abstractData && abstractData.length}
+            <AbstractSubmissionTrend submittedTimes={abstractData} title={''} height={'40vh'} />
+          {:else}
+            <div class="text-sm text-gray-500 text-center py-8">No abstracts to display.</div>
+          {/if}
+        </div>
+      </TabItem>
+    {/if}
 
     <TabItem title="Reviews">
       <div class="p-0.5 last:-mt-8">
         {#if abstractData && abstractData.length}
-          <ReviewChartView {abstractData} />
+          <ReviewChartView {abstractData} {visibilityConfig} />
         {:else}
           <div class="text-sm text-gray-500 text-center py-8">No abstracts to display.</div>
         {/if}
