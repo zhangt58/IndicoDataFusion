@@ -2,6 +2,7 @@
   import { Modal } from 'flowbite-svelte';
   import Icon from '@iconify/svelte';
   import AbstractCardItem from './AbstractCardItem.svelte';
+  import { onMount, onDestroy } from 'svelte';
 
   /**
    * open        - controls modal visibility
@@ -39,20 +40,24 @@
     onNavigate && onNavigate('next');
   }
 
-  // Keyboard navigation
+  // Keyboard navigation — registered in bubble phase so capture-phase handlers in child
+  // dialogs (AbstractReviewsDialog, AbstractReviewFormDialog) can call stopPropagation first.
   function handleKeydown(e) {
     if (!open) return;
     if (e.key === 'ArrowLeft') {
       e.preventDefault();
+      e.stopPropagation();
       goPrev();
     } else if (e.key === 'ArrowRight') {
       e.preventDefault();
+      e.stopPropagation();
       goNext();
     }
   }
-</script>
 
-<svelte:window onkeydown={handleKeydown} />
+  onMount(() => window.addEventListener('keydown', handleKeydown, false));
+  onDestroy(() => window.removeEventListener('keydown', handleKeydown, false));
+</script>
 
 <Modal bind:open size="xl" dismissable={false}>
   <div class="grid grid-cols-3 items-center mb-4">
