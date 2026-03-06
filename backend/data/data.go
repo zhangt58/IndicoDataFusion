@@ -232,7 +232,7 @@ func (h *DataSourceHandler) getAbstractsFromOverrideFile(ctx context.Context) ([
 	// the file is static the in-file review data may be stale, so we scrape the
 	// live review page for every abstract assigned to the current user and upsert
 	// the result so that MyReview always reflects the latest submitted state.
-	// Up to 8 goroutines run in parallel to amortise per-abstract HTTP latency.
+	// Up to 4 goroutines run in parallel to amortise per-abstract HTTP latency.
 	if h.client != nil {
 		type scrapeResult struct {
 			idx           int
@@ -241,7 +241,7 @@ func (h *DataSourceHandler) getAbstractsFromOverrideFile(ctx context.Context) ([
 			err           error
 		}
 
-		const maxWorkers = 8
+		const maxWorkers = 4
 
 		// Build lookup maps from the already-loaded abstract slice so that
 		// scrapeMyReviewWithMaps can resolve friendly_id and track codes without
