@@ -322,17 +322,19 @@ func (h *DataSourceHandler) getAbstractsFromOverrideFile(ctx context.Context) ([
 		}
 	}
 
-	// Filter to only abstracts assigned to this reviewer.
-	var assigned []indico.AbstractData
-	for i := range response.Abstracts {
-		if response.Abstracts[i].IsMyReview {
-			assigned = append(assigned, response.Abstracts[i])
-		}
-	}
-	log.Printf("getAbstractsFromOverrideFile: returning %d reviewer-assigned abstracts (out of %d total in file)",
-		len(assigned), len(response.Abstracts))
+	return response.Abstracts, nil
 
-	return assigned, nil
+	//// Filter to only abstracts assigned to this reviewer.
+	//var assigned []indico.AbstractData
+	//for i := range response.Abstracts {
+	//	if response.Abstracts[i].IsMyReview {
+	//		assigned = append(assigned, response.Abstracts[i])
+	//	}
+	//}
+	//log.Printf("getAbstractsFromOverrideFile: returning %d reviewer-assigned abstracts (out of %d total in file)",
+	//	len(assigned), len(response.Abstracts))
+	//
+	//return assigned, nil
 }
 
 // parseSize parses size strings like "100MB", "1GB", "512KB"
