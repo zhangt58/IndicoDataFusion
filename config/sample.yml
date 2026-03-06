@@ -52,3 +52,7 @@ ConfName:
   timeout: 60s
   # is indico API?
   indico: true
+  # (optional) path to a pre-processed abstracts JSON file for review mode.
+  # When set, abstract data is read from this file instead of the Indico API,
+  # enabling review mode without the --abstracts-file CLI flag.
+  # abstracts_file: /path/to/abstracts-snapshot.json

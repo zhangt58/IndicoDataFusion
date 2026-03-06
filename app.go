@@ -69,9 +69,12 @@ func (a *App) startup(ctx context.Context, configPath string) {
 	a.handler = handler
 	a.configPath = configPath
 
-	// Apply the abstracts file override if one was provided via --abstracts-file.
+	// Apply the abstracts file override if one was explicitly provided via the
+	// --abstracts-file CLI flag or IDF_ABSTRACTS_FILE env var.  The handler may
+	// already have an abstractsFile set from the config's abstracts_file field;
+	// the explicit CLI/env value takes precedence and overwrites it.
 	if a.abstractsFile != "" {
-		log.Printf("Abstracts override file: %s\n", a.abstractsFile)
+		log.Printf("Abstracts override file (CLI/env): %s\n", a.abstractsFile)
 		a.handler.SetAbstractsFile(a.abstractsFile)
 	}
 

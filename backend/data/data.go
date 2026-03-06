@@ -166,6 +166,13 @@ func NewDataSourceHandler(ds *config.DataSource, cacheConfig *config.CacheConfig
 		handler.client = client
 		handler.isTestMode = false
 		log.Printf("Used Indico API token for %s: (%s) [REDACTED]", ds.Name, ds.Indico.APITokenName)
+
+		// If the data source specifies abstracts_file in the config, apply it now.
+		// This enables review mode without the --abstracts-file CLI flag.
+		if ds.Indico.AbstractsFile != "" {
+			log.Printf("abstracts_file set in config for %s: %s", ds.Name, ds.Indico.AbstractsFile)
+			handler.abstractsFile = ds.Indico.AbstractsFile
+		}
 	} else if ds.Test != nil {
 		// Test mode with local files
 		handler.dataDir, _ = filepath.Abs(ds.Test.DataDir)
