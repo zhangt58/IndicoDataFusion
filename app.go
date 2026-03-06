@@ -187,6 +187,16 @@ func (a *App) GetReviewAbstractIDs(reviewTrackID int) ([]int, error) {
 	return a.handler.GetReviewAbstractIDs(a.ctx, reviewTrackID)
 }
 
+// GetVoteStats returns vote statistics per review track for the current reviewer.
+// A "vote" is defined as casting a first- or second-priority "yes" answer on any abstract.
+// Each track has a maximum of data.MaxVotesPerTrack votes allowed.
+func (a *App) GetVoteStats() (*data.VoteStats, error) {
+	if a.handler == nil {
+		return nil, errors.Errorf("data handler not initialized")
+	}
+	return a.handler.GetVoteStats(a.ctx)
+}
+
 // SubmitAbstractReview submits a new review for an abstract.
 // Parameters:
 //   - abstractID: the database ID of the abstract
