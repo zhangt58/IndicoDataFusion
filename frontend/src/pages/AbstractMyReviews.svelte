@@ -151,7 +151,7 @@
       </button>
     {:else}
       <!-- Expanded view -->
-      <div class="px-3 py-2">
+      <div class="px-2 py-2">
         <div
           class="flex items-center justify-between mb-2 drag-handle cursor-move"
           onmousedown={handleMouseDown}
@@ -204,97 +204,101 @@
             {validTrackCount} track(s) assigned:
           </div>
 
-          <!-- Vote summary bar (shown when voteStatsStore.data is available) -->
-          {#if voteStatsStore.data}
-            <div
-              class="mb-2 px-2 py-1.5 rounded bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-200 dark:border-indigo-700"
-            >
-              <div class="flex items-center gap-1.5 mb-1">
-                <Icon icon="mdi:vote" class="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
-                <span class="text-xs font-semibold text-indigo-700 dark:text-indigo-300">
-                  Votes: {voteStatsStore.data.total_cast} cast · {voteStatsStore.data.max_votes} max per
-                  track
-                </span>
-              </div>
-              <div class="flex flex-col gap-0.5">
-                {#each reviewTracks.filter((t) => t.link) as track}
-                  {@const tv = trackVotes(track.track_id)}
-                  {#if tv}
-                    {@const pct = tv.votes_max > 0 ? (tv.votes_cast / tv.votes_max) * 100 : 0}
-                    {@const overLimit = tv.votes_cast >= tv.votes_max}
-                    <div class="flex items-center gap-1.5">
-                      <span
-                        class="text-[0.65rem] text-gray-600 dark:text-gray-400 truncate max-w-28"
-                        title={track.name}>{track.name}</span
-                      >
-                      <div
-                        class="flex-1 h-1.5 rounded-full bg-gray-200 dark:bg-gray-700 overflow-hidden"
-                      >
+          <!-- Scrollable area covering vote stats + track list -->
+          <div class="overflow-y-auto max-h-96 pr-1 space-y-1">
+            <!-- Vote summary bar (shown when voteStatsStore.data is available) -->
+            {#if voteStatsStore.data}
+              <div
+                class="px-2 py-1 rounded bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-200 dark:border-indigo-700"
+              >
+                <div class="flex items-center gap-1.5 mb-1">
+                  <Icon icon="mdi:vote" class="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
+                  <span class="text-xs font-semibold text-indigo-700 dark:text-indigo-300">
+                    Votes: {voteStatsStore.data.total_cast} cast · {voteStatsStore.data.max_votes} max
+                    per track
+                  </span>
+                </div>
+                <div class="flex flex-col gap-0.5">
+                  {#each reviewTracks.filter((t) => t.link) as track}
+                    {@const tv = trackVotes(track.track_id)}
+                    {#if tv}
+                      {@const pct = tv.votes_max > 0 ? (tv.votes_cast / tv.votes_max) * 100 : 0}
+                      {@const overLimit = tv.votes_cast >= tv.votes_max}
+                      <div class="flex items-center gap-1.5">
+                        <span
+                          class="text-[0.65rem] text-gray-600 dark:text-gray-400 truncate max-w-28"
+                          title={track.name}>{track.name}</span
+                        >
                         <div
-                          class="h-full rounded-full transition-all {overLimit
-                            ? 'bg-red-500'
-                            : pct >= 67
-                              ? 'bg-amber-400'
-                              : 'bg-green-500'}"
-                          style="width: {Math.min(pct, 100)}%"
-                        ></div>
+                          class="flex-1 h-1.5 rounded-full bg-gray-200 dark:bg-gray-700 overflow-hidden"
+                        >
+                          <div
+                            class="h-full rounded-full transition-all {overLimit
+                              ? 'bg-red-500'
+                              : pct >= 67
+                                ? 'bg-amber-400'
+                                : 'bg-green-500'}"
+                            style="width: {Math.min(pct, 100)}%"
+                          ></div>
+                        </div>
+                        <span
+                          class="text-[0.65rem] font-mono font-semibold shrink-0 {overLimit
+                            ? 'text-red-600 dark:text-red-400'
+                            : 'text-gray-600 dark:text-gray-400'}"
+                        >
+                          {tv.votes_cast}/{tv.votes_max}
+                        </span>
                       </div>
+                    {/if}
+                  {/each}
+                </div>
+              </div>
+            {/if}
+
+            <div class="flex flex-col gap-1">
+              {#each reviewTracks as track}
+                {#if track.link}
+                  {@const tv = trackVotes(track.track_id)}
+                  {@const overLimit = tv && tv.votes_cast >= tv.votes_max}
+                  <button
+                    onclick={() => handleTrackClick(track)}
+                    class="relative px-5 py-1 text-xs rounded transition-colors {selectedTrackID ===
+                    track.track_id
+                      ? 'bg-blue-500 text-white'
+                      : 'bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 hover:bg-gray-300 dark:hover:bg-gray-600'}"
+                    title="{track.name}{tv ? ` — ${tv.votes_cast}/${tv.votes_max} votes cast` : ''}"
+                  >
+                    {#if track.abstract_count > 0}
                       <span
-                        class="text-[0.65rem] font-mono font-semibold shrink-0 {overLimit
-                          ? 'text-red-600 dark:text-red-400'
-                          : 'text-gray-600 dark:text-gray-400'}"
+                        class="absolute -top-1 -left-0.5 flex items-center justify-center min-w-4 h-4 px-1 bg-red-500 text-white text-[0.55rem] rounded-md border border-white dark:border-gray-800"
                       >
+                        {track.abstract_count}
+                      </span>
+                    {/if}
+                    {track.name}
+                    {#if tv}
+                      <span
+                        class="ml-2 inline-flex items-center gap-0.5 text-[0.6rem] font-semibold px-1 rounded {overLimit
+                          ? 'bg-red-200 text-red-700 dark:bg-red-800/50 dark:text-red-300'
+                          : 'bg-green-100 text-green-700 dark:bg-green-800/50 dark:text-green-300'}"
+                        title="Votes cast / max per track"
+                      >
+                        <Icon icon="mdi:vote" class="w-2.5 h-2.5" />
                         {tv.votes_cast}/{tv.votes_max}
                       </span>
-                    </div>
-                  {/if}
-                {/each}
-              </div>
+                    {/if}
+                  </button>
+                {:else}
+                  <span
+                    class="relative px-2 py-1 text-xs rounded bg-gray-300 dark:bg-gray-600 text-gray-500 dark:text-gray-400 cursor-not-allowed"
+                    title={track.name}
+                  >
+                    {track.name}
+                  </span>
+                {/if}
+              {/each}
             </div>
-          {/if}
-
-          <div class="flex flex-wrap gap-2">
-            {#each reviewTracks as track}
-              {#if track.link}
-                {@const tv = trackVotes(track.track_id)}
-                {@const overLimit = tv && tv.votes_cast >= tv.votes_max}
-                <button
-                  onclick={() => handleTrackClick(track)}
-                  class="relative px-2 py-1 text-xs rounded transition-colors {selectedTrackID ===
-                  track.track_id
-                    ? 'bg-blue-500 text-white'
-                    : 'bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 hover:bg-gray-300 dark:hover:bg-gray-600'}"
-                  title="{track.name}{tv ? ` — ${tv.votes_cast}/${tv.votes_max} votes cast` : ''}"
-                >
-                  {#if track.abstract_count > 0}
-                    <span
-                      class="absolute -top-2 -left-2.5 flex items-center justify-center min-w-4 h-4 px-1 bg-red-500 text-white text-[0.65rem] font-medium rounded-md border border-white dark:border-gray-800"
-                    >
-                      {track.abstract_count}
-                    </span>
-                  {/if}
-                  {track.name}
-                  {#if tv}
-                    <span
-                      class="ml-1 inline-flex items-center gap-0.5 text-[0.6rem] font-semibold px-1 rounded {overLimit
-                        ? 'bg-red-200 text-red-700 dark:bg-red-800/50 dark:text-red-300'
-                        : 'bg-green-100 text-green-700 dark:bg-green-800/50 dark:text-green-300'}"
-                      title="Votes cast / max per track"
-                    >
-                      <Icon icon="mdi:vote" class="w-2.5 h-2.5" />
-                      {tv.votes_cast}/{tv.votes_max}
-                    </span>
-                  {/if}
-                </button>
-              {:else}
-                <span
-                  class="relative px-2 py-1 text-xs rounded bg-gray-300 dark:bg-gray-600 text-gray-500 dark:text-gray-400 cursor-not-allowed"
-                  title={track.name}
-                >
-                  {track.name}
-                </span>
-              {/if}
-            {/each}
+            <!-- end scrollable area -->
           </div>
         {:else if !loading}
           <div class="text-xs text-gray-500 dark:text-gray-400">
