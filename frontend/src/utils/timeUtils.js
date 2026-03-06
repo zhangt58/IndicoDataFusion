@@ -41,4 +41,3 @@ export function formatFullDateTime(timestamp) {
   const date = typeof timestamp === 'string' ? new Date(timestamp) : timestamp;
   return date.toLocaleString();
 }
-

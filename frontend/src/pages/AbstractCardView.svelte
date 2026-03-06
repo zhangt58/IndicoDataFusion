@@ -2,7 +2,7 @@
   import AbstractCardItem from './AbstractCardItem.svelte';
   import { VirtualList } from 'svelte-virtuallists';
 
-  let { abstractData = $bindable([]) } = $props();
+  let { abstractData = $bindable([]), visibilityConfig = null } = $props();
 
   // Handle refresh from AbstractCardItem - update the array in place
   function handleItemRefresh(index, refreshedAbstract) {
@@ -23,6 +23,7 @@
             bind:abstract={abstractData[index]}
             onRefresh={(refreshed) => handleItemRefresh(index, refreshed)}
             isMyReview={abstractData[index].is_my_review || false}
+            {visibilityConfig}
           />
         </div>
       {/snippet}

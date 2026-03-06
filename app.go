@@ -6,6 +6,7 @@ import (
 	"IndicoDataFusion/backend/consts"
 	"IndicoDataFusion/backend/data"
 	"IndicoDataFusion/backend/indico"
+	"IndicoDataFusion/backend/reviewmode"
 	"IndicoDataFusion/backend/utils"
 	"context"
 	_ "embed"
@@ -584,14 +585,23 @@ func (a *App) IsTestMode() bool {
 	return a.handler.IsTestMode()
 }
 
-// IsAbstractsFileMode returns true when abstract data is being served from
-// an --abstracts-file override.  The frontend uses this to hide the refresh
-// button, since there is no live API to refresh from in this mode.
-func (a *App) IsAbstractsFileMode() bool {
+// ReviewMode returns true when abstract data is being served from
+// an --abstracts-file override. In this mode certain UI elements should be
+// hidden (e.g., priority ratings, submission tab, and some review analytics).
+func (a *App) ReviewMode() bool {
 	if a.handler == nil {
 		return false
 	}
-	return a.handler.IsAbstractsFileMode()
+	return a.handler.ReviewMode()
+}
+
+// GetVisibilityConfig returns the visibility configuration based on
+// whether the app is in review mode or not
+func (a *App) GetVisibilityConfig() *reviewmode.VisibilityConfig {
+	if a.ReviewMode() {
+		return reviewmode.ReviewModeVisibilityConfig()
+	}
+	return reviewmode.DefaultVisibilityConfig()
 }
 
 // GetCacheEntries returns all cache entries with metadata grouped by data source

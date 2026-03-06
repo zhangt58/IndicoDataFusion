@@ -1,6 +1,6 @@
 <script>
   import Icon from '@iconify/svelte';
-  import { Select } from 'flowbite-svelte';
+  import { Select, Radio } from 'flowbite-svelte';
   import {
     SubmitAbstractReview,
     UpdateAbstractReview,
@@ -10,6 +10,8 @@
   import TrackBadge from '../pages/TrackBadge.svelte';
   import TypeBadge from '../pages/TypeBadge.svelte';
   import StateBadge from '../pages/StateBadge.svelte';
+  import AffiliationBadge from './AffiliationBadge.svelte';
+  import AffiliationDialog from './AffiliationDialog.svelte';
   import { getAllTracks } from '../pages/AbstractTableItem.js';
   import { formatDate, ACTION_STYLES } from '../lib/reviewUtils.js';
 
@@ -28,6 +30,8 @@
 
   // question ratings map: questionID (int) → value (0 | 1)  stored as string for flowbite Select
   let questionRatings = $state({});
+  // For priority questions: track which one (if any) is selected as "yes" (only one can be yes)
+  let prioritySelection = $state('none'); // 'none' | 'first' | 'second'
   let proposedAction = $state('accept');
   let proposedContribTypeName = $state('');
   let proposedTrackIDs = $state([]);
@@ -42,6 +46,8 @@
 
   // Reviewer dialog
   let showReviewerDialog = $state(false);
+  // Affiliation dialog for primary author
+  let showAffiliationDialog = $state(false);
 
   // ── Derived ─────────────────────────────────────────────────────────────────
   const isEditMode = $derived(abstract?.my_review != null);
@@ -55,6 +61,39 @@
       .map(([qID, q]) => ({ id: parseInt(qID), ...q }))
       .sort((a, b) => (a.position ?? 0) - (b.position ?? 0)),
   );
+
+  // Separate priority questions from others
+  const priorityQuestions = $derived.by(() => {
+    const first = sortedQuestions.find((q) => q.title?.toLowerCase() === 'first priority');
+    const second = sortedQuestions.find((q) => q.title?.toLowerCase() === 'second priority');
+    return { first, second };
+  });
+
+  const nonPriorityQuestions = $derived(
+    sortedQuestions.filter(
+      (q) =>
+        q.title?.toLowerCase() !== 'first priority' && q.title?.toLowerCase() !== 'second priority',
+    ),
+  );
+
+  // Sync prioritySelection with questionRatings for priority questions
+  $effect(() => {
+    if (priorityQuestions.first && priorityQuestions.second) {
+      const firstID = priorityQuestions.first.id;
+      const secondID = priorityQuestions.second.id;
+
+      if (prioritySelection === 'first') {
+        questionRatings[firstID] = '1';
+        questionRatings[secondID] = '0';
+      } else if (prioritySelection === 'second') {
+        questionRatings[firstID] = '0';
+        questionRatings[secondID] = '1';
+      } else {
+        questionRatings[firstID] = '0';
+        questionRatings[secondID] = '0';
+      }
+    }
+  });
 
   const contribTypeOptions = $derived(
     Object.entries(contribTypes).map(([name, id]) => ({ name, id })),
@@ -97,8 +136,20 @@
   // Filtered abstract list for related-abstract search
   const filteredAbstracts = $derived.by(() => {
     const q = relatedAbstractSearch.trim().toLowerCase();
-    if (!q) return allAbstracts.slice(0, 60);
-    return allAbstracts
+
+    // For mark_as_duplicate and merge: only show abstracts assigned to the reviewer and exclude current
+    let abstracts = allAbstracts;
+    if (proposedAction === 'mark_as_duplicate' || proposedAction === 'merge') {
+      abstracts = allAbstracts.filter((a) => {
+        // Exclude the current abstract being reviewed
+        if (a.id === abstract?.id) return false;
+        // Only include abstracts assigned to this reviewer
+        return a.is_my_review === true || a.my_review != null;
+      });
+    }
+
+    if (!q) return abstracts.slice(0, 60);
+    return abstracts
       .filter((a) => String(a.friendly_id).includes(q) || a.title?.toLowerCase().includes(q))
       .slice(0, 60);
   });
@@ -216,6 +267,20 @@
         if (!(id in newRatings)) newRatings[id] = '0';
       }
       questionRatings = newRatings;
+
+      // Set prioritySelection based on ratings
+      if (priorityQuestions.first && priorityQuestions.second) {
+        const firstVal = newRatings[priorityQuestions.first.id] === '1';
+        const secondVal = newRatings[priorityQuestions.second.id] === '1';
+        if (firstVal) {
+          prioritySelection = 'first';
+        } else if (secondVal) {
+          prioritySelection = 'second';
+        } else {
+          prioritySelection = 'none';
+        }
+      }
+
       proposedAction = currentReview.proposed_action || 'accept';
       proposedContribTypeName = currentReview.proposed_contrib_type?.name ?? '';
       proposedTrackIDs = currentReview.proposed_tracks?.map((t) => t.id) ?? [];
@@ -230,6 +295,7 @@
         newRatings[parseInt(qID)] = '0';
       }
       questionRatings = newRatings;
+      prioritySelection = 'none';
       proposedAction = 'accept';
       proposedContribTypeName = '';
       proposedTrackIDs = [];
@@ -255,7 +321,7 @@
       loadingAbstracts = true;
       GetAbstracts()
         .then((list) => {
-          allAbstracts = (list ?? []).filter((a) => a.id !== abstract?.id);
+          allAbstracts = list ?? [];
         })
         .catch((e) => console.error('Failed to load abstracts for picker:', e))
         .finally(() => {
@@ -423,10 +489,10 @@
             {/if}
           </div>
           {#if primaryAuthor.affiliation}
-            <div class="text-gray-600 dark:text-gray-400 mt-0.5">
-              <Icon icon="mdi:domain" class="w-3 h-3 inline" />
-              {primaryAuthor.affiliation}
-            </div>
+            <AffiliationBadge
+              affiliation={primaryAuthor.affiliation}
+              onclick={() => (showAffiliationDialog = true)}
+            />
           {/if}
         </div>
       </div>
@@ -547,7 +613,44 @@
         <span class="text-sm font-semibold text-gray-700 dark:text-gray-300">Ratings</span>
       </div>
       <div class="space-y-0.5">
-        {#each sortedQuestions as q (q.id)}
+        <!-- Priority Questions with Radio buttons (only one can be Yes) -->
+        {#if priorityQuestions.first && priorityQuestions.second}
+          <div
+            class="bg-white dark:bg-gray-800 rounded p-2 space-y-1.5 border border-gray-200 dark:border-gray-600"
+          >
+            <p class="text-xs font-semibold text-gray-600 dark:text-gray-400">
+              Select priority (only one can be Yes):
+            </p>
+            <div class="flex flex-col gap-2">
+              <Radio name="priority" value="none" bind:group={prioritySelection} class="text-sm">
+                <span class="text-sm text-gray-700 dark:text-gray-300"> Neither (both No) </span>
+              </Radio>
+              <Radio name="priority" value="first" bind:group={prioritySelection} class="text-sm">
+                <span class="text-sm text-gray-700 dark:text-gray-300">
+                  <span
+                    class="text-xs text-gray-500 dark:text-gray-400 font-mono rounded-sm border p-0.5"
+                  >
+                    Q-{priorityQuestions.first.id}
+                  </span>
+                  {' '}{priorityQuestions.first.title}
+                </span>
+              </Radio>
+              <Radio name="priority" value="second" bind:group={prioritySelection} class="text-sm">
+                <span class="text-sm text-gray-700 dark:text-gray-300">
+                  <span
+                    class="text-xs text-gray-500 dark:text-gray-400 font-mono rounded-sm border p-0.5"
+                  >
+                    Q-{priorityQuestions.second.id}
+                  </span>
+                  {' '}{priorityQuestions.second.title}
+                </span>
+              </Radio>
+            </div>
+          </div>
+        {/if}
+
+        <!-- Non-Priority Questions with Select -->
+        {#each nonPriorityQuestions as q (q.id)}
           <div class="flex items-center justify-between gap-2">
             <div class="flex-1 min-w-0">
               <label
@@ -951,6 +1054,8 @@
     </button>
   </div>
 </div>
+
+<AffiliationDialog bind:open={showAffiliationDialog} affiliation={primaryAuthor.affiliation} />
 
 <!-- ReviewerDialog — opened when clicking the ReviewerCard -->
 {#if isEditMode && currentReview?.user}

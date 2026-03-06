@@ -3,6 +3,7 @@
   import Icon from '@iconify/svelte';
   import AbstractReviewForm from './AbstractReviewForm.svelte';
   import { RefreshAbstractByID } from '../../wailsjs/go/main/App';
+  import { onMount, onDestroy } from 'svelte';
 
   /**
    * Props:
@@ -59,6 +60,18 @@
   function handleCancel() {
     closeDialog();
   }
+
+  // Block ArrowLeft/ArrowRight from reaching parent dialogs (e.g. AbstractDetailsDialog)
+  // when this dialog is open. Use capture phase so stopPropagation takes effect first.
+  function blockArrowKeysForParent(e) {
+    if (!open) return;
+    if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+      e.stopPropagation();
+    }
+  }
+
+  onMount(() => window.addEventListener('keydown', blockArrowKeysForParent, true));
+  onDestroy(() => window.removeEventListener('keydown', blockArrowKeysForParent, true));
 </script>
 
 <Modal bind:open size="lg" dismissable={false} class="max-w-3xl">

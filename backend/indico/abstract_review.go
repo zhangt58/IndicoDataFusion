@@ -330,6 +330,562 @@ func (c *IndicoClient) GetReviewAbstractIDs(ctx context.Context, reviewTrackID i
 	return ids, nil
 }
 
+// ParseReviewFromHTML extracts the current user's review from an already-parsed
+// abstract display page (HTML document node). The page is the one served at
+// /event/{event-id}/abstracts/{abstract-id} and contains a "proposal-review-{id}"
+// div for each review left by the current user.
+//
+// questionsByTitle maps a lower-cased question title (e.g. "first priority") to its
+// numeric question ID so that ratings can be populated with the correct IDs.
+// Pass nil or an empty map if question ID resolution is not needed.
+//
+// abstractsByDBID maps an abstract's database ID (as it appears in the Indico URL,
+// e.g. /event/37/abstracts/143/) to a RelatedAbstract that carries the friendly_id
+// and title. Used to resolve proposed_related_abstract for mark_as_duplicate/merge.
+// Pass nil if this information is not available.
+//
+// tracksByTitle maps a track title (e.g. "MC8.1 First Track in MC8 Track Group…")
+// to the full Track struct carrying the numeric ID and code. The title is extracted
+// from the span's title attribute as the part after the " - " separator
+// ("GroupName: Code - Title"). This key is used instead of Code because the Code
+// field is often empty in Indico abstract data while Title is always present.
+// Pass nil if this information is not available.
+//
+// contribTypesByName maps a contribution type name (e.g. "Contributed Oral
+// Presentation") to its numeric ID.  Used to resolve ProposedContribType for the
+// accept action when the badge reads "Proposed to accept as <strong>Name</strong>".
+// Pass nil if this information is not available.
+//
+// The function returns nil, nil when no review block is found on the page.
+func ParseReviewFromHTML(doc *xhtml.Node, questionsByTitle map[string]int, abstractsByDBID map[int]*RelatedAbstract, tracksByTitle map[string]*Track, contribTypesByName map[string]int) (*Review, error) {
+	// ── helpers ────────────────────────────────────────────────────────────────
+
+	getAttr := func(attrs []xhtml.Attribute, name string) string {
+		for _, a := range attrs {
+			if strings.EqualFold(a.Key, name) {
+				return a.Val
+			}
+		}
+		return ""
+	}
+
+	hasClassToken := func(attrs []xhtml.Attribute, token string) bool {
+		cls := getAttr(attrs, "class")
+		for _, t := range strings.Fields(cls) {
+			if t == token {
+				return true
+			}
+		}
+		return false
+	}
+
+	// textContent returns all text-node descendants concatenated and normalised.
+	var textContent func(*xhtml.Node) string
+	textContent = func(n *xhtml.Node) string {
+		var b strings.Builder
+		var walk func(*xhtml.Node)
+		walk = func(cur *xhtml.Node) {
+			if cur.Type == xhtml.TextNode {
+				b.WriteString(cur.Data)
+				b.WriteByte(' ')
+			}
+			for c := cur.FirstChild; c != nil; c = c.NextSibling {
+				walk(c)
+			}
+		}
+		walk(n)
+		return strings.Join(strings.Fields(b.String()), " ")
+	}
+
+	// findFirst performs a depth-first search and returns the first node that
+	// satisfies the predicate.
+	var findFirst func(*xhtml.Node, func(*xhtml.Node) bool) *xhtml.Node
+	findFirst = func(n *xhtml.Node, pred func(*xhtml.Node) bool) *xhtml.Node {
+		if pred(n) {
+			return n
+		}
+		for c := n.FirstChild; c != nil; c = c.NextSibling {
+			if r := findFirst(c, pred); r != nil {
+				return r
+			}
+		}
+		return nil
+	}
+
+	// findAll returns all nodes matching the predicate (depth-first).
+	var findAll func(*xhtml.Node, func(*xhtml.Node) bool) []*xhtml.Node
+	findAll = func(n *xhtml.Node, pred func(*xhtml.Node) bool) []*xhtml.Node {
+		var res []*xhtml.Node
+		var walk func(*xhtml.Node)
+		walk = func(cur *xhtml.Node) {
+			if pred(cur) {
+				res = append(res, cur)
+			}
+			for c := cur.FirstChild; c != nil; c = c.NextSibling {
+				walk(c)
+			}
+		}
+		walk(n)
+		return res
+	}
+
+	isElem := func(n *xhtml.Node, tag string) bool {
+		return n.Type == xhtml.ElementNode && strings.EqualFold(n.Data, tag)
+	}
+
+	// ── locate the proposal-review-{id} div ────────────────────────────────────
+	// The div has id="proposal-review-{reviewID}".
+	reviewDiv := findFirst(doc, func(n *xhtml.Node) bool {
+		if !isElem(n, "div") {
+			return false
+		}
+		id := getAttr(n.Attr, "id")
+		return strings.HasPrefix(id, "proposal-review-")
+	})
+	if reviewDiv == nil {
+		// No review found on this page.
+		return nil, nil
+	}
+
+	// ── extract review ID ──────────────────────────────────────────────────────
+	reviewIDStr := strings.TrimPrefix(getAttr(reviewDiv.Attr, "id"), "proposal-review-")
+	reviewID, _ := strconv.Atoi(reviewIDStr)
+
+	// ── extract created_dt from <time datetime="..."> ──────────────────────────
+	var createdDT string
+	timeNode := findFirst(reviewDiv, func(n *xhtml.Node) bool {
+		return isElem(n, "time") && getAttr(n.Attr, "datetime") != ""
+	})
+	if timeNode != nil {
+		createdDT = getAttr(timeNode.Attr, "datetime")
+	}
+
+	// ── extract reviewer name from <strong> ────────────────────────────────────
+	var reviewerFullName string
+	strongNode := findFirst(reviewDiv, func(n *xhtml.Node) bool {
+		return isElem(n, "strong")
+	})
+	if strongNode != nil {
+		reviewerFullName = textContent(strongNode)
+	}
+
+	// ── extract reviewer user ID from avatar img src (/user/{id}/...) ─────────
+	var reviewerUserID int
+	var reviewerAvatarURL string
+	imgNode := findFirst(reviewDiv, func(n *xhtml.Node) bool {
+		return isElem(n, "img") && strings.Contains(getAttr(n.Attr, "class"), "profile-picture")
+	})
+	if imgNode != nil {
+		reviewerAvatarURL = getAttr(imgNode.Attr, "src")
+		// Path pattern: /user/{id}/picture-...
+		parts := strings.Split(strings.Trim(reviewerAvatarURL, "/"), "/")
+		if len(parts) >= 2 && parts[0] == "user" {
+			reviewerUserID, _ = strconv.Atoi(parts[1])
+		}
+	}
+
+	// ── extract review-group (track) link and title ────────────────────────────
+	var track Track
+	reviewGroupDiv := findFirst(reviewDiv, func(n *xhtml.Node) bool {
+		return isElem(n, "div") && hasClassToken(n.Attr, "review-group")
+	})
+	if reviewGroupDiv != nil {
+		aNode := findFirst(reviewGroupDiv, func(n *xhtml.Node) bool {
+			return isElem(n, "a")
+		})
+		if aNode != nil {
+			fullTitle := getAttr(aNode.Attr, "title") // long title e.g. "MC7 ...: MC7.1 - MC7.1 First Track..."
+			href := getAttr(aNode.Attr, "href")       // e.g. /event/37/abstracts/reviewing/88/
+			// Extract track ID from href (last numeric path segment)
+			if href != "" {
+				if pu, err := url.Parse(href); err == nil {
+					seg := strings.Trim(pu.Path, "/")
+					parts := strings.Split(seg, "/")
+					last := parts[len(parts)-1]
+					track.ID, _ = strconv.Atoi(last)
+				}
+			}
+			// Parse "GroupName: TrackCode - TrackTitle" or just display text
+			// title attr: "MC7 Accelerator Technology Main Systems: MC7.1 - MC7.1 First Track..."
+			// We store the full title in track.Title and try to extract code.
+			if fullTitle != "" {
+				// Try to split on " - " to get "GroupName: Code" and "Title"
+				parts := strings.SplitN(fullTitle, " - ", 2)
+				if len(parts) == 2 {
+					// parts[0] = "MC7 ...: MC7.1", parts[1] = "MC7.1 First Track..."
+					colonParts := strings.SplitN(parts[0], ": ", 2)
+					if len(colonParts) == 2 {
+						track.Code = strings.TrimSpace(colonParts[1])
+					}
+					track.Title = strings.TrimSpace(parts[1])
+				} else {
+					track.Title = fullTitle
+				}
+			} else {
+				track.Title = textContent(aNode)
+			}
+		}
+	}
+
+	// ── extract proposed action, contrib type & related abstract ──────────────
+	var proposedAction string
+	var proposedContribType *ContribType
+	var proposedRelatedAbstract *RelatedAbstract
+	reviewBadgesDiv := findFirst(reviewDiv, func(n *xhtml.Node) bool {
+		return isElem(n, "div") && hasClassToken(n.Attr, "review-badges")
+	})
+	if reviewBadgesDiv != nil {
+		// Look for a <span> inside review-badges that contains the action word.
+		// HTML patterns:
+		//   accept (no contrib type): Proposed to <span class="bold ...">accept</span>
+		//   accept (with contrib):    Proposed to <span class="bold ...">accept</span> as <strong>Contributed Oral Presentation</strong>
+		//   reject:           Proposed to <span class="bold ...">reject</span>
+		//   change tracks:    Proposed to <span class="bold ...">change tracks</span>
+		//   mark_as_duplicate: Proposed as <span class="bold ...">duplicate</span> of <a href="/event/37/abstracts/143/">Title</a>
+		//   merge:            Proposed to <span class="bold ...">merge</span> into <a href="/event/37/abstracts/149/">Title</a>
+		actionSpan := findFirst(reviewBadgesDiv, func(n *xhtml.Node) bool {
+			return isElem(n, "span") && hasClassToken(n.Attr, "bold")
+		})
+		if actionSpan != nil {
+			proposedAction = strings.ToLower(strings.TrimSpace(textContent(actionSpan)))
+		}
+		switch proposedAction {
+		case "duplicate":
+			proposedAction = "mark_as_duplicate"
+		case "change tracks":
+			proposedAction = "change_tracks"
+		}
+
+		// For accept: extract the optional contribution type from a <strong>
+		// sibling that follows the action span in review-badges.
+		// Template emits: … accept</span> as <strong>Name</strong>
+		// We scan review-badges direct children for a <strong> element.
+		if proposedAction == "accept" {
+			strongNode := findFirst(reviewBadgesDiv, func(n *xhtml.Node) bool {
+				return isElem(n, "strong")
+			})
+			if strongNode != nil {
+				ctName := strings.TrimSpace(textContent(strongNode))
+				if ctName != "" {
+					ct := &ContribType{Name: ctName}
+					// Resolve numeric ID from the lookup map if available.
+					if contribTypesByName != nil {
+						if id, ok := contribTypesByName[ctName]; ok {
+							ct.ID = id
+						}
+					}
+					proposedContribType = ct
+				}
+			}
+		}
+
+		// For mark_as_duplicate and merge, extract the target abstract from the
+		// sibling <a href="/event/.../abstracts/{dbID}/"> that follows the action span.
+		if proposedAction == "mark_as_duplicate" || proposedAction == "merge" {
+			// Find an <a> in review-badges whose href matches /abstracts/{digits}/
+			// (but NOT /abstracts/reviewing/ which is the track link).
+			relatedAnchor := findFirst(reviewBadgesDiv, func(n *xhtml.Node) bool {
+				if !isElem(n, "a") {
+					return false
+				}
+				href := getAttr(n.Attr, "href")
+				// Must contain /abstracts/ but must NOT be a reviewing or review-edit link.
+				return strings.Contains(href, "/abstracts/") &&
+					!strings.Contains(href, "/reviewing/") &&
+					!strings.Contains(href, "/reviews/")
+			})
+			if relatedAnchor != nil {
+				href := getAttr(relatedAnchor.Attr, "href")
+				// Extract the trailing numeric segment: /event/37/abstracts/143/
+				if pu, err := url.Parse(href); err == nil {
+					seg := strings.Trim(pu.Path, "/")
+					parts := strings.Split(seg, "/")
+					// last segment is the DB id
+					dbID, parseErr := strconv.Atoi(parts[len(parts)-1])
+					if parseErr == nil {
+						// Try to resolve friendly_id + title from the lookup map.
+						if abstractsByDBID != nil {
+							if ra, ok := abstractsByDBID[dbID]; ok {
+								proposedRelatedAbstract = ra
+							}
+						}
+						// Fallback: populate from what the HTML gives us (title text, no friendly_id).
+						if proposedRelatedAbstract == nil {
+							title := strings.TrimSpace(textContent(relatedAnchor))
+							proposedRelatedAbstract = &RelatedAbstract{
+								ID:    dbID,
+								Title: title,
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+
+	// ── extract ratings ────────────────────────────────────────────────────────
+	var ratings []Rating
+	reviewQuestionsUL := findFirst(reviewDiv, func(n *xhtml.Node) bool {
+		return isElem(n, "ul") && hasClassToken(n.Attr, "review-questions")
+	})
+	if reviewQuestionsUL != nil {
+		// Each <li class="flexrow"> contains question index, question text, and value
+		liNodes := findAll(reviewQuestionsUL, func(n *xhtml.Node) bool {
+			return isElem(n, "li") && hasClassToken(n.Attr, "flexrow")
+		})
+		for _, li := range liNodes {
+			// question text
+			qtextDiv := findFirst(li, func(n *xhtml.Node) bool {
+				return isElem(n, "div") && hasClassToken(n.Attr, "question-text")
+			})
+			var questionTitle string
+			if qtextDiv != nil {
+				questionTitle = textContent(qtextDiv)
+			}
+
+			// value: the last <div> child (after index and question-text divs) holds "Yes" or "No"
+			// We walk direct div children and pick the third one.
+			var valueDivs []*xhtml.Node
+			for c := li.FirstChild; c != nil; c = c.NextSibling {
+				if isElem(c, "div") {
+					valueDivs = append(valueDivs, c)
+				}
+			}
+			var valueStr string
+			if len(valueDivs) >= 3 {
+				valueStr = strings.TrimSpace(textContent(valueDivs[len(valueDivs)-1]))
+			}
+
+			// Resolve value to bool
+			var ratingValue interface{}
+			switch strings.ToLower(valueStr) {
+			case "yes":
+				ratingValue = true
+			case "no":
+				ratingValue = false
+			default:
+				// Try numeric
+				if n, err := strconv.Atoi(valueStr); err == nil {
+					ratingValue = n
+				} else {
+					ratingValue = valueStr
+				}
+			}
+
+			// Resolve question ID from title
+			questionID := 0
+			if questionsByTitle != nil {
+				if id, ok := questionsByTitle[strings.ToLower(questionTitle)]; ok {
+					questionID = id
+				}
+			}
+
+			var qDetails *QuestionData
+			if questionTitle != "" {
+				qDetails = &QuestionData{
+					ID:    questionID,
+					Title: questionTitle,
+				}
+			}
+
+			ratings = append(ratings, Rating{
+				Question:        questionID,
+				Value:           ratingValue,
+				QuestionDetails: qDetails,
+			})
+		}
+	}
+
+	// ── extract proposed_tracks (change_tracks action only) ───────────────────
+	// HTML structure produced by the Indico template:
+	//
+	//   <div>
+	//     Possible destination tracks:
+	//     <div class="review-group truncate-text">
+	//       <span title="GroupName: TrackCode - TrackTitle">display text</span>
+	//     </div>, …
+	//   </div>
+	//
+	// The span's title attribute has the format "GroupName: Code - Title".
+	// We extract:
+	//   • Code  — the part between ": " and " - " (may be empty in some events)
+	//   • Title — the part after " - " (always present; used as lookup key)
+	//
+	// We locate the container by finding the first <div> whose direct text
+	// nodes begin with "Possible destination tracks" rather than relying on
+	// class names, making the search robust against template changes.
+	var proposedTracks []Track
+	if proposedAction == "change_tracks" {
+		// Prefer searching inside i-box-content so we don't accidentally pick
+		// up review-group divs from i-timeline-item-metadata (reviewer's own
+		// track).  Fall back to the whole reviewDiv if not found.
+		searchRoot := findFirst(reviewDiv, func(n *xhtml.Node) bool {
+			return isElem(n, "div") && hasClassToken(n.Attr, "i-box-content")
+		})
+		if searchRoot == nil {
+			searchRoot = reviewDiv
+		}
+
+		// Find the container <div> whose visible text starts with
+		// "Possible destination tracks".
+		containerDiv := findFirst(searchRoot, func(n *xhtml.Node) bool {
+			if !isElem(n, "div") {
+				return false
+			}
+			// Check direct text-node children only (not all descendants) so we
+			// don't match a parent that merely contains this text somewhere deep.
+			for c := n.FirstChild; c != nil; c = c.NextSibling {
+				if c.Type == xhtml.TextNode {
+					if strings.Contains(strings.ToLower(c.Data), "possible destination track") {
+						return true
+					}
+				}
+			}
+			return false
+		})
+		if containerDiv == nil {
+			// Fallback: collect every review-group with a span-title (no anchor),
+			// skipping the reviewer's own track group.
+			containerDiv = searchRoot
+		}
+
+		reviewGroupDivs := findAll(containerDiv, func(n *xhtml.Node) bool {
+			return isElem(n, "div") && hasClassToken(n.Attr, "review-group")
+		})
+		for _, rgDiv := range reviewGroupDivs {
+			// Skip any review-group that contains an <a> — those are the
+			// reviewer's own track, not proposed destination tracks.
+			if findFirst(rgDiv, func(n *xhtml.Node) bool { return isElem(n, "a") }) != nil {
+				continue
+			}
+			spanNode := findFirst(rgDiv, func(n *xhtml.Node) bool {
+				return isElem(n, "span") && getAttr(n.Attr, "title") != ""
+			})
+			if spanNode == nil {
+				continue
+			}
+			fullTitle := getAttr(spanNode.Attr, "title")
+			// Parse "GroupName: Code - Title"
+			//   dashParts[0] = "GroupName: Code"
+			//   dashParts[1] = "Title"  ← used as the lookup key
+			var tCode, tTitle string
+			dashParts := strings.SplitN(fullTitle, " - ", 2)
+			if len(dashParts) == 2 {
+				colonParts := strings.SplitN(dashParts[0], ": ", 2)
+				if len(colonParts) == 2 {
+					tCode = strings.TrimSpace(colonParts[1])
+				}
+				tTitle = strings.TrimSpace(dashParts[1])
+			} else {
+				tTitle = fullTitle
+			}
+
+			t := Track{Code: tCode, Title: tTitle}
+			// Resolve the full Track (ID, canonical Title) from the lookup map.
+			// The map is keyed by Track.Title because Track.Code is often empty
+			// in the abstract data returned by Indico.
+			if tracksByTitle != nil && tTitle != "" {
+				if lt, ok := tracksByTitle[tTitle]; ok {
+					t.ID = lt.ID
+					t.Code = lt.Code
+					t.Title = lt.Title
+				}
+			}
+			proposedTracks = append(proposedTracks, t)
+		}
+	}
+	if proposedTracks == nil {
+		proposedTracks = []Track{}
+	}
+
+	// ── extract comment ────────────────────────────────────────────────────────
+	var comment string
+	markdownDiv := findFirst(reviewDiv, func(n *xhtml.Node) bool {
+		return isElem(n, "div") && hasClassToken(n.Attr, "markdown-text")
+	})
+	if markdownDiv != nil {
+		comment = strings.TrimSpace(textContent(markdownDiv))
+	}
+
+	// ── assemble the Review struct ─────────────────────────────────────────────
+	review := &Review{
+		ID:                      reviewID,
+		CreatedDT:               createdDT,
+		ProposedAction:          proposedAction,
+		ProposedContribType:     proposedContribType,
+		Ratings:                 ratings,
+		Comment:                 comment,
+		Track:                   track,
+		ProposedTracks:          proposedTracks,
+		ProposedRelatedAbstract: proposedRelatedAbstract,
+		User: Reviewer{
+			ID:        reviewerUserID,
+			FullName:  reviewerFullName,
+			AvatarURL: reviewerAvatarURL,
+		},
+	}
+
+	return review, nil
+}
+
+// GetReviewFromAbstractPage fetches the abstract display page for the given
+// abstract database ID and parses the current user's review from it.
+// questionsByTitle maps lower-cased question titles to their numeric IDs so that
+// Rating.Question fields can be populated correctly.
+// abstractsByDBID, tracksByTitle, and contribTypesByName are optional lookup maps
+// forwarded to ParseReviewFromHTML to resolve proposed_related_abstract,
+// proposed_tracks, and proposed_contrib_type respectively.
+// Returns nil, nil when the page exists but contains no review by this user.
+func (c *IndicoClient) GetReviewFromAbstractPage(ctx context.Context, abstractID int, questionsByTitle map[string]int, abstractsByDBID map[int]*RelatedAbstract, tracksByTitle map[string]*Track, contribTypesByName map[string]int) (*Review, error) {
+	u, err := url.Parse(c.BaseURL)
+	if err != nil {
+		return nil, err
+	}
+	path := fmt.Sprintf("/event/%d/abstracts/%d", c.EventID, abstractID)
+	u.Path = joinPaths(u.Path, path)
+
+	ctxReq, cancel := context.WithTimeout(ctx, c.Timeout)
+	defer cancel()
+
+	req, err := http.NewRequestWithContext(ctxReq, http.MethodGet, u.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Set("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8")
+	if c.APIToken != "" {
+		req.Header.Set("Authorization", "Bearer "+c.APIToken)
+	}
+
+	resp, err := c.Client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = resp.Body.Close() }()
+
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		b, _ := io.ReadAll(io.LimitReader(resp.Body, 8*1024))
+		return nil, fmt.Errorf("api error: status %d: %s", resp.StatusCode, string(b))
+	}
+
+	b, err := io.ReadAll(io.LimitReader(resp.Body, 10*1024*1024))
+	if err != nil {
+		return nil, fmt.Errorf("read body: %w", err)
+	}
+
+	doc, err := xhtml.Parse(strings.NewReader(string(b)))
+	if err != nil {
+		return nil, fmt.Errorf("parse html: %w", err)
+	}
+
+	// Cache CSRF token if available
+	if _, csrf := parseAbstractIDsAndCSRFFromRoot(doc); csrf != "" {
+		c.csrfToken = csrf
+	}
+
+	return ParseReviewFromHTML(doc, questionsByTitle, abstractsByDBID, tracksByTitle, contribTypesByName)
+}
+
 // AggRatings aggregates ratings from a single review by question ID.
 func (r *Review) AggRatings() map[int]float64 {
 	agg := make(map[int]float64)

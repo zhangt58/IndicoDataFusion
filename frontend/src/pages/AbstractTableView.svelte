@@ -18,7 +18,11 @@
     getAllTracks,
   } from './AbstractTableItem.js';
 
-  let { abstractData = $bindable([]), selectedReviewTrackID = null } = $props();
+  let {
+    abstractData = $bindable([]),
+    selectedReviewTrackID = null,
+    visibilityConfig = null,
+  } = $props();
 
   // Abstract dialog state
   let showAbstractDialog = $state(false);
@@ -76,25 +80,47 @@
     { id: 'SubmittedForTracks', title: 'Submitted Tracks', stretch: 2 },
   ];
 
-  // Derive columns from `allColumns`, skipping entries with `hide: true`
-  const columns = origColumns.filter((c) => !c.hide);
+  // Derive columns from `allColumns`, skipping entries with `hide: true` and
+  // filtering based on visibilityConfig
+  const columns = $derived.by(() => {
+    let filtered = origColumns.filter((c) => !c.hide);
+
+    // Apply visibility config filters if available
+    if (visibilityConfig) {
+      filtered = filtered.filter((c) => {
+        if (c.id === 'FirstPriority' && visibilityConfig.ShowFirstPriority === false) {
+          return false;
+        }
+        if (c.id === 'SecondPriority' && visibilityConfig.ShowSecondPriority === false) {
+          return false;
+        }
+        return true;
+      });
+    }
+
+    return filtered;
+  });
 
   // Map of visible column keys in the data objects (header titles)
-  const visibleKeys = columns.map((c) => c.title);
+  const visibleKeys = $derived(columns.map((c) => c.title));
 
   // Build mappedColumns for rowSnippet rendering
-  const mappedColumns = columns.map((c) => ({
-    id: c.id,
-    title: c.title,
-    nowrap: false,
-    stretch: c.stretch,
-  }));
+  const mappedColumns = $derived(
+    columns.map((c) => ({
+      id: c.id,
+      title: c.title,
+      nowrap: false,
+      stretch: c.stretch,
+    })),
+  );
 
   // Build column widths mapping to pass to DataTable (using stretch weights)
-  const colWidths = mappedColumns.reduce((acc, c) => {
-    acc[c.title] = c.stretch;
-    return acc;
-  }, {});
+  const colWidths = $derived(
+    mappedColumns.reduce((acc, c) => {
+      acc[c.title] = c.stretch;
+      return acc;
+    }, {}),
+  );
 
   // Collect all unique tracks from all abstracts using getAllTracks (handles arrays)
   let allAvailableTracks = $derived(getAllTracks(abstractData));
@@ -628,6 +654,7 @@
   currentIndex={currentDialogIndex}
   totalCount={sortedItems.length}
   onNavigate={navigateDialog}
+  {visibilityConfig}
 />
 
 <!-- Track Details Dialog -->

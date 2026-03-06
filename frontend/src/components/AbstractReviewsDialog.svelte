@@ -32,20 +32,27 @@
   }
 
   function handleKeydown(e) {
+    if (!open) return;
     if (e.altKey || e.ctrlKey || e.metaKey) return;
     const active = document.activeElement;
     if (isTypingElement(active)) return;
 
     const key = e.key;
-    if (key === 'ArrowLeft' || key === 'k') {
-      goToPrevious();
-    } else if (key === 'ArrowRight' || key === 'j') {
-      goToNext();
+    if (key === 'ArrowLeft' || key === 'k' || key === 'ArrowRight' || key === 'j') {
+      // Stop propagation so parent dialogs (e.g. AbstractDetailsDialog) don't also handle it
+      e.stopPropagation();
+      if (key === 'ArrowLeft' || key === 'k') {
+        goToPrevious();
+      } else {
+        goToNext();
+      }
     }
   }
 
-  onMount(() => window.addEventListener('keydown', handleKeydown));
-  onDestroy(() => window.removeEventListener('keydown', handleKeydown));
+  // Use capture phase so this handler runs before parent window keydown listeners,
+  // allowing stopPropagation to prevent parent navigation handlers from firing.
+  onMount(() => window.addEventListener('keydown', handleKeydown, true));
+  onDestroy(() => window.removeEventListener('keydown', handleKeydown, true));
 
   function closeDialog() {
     open = false;
