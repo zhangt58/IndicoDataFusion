@@ -14,6 +14,7 @@
   import AffiliationDialog from './AffiliationDialog.svelte';
   import { getAllTracks } from '../pages/AbstractTableItem.js';
   import { formatDate, ACTION_STYLES } from '../lib/reviewUtils.js';
+  import { voteStatsStore } from '../lib/voteStats.svelte.js';
 
   /**
    * Props:
@@ -43,6 +44,7 @@
   // Abstract list for related-abstract picker
   let allAbstracts = $state([]);
   let loadingAbstracts = $state(false);
+
 
   // Reviewer dialog
   let showReviewerDialog = $state(false);
@@ -246,6 +248,15 @@
   // Submit button should be enabled only if form is valid and has changes (for edit mode)
   const canSubmit = $derived(isFormValid && hasChanges && !isSubmitting);
 
+  // Vote stats for the effective track (from shared store)
+  const currentTrackVotes = $derived.by(() => {
+    if (!voteStatsStore.data?.per_track || !effectiveTrackID) return null;
+    return voteStatsStore.data.per_track[effectiveTrackID] ?? null;
+  });
+
+  // Whether the current priority selection casts a vote (first or second = yes)
+  const castingVote = $derived(prioritySelection === 'first' || prioritySelection === 'second');
+
   // ── Initialisation ──────────────────────────────────────────────────────────
   let _initialized = $state(false);
 
@@ -330,6 +341,12 @@
     }
   });
 
+  // Load vote stats once when the form mounts if not already populated in the shared store
+  $effect(() => {
+    if (voteStatsStore.data !== null || voteStatsStore.loading) return;
+    voteStatsStore.refresh();
+  });
+
   // ── Helpers ─────────────────────────────────────────────────────────────────
   function toggleProposedTrack(trackID) {
     proposedTrackIDs = proposedTrackIDs.includes(trackID)
@@ -399,6 +416,8 @@
         );
       }
       if (onSuccess) onSuccess();
+      // Refresh shared vote stats so AbstractMyReviews and any other consumer updates reactively
+      voteStatsStore.refresh();
     } catch (err) {
       error = err.message || String(err);
     } finally {
@@ -611,6 +630,36 @@
       <div class="flex items-center gap-2 mb-0.5">
         <Icon icon="mdi:star-outline" class="w-4 h-4 text-yellow-500" />
         <span class="text-sm font-semibold text-gray-700 dark:text-gray-300">Ratings</span>
+
+        <!-- Vote counter pill for the current track -->
+        {#if currentTrackVotes}
+          {@const overLimit = currentTrackVotes.votes_cast >= currentTrackVotes.votes_max}
+          {@const wouldExceed =
+            castingVote &&
+            !isEditMode &&
+            currentTrackVotes.votes_cast >= currentTrackVotes.votes_max}
+          <span
+            class="ml-auto flex items-center gap-1 px-1.5 py-0.5 rounded text-[0.65rem] font-semibold border {overLimit
+              ? 'bg-red-100 border-red-300 text-red-700 dark:bg-red-900/30 dark:border-red-600 dark:text-red-300'
+              : currentTrackVotes.votes_left <= 1
+                ? 'bg-amber-100 border-amber-300 text-amber-700 dark:bg-amber-900/30 dark:border-amber-600 dark:text-amber-300'
+                : 'bg-green-100 border-green-300 text-green-700 dark:bg-green-900/30 dark:border-green-600 dark:text-green-300'}"
+            title="Votes cast for this track: {currentTrackVotes.votes_cast} / {currentTrackVotes.votes_max} max"
+          >
+            <Icon icon="mdi:vote" class="w-3 h-3" />
+            {currentTrackVotes.votes_cast}/{currentTrackVotes.votes_max} votes
+            {#if overLimit}
+              <Icon icon="mdi:alert" class="w-3 h-3" />
+            {:else}
+              · {currentTrackVotes.votes_left} left
+            {/if}
+          </span>
+          {#if wouldExceed}
+            <span class="text-[0.65rem] text-red-600 dark:text-red-400 font-medium">
+              ⚠ Exceeds track limit
+            </span>
+          {/if}
+        {/if}
       </div>
       <div class="space-y-0.5">
         <!-- Priority Questions with Radio buttons (only one can be Yes) -->
