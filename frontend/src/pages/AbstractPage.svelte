@@ -194,7 +194,7 @@
       Abstracts ({abstractData.length})
     </h2>
     <div class="flex gap-1 ml-2">
-      {#if !isTestMode && !reviewMode}
+      {#if !isTestMode}
         <div class="relative">
           <button
             onclick={() => handleRefresh()}
