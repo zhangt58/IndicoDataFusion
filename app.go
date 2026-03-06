@@ -84,14 +84,21 @@ func (a *App) startup(ctx context.Context, configPath string) {
 	}
 	log.Printf("Data handler initialized from: %s\n", configPath)
 
-	// Notify frontend of the active data source name so UI (titlebar) can display it
-	if a.handler != nil {
-		wailsruntime.EventsEmit(a.ctx, "app:datasource", a.DataSourceName)
-		// Emit init problems so UI can show token-related issues
-		wailsruntime.EventsEmit(a.ctx, "app:initproblems", a.GetInitProblems())
-	}
+	// Notify frontend of app state (data source, review mode, init problems)
+	a.emitAppState()
 
 	a.registerCacheCallbacks()
+}
+
+// emitAppState broadcasts the current data source name, review mode flag, and any
+// init problems to the frontend. Call this whenever the handler changes.
+func (a *App) emitAppState() {
+	if a.handler == nil {
+		return
+	}
+	wailsruntime.EventsEmit(a.ctx, "app:datasource", a.DataSourceName)
+	wailsruntime.EventsEmit(a.ctx, "app:reviewmode", a.ReviewMode())
+	wailsruntime.EventsEmit(a.ctx, "app:initproblems", a.GetInitProblems())
 }
 
 // GetEventInfo retrieves event information from the configured data source
@@ -377,12 +384,8 @@ func (a *App) ApplyConfigYAML(yamlContent string) error {
 		a.DataSourceName = a.handler.GetDataSourceName()
 	}
 
-	// Notify frontend of the active data source name after reload
-	if a.handler != nil {
-		wailsruntime.EventsEmit(a.ctx, "app:datasource", a.DataSourceName)
-		// Emit init problems so UI can show token-related issues
-		wailsruntime.EventsEmit(a.ctx, "app:initproblems", a.GetInitProblems())
-	}
+	// Notify frontend of app state after reload
+	a.emitAppState()
 
 	a.registerCacheCallbacks()
 	return nil
@@ -440,12 +443,8 @@ func (a *App) ApplyStructuredConfigUI(configData *config.ConfigDataUI) error {
 		a.DataSourceName = a.handler.GetDataSourceName()
 	}
 
-	// Notify frontend of the active data source name after structured config reload
-	if a.handler != nil {
-		wailsruntime.EventsEmit(a.ctx, "app:datasource", a.DataSourceName)
-		// Emit init problems so UI can show token-related issues
-		wailsruntime.EventsEmit(a.ctx, "app:initproblems", a.GetInitProblems())
-	}
+	// Notify frontend of app state after structured config reload
+	a.emitAppState()
 
 	a.registerCacheCallbacks()
 	return nil
@@ -502,12 +501,8 @@ func (a *App) ImportConfig(encryptedData string, password string) error {
 		a.DataSourceName = a.handler.GetDataSourceName()
 	}
 
-	// Notify frontend of the active data source name after import
-	if a.handler != nil {
-		wailsruntime.EventsEmit(a.ctx, "app:datasource", a.DataSourceName)
-		// Emit init problems so UI can show token-related issues
-		wailsruntime.EventsEmit(a.ctx, "app:initproblems", a.GetInitProblems())
-	}
+	// Notify frontend of app state after import
+	a.emitAppState()
 
 	a.registerCacheCallbacks()
 	return nil
@@ -853,4 +848,17 @@ func (a *App) OpenCacheDirectory() error {
 // GetWordFrequencies computes word frequencies from input text
 func (a *App) GetWordFrequencies(text string, minLength int, topN int, enablePluralNorm bool, customExcludedWords []string) []data.WordFrequency {
 	return data.GetWordFrequencies(text, minLength, topN, enablePluralNorm, customExcludedWords)
+}
+
+// OpenAbstractsFileDialog opens a native file-picker dialog so the user can browse for a
+// pre-processed abstracts JSON file.  Returns the selected file path, or an empty string
+// when the user cancels.
+func (a *App) OpenAbstractsFileDialog() (string, error) {
+	return wailsruntime.OpenFileDialog(a.ctx, wailsruntime.OpenDialogOptions{
+		Title: "Select Abstracts JSON File",
+		Filters: []wailsruntime.FileFilter{
+			{DisplayName: "JSON files (*.json)", Pattern: "*.json"},
+			{DisplayName: "All files (*.*)", Pattern: "*.*"},
+		},
+	})
 }
