@@ -356,8 +356,11 @@ func (c *IndicoClient) GetReviewAbstractIDs(ctx context.Context, reviewTrackID i
 // accept action when the badge reads "Proposed to accept as <strong>Name</strong>".
 // Pass nil if this information is not available.
 //
-// The function returns nil, nil when no review block is found on the page.
-func ParseReviewFromHTML(doc *xhtml.Node, questionsByTitle map[string]int, abstractsByDBID map[int]*RelatedAbstract, tracksByTitle map[string]*Track, contribTypesByName map[string]int) (*Review, error) {
+// The function returns nil, "", nil when no review block is found on the page.
+// The second return value is the abstract state extracted from the first
+// <div class="i-tag"> element on the page (e.g. "Submitted", "Withdrawn").
+// It is an empty string when the element is not found.
+func ParseReviewFromHTML(doc *xhtml.Node, questionsByTitle map[string]int, abstractsByDBID map[int]*RelatedAbstract, tracksByTitle map[string]*Track, contribTypesByName map[string]int) (*Review, string, error) {
 	// ── helpers ────────────────────────────────────────────────────────────────
 
 	getAttr := func(attrs []xhtml.Attribute, name string) string {
@@ -442,9 +445,20 @@ func ParseReviewFromHTML(doc *xhtml.Node, questionsByTitle map[string]int, abstr
 		id := getAttr(n.Attr, "id")
 		return strings.HasPrefix(id, "proposal-review-")
 	})
+	// ── extract abstract state from <div class="i-tag"> ──────────────────────
+	// The page renders the abstract's current state (e.g. "Submitted",
+	// "Withdrawn", "Accepted") inside the first <div class="i-tag"> element.
+	var abstractState string
+	iTagDiv := findFirst(doc, func(n *xhtml.Node) bool {
+		return isElem(n, "div") && hasClassToken(n.Attr, "i-tag")
+	})
+	if iTagDiv != nil {
+		abstractState = strings.TrimSpace(textContent(iTagDiv))
+	}
+
 	if reviewDiv == nil {
 		// No review found on this page.
-		return nil, nil
+		return nil, abstractState, nil
 	}
 
 	// ── extract review ID ──────────────────────────────────────────────────────
@@ -825,7 +839,7 @@ func ParseReviewFromHTML(doc *xhtml.Node, questionsByTitle map[string]int, abstr
 		},
 	}
 
-	return review, nil
+	return review, abstractState, nil
 }
 
 // GetReviewFromAbstractPage fetches the abstract display page for the given
@@ -835,11 +849,13 @@ func ParseReviewFromHTML(doc *xhtml.Node, questionsByTitle map[string]int, abstr
 // abstractsByDBID, tracksByTitle, and contribTypesByName are optional lookup maps
 // forwarded to ParseReviewFromHTML to resolve proposed_related_abstract,
 // proposed_tracks, and proposed_contrib_type respectively.
-// Returns nil, nil when the page exists but contains no review by this user.
-func (c *IndicoClient) GetReviewFromAbstractPage(ctx context.Context, abstractID int, questionsByTitle map[string]int, abstractsByDBID map[int]*RelatedAbstract, tracksByTitle map[string]*Track, contribTypesByName map[string]int) (*Review, error) {
+// Returns nil, "", nil when the page exists but contains no review by this user.
+// The second return value is the abstract state (e.g. "Submitted", "Withdrawn")
+// extracted from the page regardless of whether a review was found.
+func (c *IndicoClient) GetReviewFromAbstractPage(ctx context.Context, abstractID int, questionsByTitle map[string]int, abstractsByDBID map[int]*RelatedAbstract, tracksByTitle map[string]*Track, contribTypesByName map[string]int) (*Review, string, error) {
 	u, err := url.Parse(c.BaseURL)
 	if err != nil {
-		return nil, err
+		return nil, "", err
 	}
 	path := fmt.Sprintf("/event/%d/abstracts/%d", c.EventID, abstractID)
 	u.Path = joinPaths(u.Path, path)
@@ -849,7 +865,7 @@ func (c *IndicoClient) GetReviewFromAbstractPage(ctx context.Context, abstractID
 
 	req, err := http.NewRequestWithContext(ctxReq, http.MethodGet, u.String(), nil)
 	if err != nil {
-		return nil, err
+		return nil, "", err
 	}
 
 	req.Header.Set("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8")
@@ -859,23 +875,23 @@ func (c *IndicoClient) GetReviewFromAbstractPage(ctx context.Context, abstractID
 
 	resp, err := c.Client.Do(req)
 	if err != nil {
-		return nil, err
+		return nil, "", err
 	}
 	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		b, _ := io.ReadAll(io.LimitReader(resp.Body, 8*1024))
-		return nil, fmt.Errorf("api error: status %d: %s", resp.StatusCode, string(b))
+		return nil, "", fmt.Errorf("api error: status %d: %s", resp.StatusCode, string(b))
 	}
 
 	b, err := io.ReadAll(io.LimitReader(resp.Body, 10*1024*1024))
 	if err != nil {
-		return nil, fmt.Errorf("read body: %w", err)
+		return nil, "", fmt.Errorf("read body: %w", err)
 	}
 
 	doc, err := xhtml.Parse(strings.NewReader(string(b)))
 	if err != nil {
-		return nil, fmt.Errorf("parse html: %w", err)
+		return nil, "", fmt.Errorf("parse html: %w", err)
 	}
 
 	// Cache CSRF token if available
