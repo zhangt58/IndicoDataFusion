@@ -236,7 +236,7 @@ func (h *DataSourceHandler) getAbstractsFromOverrideFile(ctx context.Context) ([
 		// Build lookup maps from the already-loaded abstract slice so that
 		// scrapeMyReviewWithMaps can resolve friendly_id and track codes without
 		// relying on the cache, which has not been written yet at this point.
-		abstractsByDBID, tracksByCode := buildAbstractLookupMaps(response.Abstracts)
+		abstractsByDBID, tracksByTitle := buildAbstractLookupMaps(response.Abstracts)
 
 		// Collect indices of abstracts that need scraping.
 		var targets []int
@@ -267,7 +267,7 @@ func (h *DataSourceHandler) getAbstractsFromOverrideFile(ctx context.Context) ([
 				go func() {
 					defer wg.Done()
 					for idx := range workCh {
-						review, err := h.scrapeMyReviewWithMaps(ctx, response.Abstracts[idx].ID, abstractsByDBID, tracksByCode)
+						review, err := h.scrapeMyReviewWithMaps(ctx, response.Abstracts[idx].ID, abstractsByDBID, tracksByTitle)
 						resultCh <- scrapeResult{idx: idx, review: review, err: err}
 					}
 				}()
@@ -977,7 +977,7 @@ func buildAbstractLookupMaps(abstracts []indico.AbstractData) (map[int]*indico.R
 }
 
 // scrapeMyReview fetches the current user's review for a single abstract by
-// visiting its display page. It builds abstractsByDBID and tracksByCode from
+// visiting its display page. It builds abstractsByDBID and tracksByTitle from
 // the cache. Use scrapeMyReviewWithMaps when the caller already has the abstract
 // slice in memory (e.g. getAbstractsFromOverrideFile) to avoid relying on a
 // cache that has not yet been populated.
@@ -998,8 +998,8 @@ func (h *DataSourceHandler) scrapeMyReview(ctx context.Context, abstractID int) 
 			}
 		}
 	}
-	abstractsByDBID, tracksByCode := buildAbstractLookupMaps(abstracts)
-	return h.scrapeMyReviewWithMaps(ctx, abstractID, abstractsByDBID, tracksByCode)
+	abstractsByDBID, tracksByTitle := buildAbstractLookupMaps(abstracts)
+	return h.scrapeMyReviewWithMaps(ctx, abstractID, abstractsByDBID, tracksByTitle)
 }
 
 // scrapeMyReviewWithMaps is the core scrape implementation. It calls
@@ -1119,9 +1119,9 @@ func (h *DataSourceHandler) RefreshAbstractByID(ctx context.Context, id int) (*i
 		// Build lookup maps from the full abstract list.  GetAbstractByID already
 		// called GetAbstracts above, so the cache is populated and this is cheap.
 		allAbstracts, _ := h.GetAbstracts(ctx)
-		abstractsByDBID, tracksByCode := buildAbstractLookupMaps(allAbstracts)
+		abstractsByDBID, tracksByTitle := buildAbstractLookupMaps(allAbstracts)
 
-		review, err := h.scrapeMyReviewWithMaps(ctx, abstract.ID, abstractsByDBID, tracksByCode)
+		review, err := h.scrapeMyReviewWithMaps(ctx, abstract.ID, abstractsByDBID, tracksByTitle)
 		if err != nil {
 			log.Printf("Warning: RefreshAbstractByID (abstracts-file mode): failed to fetch review page for abstract %d: %v", abstract.ID, err)
 		} else if review != nil {
