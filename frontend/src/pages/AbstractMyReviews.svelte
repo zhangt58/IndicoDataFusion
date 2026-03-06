@@ -41,10 +41,7 @@
     loading = true;
     error = null;
     try {
-      const [tracksData] = await Promise.all([
-        GetReviewTracks(),
-        voteStatsStore.refresh(),
-      ]);
+      const [tracksData] = await Promise.all([GetReviewTracks(), voteStatsStore.refresh()]);
       // Backend already filters tracks with <a> defined
       reviewTracks = tracksData?.tracks || [];
     } catch (err) {
@@ -215,7 +212,8 @@
               <div class="flex items-center gap-1.5 mb-1">
                 <Icon icon="mdi:vote" class="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
                 <span class="text-xs font-semibold text-indigo-700 dark:text-indigo-300">
-                  Votes: {voteStatsStore.data.total_cast} cast · {voteStatsStore.data.max_votes} max per track
+                  Votes: {voteStatsStore.data.total_cast} cast · {voteStatsStore.data.max_votes} max per
+                  track
                 </span>
               </div>
               <div class="flex flex-col gap-0.5">

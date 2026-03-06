@@ -79,18 +79,22 @@
     selectedReviewTrackID = trackID;
   }
 
-  onMount(async () => {
+  async function refreshModeState() {
     try {
       isTestMode = await IsTestMode();
     } catch (e) {
-      console.error('Failed to check test mode', e);
+      console.warn('Failed to refresh test mode', e);
     }
     try {
       reviewMode = await ReviewMode();
       visibilityConfig = await GetVisibilityConfig();
     } catch (e) {
-      console.error('Failed to check review mode', e);
+      console.warn('Failed to refresh review mode / visibility config', e);
     }
+  }
+
+  onMount(async () => {
+    await refreshModeState();
 
     // Load abstract data first to show page immediately
     await loadData();
@@ -145,10 +149,33 @@
 
       handleCacheEvent(ev);
     });
+
+    // React to data source / review-mode changes triggered by Settings → Apply
+    EventsOn('app:datasource', async () => {
+      await refreshModeState();
+      await loadData();
+      try {
+        const c = await GetAssignedReviewCount();
+        hasAssignedReviews = (c && c > 0) || false;
+      } catch (_) {
+        hasAssignedReviews = false;
+      }
+    });
+
+    EventsOn('app:reviewmode', async (val) => {
+      reviewMode = !!val;
+      try {
+        visibilityConfig = await GetVisibilityConfig();
+      } catch (e) {
+        console.warn('Failed to refresh visibility config on reviewmode change', e);
+      }
+    });
   });
 
   onDestroy(() => {
     EventsOff('cache:updated');
+    EventsOff('app:datasource');
+    EventsOff('app:reviewmode');
   });
 </script>
 
