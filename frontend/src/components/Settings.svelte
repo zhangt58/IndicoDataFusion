@@ -28,12 +28,20 @@
     }
   }
 
+  // Close settings when the setup wizard is opened so the modal doesn't overlap the wizard
+  function handleOpenSetupWizardCloseSettings() {
+    // If settings modal is open, close it — setup wizard will open via the same event
+    open = false;
+  }
+
   onMount(() => {
     window.addEventListener('open:settings', handleOpenSettingsEvent);
+    window.addEventListener('open:setup-wizard', handleOpenSetupWizardCloseSettings);
   });
 
   onDestroy(() => {
     window.removeEventListener('open:settings', handleOpenSettingsEvent);
+    window.removeEventListener('open:setup-wizard', handleOpenSetupWizardCloseSettings);
   });
 
   function setTab(tab) {

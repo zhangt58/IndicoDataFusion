@@ -12,6 +12,7 @@
   import TitleBar from './components/TitleBar.svelte';
   import StatusBar from './components/StatusBar.svelte';
   import InitProblems from './components/InitProblems.svelte';
+  import SetupWizard from './components/SetupWizard.svelte';
 
   let Router = LocalRouter;
 
@@ -82,6 +83,9 @@
 
 <!-- Initialization problems (token/config issues) -->
 <InitProblems />
+
+<!-- Setup wizard: guides the user through fixing init problems step-by-step -->
+<SetupWizard />
 
 <div class="flex min-h-screen pt-12 overflow-hidden h-full pb-10">
   {#if isSidebarOpen}

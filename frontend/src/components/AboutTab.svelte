@@ -49,13 +49,24 @@
       </div>
       <div class="flex justify-between items-center py-2">
         <span class="text-sm font-medium text-gray-700 dark:text-gray-300">See an Issue?</span>
-        <button
-          type="button"
-          onclick={reportIssue}
-          class="text-sm px-3 py-1 rounded bg-indigo-600 text-white hover:bg-indigo-700 dark:bg-indigo-500 dark:hover:bg-indigo-600 focus:outline-none focus:ring-2 focus:ring-indigo-400"
-        >
-          Report
-        </button>
+        <div class="flex items-center gap-2">
+          <button
+            type="button"
+            onclick={reportIssue}
+            class="text-sm px-3 py-1 rounded bg-indigo-600 text-white hover:bg-indigo-700 dark:bg-indigo-500 dark:hover:bg-indigo-600 focus:outline-none focus:ring-2 focus:ring-indigo-400"
+          >
+            Report
+          </button>
+          <button
+            type="button"
+            onclick={() => window.dispatchEvent(new CustomEvent('open:setup-wizard'))}
+            class="text-sm px-3 py-1 rounded bg-amber-500 text-white hover:bg-amber-600 dark:bg-amber-500 dark:hover:bg-amber-600 focus:outline-none focus:ring-2 focus:ring-amber-400"
+            aria-label="Open Setup Wizard"
+            title="Open Setup Wizard"
+          >
+            Wizard
+          </button>
+        </div>
       </div>
     </div>
 
