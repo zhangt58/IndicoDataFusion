@@ -208,8 +208,6 @@ func (h *DataSourceHandler) SetAbstractsFile(path string) {
 // When an Indico client is available it also fetches the caller's review
 // assignments (via GetReviewTracks) and merges IsMyReview / MyReview into
 // each abstract, mirrors the post-processing done by getAbstractsFromAPI.
-// Only abstracts assigned to the current reviewer (IsMyReview == true) are
-// returned.
 func (h *DataSourceHandler) getAbstractsFromOverrideFile(ctx context.Context) ([]indico.AbstractData, error) {
 	filePath := h.abstractsFile
 	log.Printf("Reading abstract data from override file: %v\n", filePath)
@@ -323,18 +321,6 @@ func (h *DataSourceHandler) getAbstractsFromOverrideFile(ctx context.Context) ([
 	}
 
 	return response.Abstracts, nil
-
-	//// Filter to only abstracts assigned to this reviewer.
-	//var assigned []indico.AbstractData
-	//for i := range response.Abstracts {
-	//	if response.Abstracts[i].IsMyReview {
-	//		assigned = append(assigned, response.Abstracts[i])
-	//	}
-	//}
-	//log.Printf("getAbstractsFromOverrideFile: returning %d reviewer-assigned abstracts (out of %d total in file)",
-	//	len(assigned), len(response.Abstracts))
-	//
-	//return assigned, nil
 }
 
 // parseSize parses size strings like "100MB", "1GB", "512KB"
@@ -1010,7 +996,6 @@ func buildAbstractLookupMaps(abstracts []indico.AbstractData) (map[int]*indico.R
 // the cache. Use scrapeMyReviewWithMaps when the caller already has the abstract
 // slice in memory (e.g. getAbstractsFromOverrideFile) to avoid relying on a
 // cache that has not yet been populated.
-// It is a no-op when h.client is nil.
 // The second return value is the abstract state extracted from the page
 // (e.g. "Submitted", "Withdrawn"); it is empty when not found.
 func (h *DataSourceHandler) scrapeMyReview(ctx context.Context, abstractID int) (*indico.Review, string, error) {
