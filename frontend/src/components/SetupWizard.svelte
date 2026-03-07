@@ -21,6 +21,7 @@
     AddAPIToken,
     GetStructuredConfigUI,
     ApplyStructuredConfigUI,
+    OpenAbstractsFileDialog,
   } from '../../wailsjs/go/main/App.js';
 
   // ── State ────────────────────────────────────────────────────────────────────
@@ -42,6 +43,7 @@
     eventId: '',
     apiTokenName: '',
     timeout: '60s',
+    abstractsFile: '',
   });
   /** @type {Record<string, string>} */
   let dsErrors = $state({});
@@ -169,6 +171,7 @@
             eventId: String(ds.indico.eventId ?? ''),
             apiTokenName: ds.indico.apiTokenName || '',
             timeout: ds.indico.timeout || '60s',
+            abstractsFile: ds.indico.abstractsFile || '',
           };
         }
       }
@@ -273,7 +276,7 @@
   function validateDsForm() {
     /** @type {Record<string, string>} */
     const errs = {};
-    if (!dsForm.name.trim()) errs.name = 'Give this data source a short name (e.g. "IPAC25").';
+    if (!dsForm.name.trim()) errs.name = 'Give this data source a short name (e.g. "IPAC27").';
     try {
       const u = new URL(dsForm.baseUrl.trim());
       if (u.protocol !== 'http:' && u.protocol !== 'https:')
@@ -310,7 +313,7 @@
           eventId: parseInt(String(dsForm.eventId).trim(), 10),
           apiTokenName: dsForm.apiTokenName.trim(),
           timeout: dsForm.timeout.trim(),
-          abstractsFile: '',
+          abstractsFile: dsForm.abstractsFile ? dsForm.abstractsFile.trim() : '',
         },
       };
 
@@ -376,6 +379,15 @@
     { n: 3, label: 'Data Source', icon: 'mdi:database-cog' },
     { n: 4, label: 'Done', icon: 'mdi:check-circle' },
   ];
+
+  async function browseAbstractsFile() {
+    try {
+      const path = await OpenAbstractsFileDialog();
+      if (path) dsForm = { ...dsForm, abstractsFile: path };
+    } catch (e) {
+      console.error('Failed to open file dialog:', e);
+    }
+  }
 </script>
 
 {#if open}
@@ -960,6 +972,57 @@
                 {#if dsErrors.timeout}<p class="mt-0.5 text-xs text-red-500">
                     {dsErrors.timeout}
                   </p>{/if}
+              </div>
+
+              <!-- Additional abstracts file (review mode) -->
+              <div>
+                <label
+                  for="wiz-ds-abstractsfile"
+                  class="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1"
+                >
+                  Additional abstracts file (review mode)
+                  <span class="ml-1 font-normal text-gray-400">(optional)</span>
+                </label>
+                <div class="flex gap-2 items-center">
+                  <input
+                    id="wiz-ds-abstractsfile"
+                    type="text"
+                    placeholder="Leave empty to use live Indico API"
+                    bind:value={dsForm.abstractsFile}
+                    class="flex-1 rounded-lg border px-3 py-2 text-sm font-mono
+                      {dsErrors.abstractsFile
+                      ? 'border-red-400 dark:border-red-600'
+                      : 'border-gray-300 dark:border-gray-600'}
+                      bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                  />
+                  <button
+                    type="button"
+                    class="shrink-0 px-2 py-2 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 text-gray-600 dark:text-gray-300 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    onclick={(e) => {
+                      e.stopPropagation();
+                      browseAbstractsFile();
+                    }}
+                    title="Browse for abstracts JSON file"
+                    aria-label="Browse for abstracts file"
+                  >
+                    <Icon icon="mdi:folder-open-outline" class="w-4 h-4" aria-hidden="true" />
+                  </button>
+                  {#if dsForm.abstractsFile}
+                    <button
+                      type="button"
+                      class="shrink-0 px-2 py-2 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 hover:bg-red-50 dark:hover:bg-red-900 text-red-500 focus:outline-none focus:ring-2 focus:ring-red-300"
+                      onclick={() => (dsForm = { ...dsForm, abstractsFile: '' })}
+                      title="Clear abstracts file (use live API)"
+                      aria-label="Clear abstracts file"
+                    >
+                      <Icon icon="mdi:close" class="w-4 h-4" aria-hidden="true" />
+                    </button>
+                  {/if}
+                </div>
+                <p class="mt-0.5 text-xs text-gray-400">
+                  Optional — when set, review mode will load this JSON file of abstracts in addition
+                  to the event data. Clear to use the live Indico API.
+                </p>
               </div>
 
               <!-- Save & activate button -->
