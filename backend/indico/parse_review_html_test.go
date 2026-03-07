@@ -672,7 +672,8 @@ func TestParseReviewFromHTML(t *testing.T) {
 }
 
 // TestParseReviewFromHTML_NoReview verifies that a minimal HTML page without
-// a proposal-review div returns nil, nil.
+// a proposal-review div results in a nil review and returns (nil, abstract state, nil),
+// with abstract state possibly non-empty.
 func TestParseReviewFromHTML_NoReview(t *testing.T) {
 	const page = `<!DOCTYPE html><html><body><p>No review here.</p></body></html>`
 	doc, err := xhtml.Parse(strings.NewReader(page))
