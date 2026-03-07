@@ -3,6 +3,7 @@
   import { addTagTo, removeTagFrom, toggleFavoriteOn } from '../utils/dataSourceUtils.js';
   import TagEditor from './TagEditor.svelte';
   import BaseUrlInput from './BaseUrlInput.svelte';
+  import { OpenAbstractsFileDialog } from '../../wailsjs/go/main/App';
   let {
     open = $bindable(false),
     existingNames = [],
@@ -33,6 +34,7 @@
     favorite: false,
     description: '',
     tags: [],
+    abstractsFile: '',
   });
   // validation errors for the form fields
   let newIndicoErrors = $state({ name: '', baseUrl: '', eventId: '', timeout: '' });
@@ -53,6 +55,7 @@
       newIndico.favorite = initialData.favorite || false;
       newIndico.description = initialData.description || '';
       newIndico.tags = initialData.tags || [];
+      newIndico.abstractsFile = initialData.abstractsFile || '';
     } else {
       // Create mode - use defaults
       newIndico.name = '';
@@ -63,6 +66,7 @@
       newIndico.favorite = false;
       newIndico.description = '';
       newIndico.tags = [];
+      newIndico.abstractsFile = '';
     }
     newIndicoErrors = { name: '', baseUrl: '', eventId: '', timeout: '' };
   }
@@ -133,6 +137,7 @@
       favorite: newIndico.favorite,
       description: newIndico.description,
       tags: newIndico.tags || [],
+      abstractsFile: newIndico.abstractsFile || '',
     };
     onCreate(payload);
   }
@@ -277,6 +282,59 @@
               <p class="text-xs text-red-500 mt-1">{newIndicoErrors.timeout}</p>
             {/if}
           </div>
+        </div>
+
+        <!-- Review Mode: Abstracts File -->
+        <div>
+          <label
+            for="new-indico-abstractsFile"
+            class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+          >
+            Abstracts File
+            <span class="ml-1 text-xs font-normal text-indigo-500 dark:text-indigo-400"
+              >(review mode)</span
+            >
+          </label>
+          <div class="flex gap-2 items-center">
+            <input
+              id="new-indico-abstractsFile"
+              type="text"
+              bind:value={newIndico.abstractsFile}
+              placeholder="Leave empty to use live Indico API"
+              class="flex-1 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm font-mono subtle-placeholder"
+            />
+            <button
+              type="button"
+              class="shrink-0 px-2 py-2 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 text-gray-600 dark:text-gray-300 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              onclick={async () => {
+                try {
+                  const path = await OpenAbstractsFileDialog();
+                  if (path) newIndico.abstractsFile = path;
+                } catch (e) {
+                  console.error('Failed to open file dialog:', e);
+                }
+              }}
+              title="Browse for abstracts JSON file"
+              aria-label="Browse for abstracts file"
+            >
+              <Icon icon="mdi:folder-open-outline" class="w-4 h-4" aria-hidden="true" />
+            </button>
+            {#if newIndico.abstractsFile}
+              <button
+                type="button"
+                class="shrink-0 px-2 py-2 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 hover:bg-red-50 dark:hover:bg-red-900 text-red-500 focus:outline-none focus:ring-2 focus:ring-red-300"
+                onclick={() => (newIndico.abstractsFile = '')}
+                title="Clear abstracts file (use live API)"
+                aria-label="Clear abstracts file"
+              >
+                <Icon icon="mdi:close" class="w-4 h-4" aria-hidden="true" />
+              </button>
+            {/if}
+          </div>
+          <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
+            When set, abstract data is read from this file (review mode). Clear to use the live
+            Indico API.
+          </p>
         </div>
 
         <!-- New fields: Description, Tags (Favorite moved to header) -->

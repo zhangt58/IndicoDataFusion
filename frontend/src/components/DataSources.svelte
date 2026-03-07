@@ -10,6 +10,7 @@
   import BaseUrlInput from './BaseUrlInput.svelte';
   import TagEditor from './TagEditor.svelte';
   import DataSourcesTableView from './DataSourcesTableView.svelte';
+  import { OpenAbstractsFileDialog } from '../../wailsjs/go/main/App';
   let {
     configData = $bindable({ dataSources: [] }),
     expandedSources = {},
@@ -71,6 +72,17 @@
     if (index >= 0 && index < configData.dataSources.length) {
       configData.dataSources[index] = updatedSource;
       validateNames();
+    }
+  }
+
+  async function browseAbstractsFile(i) {
+    try {
+      const path = await OpenAbstractsFileDialog();
+      if (path && configData.dataSources[i]?.indico) {
+        configData.dataSources[i].indico.abstractsFile = path;
+      }
+    } catch (e) {
+      console.error('Failed to open file dialog:', e);
     }
   }
 </script>
@@ -308,6 +320,57 @@
                   />
                   <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">e.g., 15s, 1m, 500ms</p>
                 </div>
+              </div>
+              <!-- Review Mode: Abstracts File override -->
+              <div>
+                <label
+                  for={`ds-${i}-abstractsFile`}
+                  class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+                >
+                  Abstracts File
+                  <span class="ml-1 text-xs font-normal text-indigo-500 dark:text-indigo-400"
+                    >(review mode)</span
+                  >
+                </label>
+                <div class="flex gap-2 items-center">
+                  <input
+                    id={`ds-${i}-abstractsFile`}
+                    type="text"
+                    bind:value={dataSource.indico.abstractsFile}
+                    placeholder="Leave empty to use live Indico API"
+                    class="flex-1 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-indigo-500 subtle-placeholder"
+                  />
+                  <button
+                    type="button"
+                    class="shrink-0 px-2 py-2 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 text-gray-600 dark:text-gray-300 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    onclick={(e) => {
+                      e.stopPropagation();
+                      browseAbstractsFile(i);
+                    }}
+                    title="Browse for abstracts JSON file"
+                    aria-label="Browse for abstracts file"
+                  >
+                    <Icon icon="mdi:folder-open-outline" class="w-4 h-4" aria-hidden="true" />
+                  </button>
+                  {#if dataSource.indico.abstractsFile}
+                    <button
+                      type="button"
+                      class="shrink-0 px-2 py-2 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 hover:bg-red-50 dark:hover:bg-red-900 text-red-500 focus:outline-none focus:ring-2 focus:ring-red-300"
+                      onclick={(e) => {
+                        e.stopPropagation();
+                        dataSource.indico.abstractsFile = '';
+                      }}
+                      title="Clear abstracts file (use live API)"
+                      aria-label="Clear abstracts file"
+                    >
+                      <Icon icon="mdi:close" class="w-4 h-4" aria-hidden="true" />
+                    </button>
+                  {/if}
+                </div>
+                <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                  When set, abstract data is read from this file (review mode). Clear to use the
+                  live Indico API.
+                </p>
               </div>
             {:else if dataSource.type === 'test' && dataSource.test}
               <!-- Test Data Configuration -->

@@ -45,7 +45,6 @@
   let allAbstracts = $state([]);
   let loadingAbstracts = $state(false);
 
-
   // Reviewer dialog
   let showReviewerDialog = $state(false);
   // Affiliation dialog for primary author

@@ -38,7 +38,6 @@
 
   function handleAppDatasource(ev) {
     try {
-      // runtime may pass the payload as ev.detail or raw value
       const v = ev && ev.detail ? ev.detail : ev;
       if (typeof v === 'string') {
         dataSource = v;
@@ -49,6 +48,19 @@
       }
     } catch (e) {
       console.debug('app:datasource handler error', e);
+    }
+    // Re-fetch reviewMode whenever the active data source changes
+    ReviewMode()
+      .then((v) => (reviewMode = v))
+      .catch((e) => console.debug('Failed to refresh review mode on datasource change', e));
+  }
+
+  function handleAppReviewMode(ev) {
+    try {
+      const v = ev && ev.detail !== undefined ? ev.detail : ev;
+      reviewMode = !!v;
+    } catch (e) {
+      console.debug('app:reviewmode handler error', e);
     }
   }
 
@@ -82,6 +94,12 @@
     }
 
     try {
+      EventsOn('app:reviewmode', handleAppReviewMode);
+    } catch (e) {
+      console.debug('Failed to subscribe to app:reviewmode in StatusBar', e);
+    }
+
+    try {
       const info = await GetAppInfo();
       if (info) {
         // Try a few plausible field names for an active data source in AppInfo
@@ -103,6 +121,11 @@
   onDestroy(() => {
     try {
       EventsOff('app:datasource');
+    } catch (e) {
+      /* ignore */
+    }
+    try {
+      EventsOff('app:reviewmode');
     } catch (e) {
       /* ignore */
     }

@@ -99,10 +99,19 @@
 
       handleCacheEvent(ev);
     });
+
+    // Reload when the active data source changes (Settings → Apply)
+    EventsOn('app:datasource', async () => {
+      try {
+        isTestMode = await IsTestMode();
+      } catch (_) {}
+      await loadData();
+    });
   });
 
   onDestroy(() => {
     EventsOff('cache:updated');
+    EventsOff('app:datasource');
   });
 </script>
 

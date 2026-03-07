@@ -166,6 +166,13 @@ func NewDataSourceHandler(ds *config.DataSource, cacheConfig *config.CacheConfig
 		handler.client = client
 		handler.isTestMode = false
 		log.Printf("Used Indico API token for %s: (%s) [REDACTED]", ds.Name, ds.Indico.APITokenName)
+
+		// If the data source specifies abstracts_file in the config, apply it now.
+		// This enables review mode without the --abstracts-file CLI flag.
+		if ds.Indico.AbstractsFile != "" {
+			log.Printf("abstracts_file set in config for %s: %s", ds.Name, ds.Indico.AbstractsFile)
+			handler.abstractsFile = ds.Indico.AbstractsFile
+		}
 	} else if ds.Test != nil {
 		// Test mode with local files
 		handler.dataDir, _ = filepath.Abs(ds.Test.DataDir)
@@ -223,15 +230,16 @@ func (h *DataSourceHandler) getAbstractsFromOverrideFile(ctx context.Context) ([
 	// the file is static the in-file review data may be stale, so we scrape the
 	// live review page for every abstract assigned to the current user and upsert
 	// the result so that MyReview always reflects the latest submitted state.
-	// Up to 8 goroutines run in parallel to amortise per-abstract HTTP latency.
+	// Up to 4 goroutines run in parallel to amortise per-abstract HTTP latency.
 	if h.client != nil {
 		type scrapeResult struct {
-			idx    int
-			review *indico.Review // nil → not yet reviewed
-			err    error
+			idx           int
+			review        *indico.Review // nil → not yet reviewed
+			abstractState string         // e.g. "Submitted", "Withdrawn"; empty if not found
+			err           error
 		}
 
-		const maxWorkers = 8
+		const maxWorkers = 4
 
 		// Build lookup maps from the already-loaded abstract slice so that
 		// scrapeMyReviewWithMaps can resolve friendly_id and track codes without
@@ -267,8 +275,8 @@ func (h *DataSourceHandler) getAbstractsFromOverrideFile(ctx context.Context) ([
 				go func() {
 					defer wg.Done()
 					for idx := range workCh {
-						review, err := h.scrapeMyReviewWithMaps(ctx, response.Abstracts[idx].ID, abstractsByDBID, tracksByTitle)
-						resultCh <- scrapeResult{idx: idx, review: review, err: err}
+						review, abstractState, err := h.scrapeMyReviewWithMaps(ctx, response.Abstracts[idx].ID, abstractsByDBID, tracksByTitle)
+						resultCh <- scrapeResult{idx: idx, review: review, abstractState: abstractState, err: err}
 					}
 				}()
 			}
@@ -280,6 +288,13 @@ func (h *DataSourceHandler) getAbstractsFromOverrideFile(ctx context.Context) ([
 				if r.err != nil {
 					log.Printf("Warning: getAbstractsFromOverrideFile: failed to scrape review for abstract %d: %v", response.Abstracts[r.idx].ID, r.err)
 					continue
+				}
+				// Override the abstract State with the value scraped from the HTML page
+				// (e.g. "Submitted", "Withdrawn") when available, as it is more up-to-date
+				// than what the file-based abstract data may carry.
+				if r.abstractState != "" {
+					response.Abstracts[r.idx].State = r.abstractState
+					log.Printf("getAbstractsFromOverrideFile: overriding state of abstract %d with %q (from HTML page)", response.Abstracts[r.idx].ID, r.abstractState)
 				}
 				if r.review == nil {
 					// Not yet reviewed – clear any stale MyReview from the file.
@@ -981,10 +996,11 @@ func buildAbstractLookupMaps(abstracts []indico.AbstractData) (map[int]*indico.R
 // the cache. Use scrapeMyReviewWithMaps when the caller already has the abstract
 // slice in memory (e.g. getAbstractsFromOverrideFile) to avoid relying on a
 // cache that has not yet been populated.
-// It is a no-op when h.client is nil.
-func (h *DataSourceHandler) scrapeMyReview(ctx context.Context, abstractID int) (*indico.Review, error) {
+// The second return value is the abstract state extracted from the page
+// (e.g. "Submitted", "Withdrawn"); it is empty when not found.
+func (h *DataSourceHandler) scrapeMyReview(ctx context.Context, abstractID int) (*indico.Review, string, error) {
 	if h.client == nil {
-		return nil, fmt.Errorf("indico client not initialized")
+		return nil, "", fmt.Errorf("indico client not initialized")
 	}
 	var abstracts []indico.AbstractData
 	if h.cache != nil {
@@ -1006,9 +1022,11 @@ func (h *DataSourceHandler) scrapeMyReview(ctx context.Context, abstractID int) 
 // GetReviewFromAbstractPage with the supplied lookup maps and expands question
 // details. The caller supplies correctly built abstractsByDBID and tracksByTitle;
 // pass nil for either if not available.
-func (h *DataSourceHandler) scrapeMyReviewWithMaps(ctx context.Context, abstractID int, abstractsByDBID map[int]*indico.RelatedAbstract, tracksByTitle map[string]*indico.Track) (*indico.Review, error) {
+// The second return value is the abstract state extracted from the page
+// (e.g. "Submitted", "Withdrawn"); it is empty when not found.
+func (h *DataSourceHandler) scrapeMyReviewWithMaps(ctx context.Context, abstractID int, abstractsByDBID map[int]*indico.RelatedAbstract, tracksByTitle map[string]*indico.Track) (*indico.Review, string, error) {
 	if h.client == nil {
-		return nil, fmt.Errorf("indico client not initialized")
+		return nil, "", fmt.Errorf("indico client not initialized")
 	}
 
 	h.mu.RLock()
@@ -1024,12 +1042,12 @@ func (h *DataSourceHandler) scrapeMyReviewWithMaps(ctx context.Context, abstract
 	}
 	h.mu.RUnlock()
 
-	review, err := h.client.GetReviewFromAbstractPage(ctx, abstractID, questionsByTitle, abstractsByDBID, tracksByTitle, contribTypesByName)
+	review, abstractState, err := h.client.GetReviewFromAbstractPage(ctx, abstractID, questionsByTitle, abstractsByDBID, tracksByTitle, contribTypesByName)
 	if err != nil {
-		return nil, err
+		return nil, "", err
 	}
 	if review == nil {
-		return nil, nil
+		return nil, abstractState, nil
 	}
 
 	// Expand question details from the handler's question map.
@@ -1041,7 +1059,7 @@ func (h *DataSourceHandler) scrapeMyReviewWithMaps(ctx context.Context, abstract
 	}
 	h.mu.RUnlock()
 
-	return review, nil
+	return review, abstractState, nil
 }
 
 // upsertAbstractInCache updates or appends an abstract in the cached abstracts
@@ -1121,28 +1139,36 @@ func (h *DataSourceHandler) RefreshAbstractByID(ctx context.Context, id int) (*i
 		allAbstracts, _ := h.GetAbstracts(ctx)
 		abstractsByDBID, tracksByTitle := buildAbstractLookupMaps(allAbstracts)
 
-		review, err := h.scrapeMyReviewWithMaps(ctx, abstract.ID, abstractsByDBID, tracksByTitle)
+		review, abstractState, err := h.scrapeMyReviewWithMaps(ctx, abstract.ID, abstractsByDBID, tracksByTitle)
 		if err != nil {
 			log.Printf("Warning: RefreshAbstractByID (abstracts-file mode): failed to fetch review page for abstract %d: %v", abstract.ID, err)
-		} else if review != nil {
-			// Upsert into abstract.Reviews by review ID.
-			upserted := false
-			for j := range abstract.Reviews {
-				if abstract.Reviews[j].ID == review.ID {
-					abstract.Reviews[j] = *review
-					upserted = true
-					break
-				}
-			}
-			if !upserted {
-				abstract.Reviews = append(abstract.Reviews, *review)
-			}
-			reviewCopy := *review
-			abstract.MyReview = &reviewCopy
-			abstract.IsMyReview = true
-			log.Printf("RefreshAbstractByID (abstracts-file mode): updated MyReview (review %d) for abstract %d", review.ID, abstract.ID)
 		} else {
-			abstract.MyReview = nil
+			// Override the abstract State with the value scraped from the HTML page
+			// (e.g. "Submitted", "Withdrawn") when available.
+			if abstractState != "" {
+				abstract.State = abstractState
+				log.Printf("RefreshAbstractByID (abstracts-file mode): overriding state of abstract %d with %q (from HTML page)", abstract.ID, abstractState)
+			}
+			if review != nil {
+				// Upsert into abstract.Reviews by review ID.
+				upserted := false
+				for j := range abstract.Reviews {
+					if abstract.Reviews[j].ID == review.ID {
+						abstract.Reviews[j] = *review
+						upserted = true
+						break
+					}
+				}
+				if !upserted {
+					abstract.Reviews = append(abstract.Reviews, *review)
+				}
+				reviewCopy := *review
+				abstract.MyReview = &reviewCopy
+				abstract.IsMyReview = true
+				log.Printf("RefreshAbstractByID (abstracts-file mode): updated MyReview (review %d) for abstract %d", review.ID, abstract.ID)
+			} else {
+				abstract.MyReview = nil
+			}
 		}
 
 		h.upsertAbstractInCache(abstract)
@@ -1254,7 +1280,8 @@ func (h *DataSourceHandler) GetMyReviewForAbstract(ctx context.Context, abstract
 	if h.isTestMode {
 		return nil, fmt.Errorf("cannot fetch live review in test mode")
 	}
-	return h.scrapeMyReview(ctx, abstractID)
+	review, _, err := h.scrapeMyReview(ctx, abstractID)
+	return review, err
 }
 
 // GetAssignedReviewCount returns the number of unique abstracts assigned to the current user

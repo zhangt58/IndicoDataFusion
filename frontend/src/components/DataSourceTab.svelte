@@ -98,6 +98,7 @@
         // use token name reference (payload may contain apiTokenName)
         apiTokenName: payload.apiTokenName || payload.apiToken || '',
         timeout: payload.timeout || '60s',
+        abstractsFile: payload.abstractsFile || '',
       },
     };
 

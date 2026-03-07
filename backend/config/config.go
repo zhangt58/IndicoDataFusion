@@ -44,6 +44,10 @@ type IndicoConfig struct {
 	EventID      int    `yaml:"event_id" json:"eventId"`
 	APITokenName string `yaml:"api_token_name" json:"apiTokenName"`
 	Timeout      string `yaml:"timeout,omitempty" json:"timeout,omitempty"`
+	// AbstractsFile is an optional path to a pre-processed abstracts JSON file.
+	// When set, all GetAbstracts calls read from this file instead of the Indico
+	// API, enabling review mode without the --abstracts-file CLI flag.
+	AbstractsFile string `yaml:"abstracts_file,omitempty" json:"abstractsFile,omitempty"`
 }
 
 // TestConfig holds test/local data configuration.
@@ -135,6 +139,9 @@ func (c *Config) GetDataSource(name string) (*DataSource, error) {
 		}
 		if timeout, ok := rawData["timeout"].(string); ok {
 			ic.Timeout = timeout
+		}
+		if abstractsFile, ok := rawData["abstracts_file"].(string); ok {
+			ic.AbstractsFile = abstractsFile
 		}
 		ds.Indico = ic
 	} else {
@@ -404,6 +411,9 @@ func BuildConfigFromStructuredUI(configData *ConfigDataUI) *Config {
 			rawData["api_token_name"] = ds.Indico.APITokenName
 			if ds.Indico.Timeout != "" {
 				rawData["timeout"] = ds.Indico.Timeout
+			}
+			if ds.Indico.AbstractsFile != "" {
+				rawData["abstracts_file"] = ds.Indico.AbstractsFile
 			}
 		} else if ds.Type == "test" && ds.Test != nil {
 			rawData["indico"] = false

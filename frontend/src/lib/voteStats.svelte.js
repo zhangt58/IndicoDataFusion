@@ -25,12 +25,17 @@ function createVoteStatsStore() {
   }
 
   return {
-    get data() { return data; },
-    set data(v) { data = v; },
-    get loading() { return loading; },
+    get data() {
+      return data;
+    },
+    set data(v) {
+      data = v;
+    },
+    get loading() {
+      return loading;
+    },
     refresh,
   };
 }
 
 export const voteStatsStore = createVoteStatsStore();
-

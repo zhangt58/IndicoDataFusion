@@ -35,6 +35,7 @@
     { id: 'EventID', title: 'ID', stretch: 1 },
     { id: 'APIToken', title: 'Token', stretch: 2 },
     { id: 'Timeout', title: 'Timeout', stretch: 1 },
+    { id: 'AbstractsFile', title: 'Abstracts File', stretch: 3 },
     { id: 'Description', title: 'Description', stretch: 2 },
     { id: 'Tags', title: 'Tags', stretch: 2 },
     { id: 'Favorite', title: 'Fav', stretch: 0.5 },
@@ -57,6 +58,7 @@
       EventID: ds.indico?.eventId?.toString() || '',
       APIToken: ds.indico?.apiTokenName || '',
       Timeout: ds.indico?.timeout || '',
+      AbstractsFile: ds.indico?.abstractsFile || '',
       Description: ds.description || '',
       Tags: ds.tags || [],
       Favorite: !!ds.favorite,
@@ -180,6 +182,7 @@
       apiTokenName: ds.indico?.apiTokenName || '',
       apiToken: ds.indico?.apiTokenName || '',
       timeout: ds.indico?.timeout || '60s',
+      abstractsFile: ds.indico?.abstractsFile || '',
       description: ds.description || '',
       tags: ds.tags || [],
       favorite: ds.favorite || false,
@@ -207,6 +210,7 @@
         eventId: payload.eventId ? parseInt(String(payload.eventId), 10) : ds.indico?.eventId || 0,
         apiTokenName: payload.apiTokenName || payload.apiToken || ds.indico?.apiTokenName || '',
         timeout: payload.timeout || ds.indico?.timeout || '60s',
+        abstractsFile: payload.abstractsFile ?? ds.indico?.abstractsFile ?? '',
       };
     }
 
@@ -296,6 +300,21 @@
           <span class="font-mono text-sm">{item.APIToken}</span>
         {:else if col.id === 'Timeout'}
           <span>{item.Timeout}</span>
+        {:else if col.id === 'AbstractsFile'}
+          {#if item.AbstractsFile}
+            <span
+              class="inline-flex items-center gap-1 text-xs font-mono text-amber-700 dark:text-amber-300"
+              title={item.AbstractsFile}
+            >
+              <span
+                class="px-1.5 py-0.5 rounded bg-amber-100 dark:bg-amber-900 font-semibold text-amber-800 dark:text-amber-200 shrink-0"
+                >review</span
+              >
+              <span class="truncate max-w-[12rem]">{item.AbstractsFile}</span>
+            </span>
+          {:else}
+            <span class="text-xs text-gray-400">—</span>
+          {/if}
         {:else if col.id === 'Description'}
           <span title={item.Description}>{item.Description}</span>
         {:else if col.id === 'Tags'}
