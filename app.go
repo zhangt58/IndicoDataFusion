@@ -34,9 +34,9 @@ type App struct {
 	ctx        context.Context
 	handler    *data.DataSourceHandler
 	configPath string
-	// abstractsFile is the optional path from the --abstracts-file CLI flag.
-	// When non-empty, all GetAbstracts calls read from this file instead of the
-	// configured data source.
+	// abstractsFile is the optional path used to override abstract data.
+	// This can be set from the data source config (Indico.abstracts_file) or
+	// via the application UI.
 	abstractsFile string
 	// DataSourceName caches the active data source name from the handler
 	DataSourceName string
@@ -70,11 +70,11 @@ func (a *App) startup(ctx context.Context, configPath string) {
 	a.configPath = configPath
 
 	// Apply the abstracts file override if one was explicitly provided via the
-	// --abstracts-file CLI flag or IDF_ABSTRACTS_FILE env var.  The handler may
+	// data source config or previously-set UI value.  The handler may
 	// already have an abstractsFile set from the config's abstracts_file field;
-	// the explicit CLI/env value takes precedence and overwrites it.
+	// an explicit UI/config value takes precedence and overwrites it.
 	if a.abstractsFile != "" {
-		log.Printf("Abstracts override file (CLI/env): %s\n", a.abstractsFile)
+		log.Printf("Abstracts override file: %s\n", a.abstractsFile)
 		a.handler.SetAbstractsFile(a.abstractsFile)
 	}
 
@@ -594,8 +594,8 @@ func (a *App) IsTestMode() bool {
 }
 
 // ReviewMode returns true when abstract data is being served from
-// an --abstracts-file override. In this mode certain UI elements should be
-// hidden (e.g., priority ratings, submission tab, and some review analytics).
+// a file-override (e.g., data source config's abstracts_file or a file selected via UI).
+// In this mode certain UI elements should be hidden (e.g., priority ratings, submission tab, and some review analytics).
 func (a *App) ReviewMode() bool {
 	if a.handler == nil {
 		return false

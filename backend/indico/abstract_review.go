@@ -84,7 +84,7 @@ func (c *IndicoClient) GetReviewTracks(ctx context.Context) (*ReviewTracks, erro
 		return ""
 	}
 
-	// required if the abstract data is provided through --abstracts-file, otherwise
+	// required if the abstract data is provided through a file-override (config/UI), otherwise
 	// it is set when GetAbstracts is called.
 	if _, csrf := parseAbstractIDsAndCSRFFromRoot(doc); csrf != "" {
 		c.csrfToken = csrf
@@ -942,7 +942,7 @@ func (a *AbstractData) GetAggregatedRatingByTitle(questionTitle string) float64 
 			}
 		}
 	}
-	return 0
+	return 0.0
 }
 
 // convertRatingValue converts a rating value to float64.

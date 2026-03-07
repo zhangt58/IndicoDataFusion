@@ -46,7 +46,8 @@ type IndicoConfig struct {
 	Timeout      string `yaml:"timeout,omitempty" json:"timeout,omitempty"`
 	// AbstractsFile is an optional path to a pre-processed abstracts JSON file.
 	// When set, all GetAbstracts calls read from this file instead of the Indico
-	// API, enabling review mode without the --abstracts-file CLI flag.
+	// API. This enables review mode via the data source configuration (abstracts_file)
+	// or when a file is selected through the application's UI.
 	AbstractsFile string `yaml:"abstracts_file,omitempty" json:"abstractsFile,omitempty"`
 }
 

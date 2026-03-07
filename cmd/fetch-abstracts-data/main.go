@@ -1,7 +1,9 @@
 // fetch-abstracts-data retrieves raw abstract data from an Indico data source
 // using the IndicoClient.FetchAbstractsData API and writes the response to a
-// JSON file.  The output file can be fed back to the application via the
-// --abstracts-file flag to bypass live API calls during development / testing.
+// JSON file.  The output file can be fed back to the application by setting
+// the data source `abstracts_file` in the YAML config or by selecting the file
+// via the application's UI to operate in file-override (review) mode during
+// development / testing.
 //
 // Usage:
 //
