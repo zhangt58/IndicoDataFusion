@@ -983,6 +983,34 @@
                   Additional abstracts file (review mode)
                   <span class="ml-1 font-normal text-gray-400">(optional)</span>
                 </label>
+
+                <!-- Info callout: review vs live/read mode -->
+                <details
+                  class="mb-2 rounded-lg border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-950/40 text-xs text-blue-800 dark:text-blue-200"
+                >
+                  <summary
+                    class="px-3 py-2 cursor-pointer font-semibold flex items-center gap-1.5 select-none"
+                  >
+                    <Icon icon="mdi:information-outline" class="w-3.5 h-3.5" />
+                    How Review mode works
+                  </summary>
+                  <div
+                    class="px-3 pb-3 pt-1 leading-relaxed text-xs text-gray-700 dark:text-gray-300"
+                  >
+                    <p class="mb-1">
+                      <strong>Review mode</strong> — when you set an abstracts file on the data source,
+                      the app will load the abstract content from that local JSON file instead of fetching
+                      abstracts live from Indico, to support reviewing features.
+                    </p>
+                    <p class="mb-1">
+                      Important: even in Review mode the app still uses the Indico API to retrieve
+                      review assignments and related metadata (e.g. which abstracts are assigned to
+                      the current reviewer). That means a valid API token and network access to the
+                      Indico instance are still required for the reviewing features to work.
+                    </p>
+                  </div>
+                </details>
+
                 <div class="flex gap-2 items-center">
                   <input
                     id="wiz-ds-abstractsfile"

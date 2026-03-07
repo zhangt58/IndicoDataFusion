@@ -40,7 +40,7 @@
 
   // Per-kind fix guidance
   const guidance = {
-    auth: 'Open Settings → Configuration → Advanced → API Tokens and verify the token is correct and has the required scope.',
+    auth: 'Open Settings → Configuration → Advanced → API Tokens and verify the token is correct and has the required scope. If you cannot fix authentication immediately, you can still review abstracts by setting an "Additional abstracts file" on the data source (Settings → Data Sources) or by using the Open Setup Wizard button to configure it quickly — note that review assignments still require API access.',
     config:
       'Open Settings → Configuration and double-check the Base URL and Event ID for the active data source.',
     server:
@@ -67,6 +67,14 @@
       window.dispatchEvent(new CustomEvent('open:settings', { detail: { tab: 'config' } }));
     } catch (e) {
       console.warn('Could not dispatch open:settings event', e);
+    }
+  }
+
+  function openSetupWizard() {
+    try {
+      window.dispatchEvent(new CustomEvent('open:setup-wizard'));
+    } catch (e) {
+      console.warn('Could not dispatch open:setup-wizard event', e);
     }
   }
 
@@ -115,13 +123,22 @@
       </div>
 
       <!-- Action -->
-      <div class="flex justify-end">
+      <div class="flex justify-end space-x-2">
         <button
           onclick={openSettings}
           class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white text-sm font-medium transition-colors"
         >
           <Icon icon="mdi:cog" class="w-4 h-4" />
           Open Settings
+        </button>
+        <button
+          onclick={openSetupWizard}
+          class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white text-sm font-medium transition-colors"
+          title="Open the Setup Wizard to guide issue resolution"
+          aria-label="Open Setup Wizard"
+        >
+          <Icon icon="mdi:auto-fix" class="w-4 h-4" />
+          Open Setup Wizard
         </button>
       </div>
     </div>
