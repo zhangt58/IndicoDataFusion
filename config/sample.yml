@@ -1,58 +1,100 @@
-# Sample configuration for the data sources
-
 data-source:
-  # the data source def to be used
-  use: ConfName
-
-# cache configuration (optional)
+    use: IPAC27
 cache:
-  # Time-to-live for cache entries (e.g., "24h", "1h30m", "30m")
-  # Default: 24h
-  ttl: 24h
-  # Maximum cache size (e.g., "100MB", "1GB", "500MB")
-  # Default: 100MB
-  max_size: 100MB
-  # Custom cache directory path (leave empty for default: ~/.cache/IndicoDataFusion)
-  # cache_dir: /path/to/custom/cache
-
+    ttl: 24h
+    max_size: 100MB
 api-tokens:
-  - name: <token-name>
-    base_url: <indico-base-url>
-    username: <username>
-    token: ""
-
-# chart settings (optional)
+    - name: jacow-<username>
+      base_url: https://indico.jacow.org
+      username: <username>
+      token: ""
 chart-settings:
-  # Words to exclude from word cloud (in addition to built-in stopwords)
-  excluded_words:
-    - example
-    - test
-    - placeholder
-  # Affiliation deduplication map: canonical name -> list of aliases with enabled flag
-  affiliation_map:
-    - canonical: MIT
-      aliases:
-        - Massachusetts Institute of Technology
-        - MIT, USA
-      enabled: true
-    - canonical: Standord University
-      aliases:
-        - Stanford
-        - Stanford U
-      enabled: false
-# the data source defines an actual Indico conference: <conference-name>
-ConfName:
-  # the base URL of the Indico server, e.g. https://indico.jacow.org
-  base_url: <indico-base-url>
-  # the event ID of Indico event, e.g. 82
-  event_id: <event-id>
-  # the API token, get it from your account settings, e.g. indp_xxx
-  api_token_name: <token-name>
-  # the request timeout duration
-  timeout: 60s
-  # is indico API?
-  indico: true
-  # (optional) path to a pre-processed abstracts JSON file for review mode.
-  # When set, abstract data is read from this file instead of the Indico API,
-  # enabling review mode without the --abstracts-file CLI flag.
-  # abstracts_file: /path/to/abstracts-snapshot.json
+    excluded_words:
+        - example
+        - test
+        - placeholder
+    affiliation_map:
+        - canonical: MIT
+          aliases:
+            - Massachusetts Institute of Technology
+            - MIT, USA
+          enabled: true
+        - canonical: Facility for Rare Isotope Beams
+          aliases:
+            - Facility for Rare Isotope Beams, Michigan State University
+          enabled: true
+        - canonical: Brookhaven National Laboratory
+          aliases:
+            - Brookhaven National Laboratory (BNL)
+          enabled: true
+        - canonical: CERN
+          aliases:
+            - European Organization for Nuclear Research
+            - European Organization for Nuclear Research (CERN)
+          enabled: true
+        - canonical: Euclid
+          aliases:
+            - Euclid Beamlabs LLC
+            - Euclid Beamlabs, LLC
+            - Euclid TechLabs, LLC
+          enabled: true
+        - canonical: RadiaBeam
+          aliases:
+            - RadiaBeam Technologies
+          enabled: true
+        - canonical: Paul Scherrer Institute
+          aliases:
+            - Paul Scherrer Institut
+          enabled: true
+        - canonical: Karlsruhe Institute of Technology
+          aliases:
+            - Karlsruhe Institute of Technology (KIT)
+            - Karlsruhe Instutute of Technology
+          enabled: true
+        - canonical: Helmholtz-Zentrum Berlin für Materialien und Energie
+          aliases:
+            - Helmholtz-Zentrum Berlin fuer Materialien und Energie GmbH
+            - Helmholtz-Zentrum Berlin für Materialien und Energie
+            - Helmholtz-Zentrum Berlin für Materialien und Energie GmbH
+          enabled: true
+        - canonical: Cornell University
+          aliases:
+            - Cornell University (CLASSE)
+          enabled: true
+        - canonical: Technische Universität Darmstadt
+          aliases:
+            - Technische Universitaet Darmstadt
+            - Technische Universität Darmstadt
+          enabled: true
+        - canonical: TRIUMF
+          aliases:
+            - University of British Columbia & TRIUMF
+          enabled: true
+        - canonical: Stony Brook University
+          aliases:
+            - State University of New York at Stony Brook
+          enabled: true
+        - canonical: Istituto Nazionale di Fisica Nucleare
+          aliases:
+            - Istituto Nazionale di Fisica Nucleare - Sez. Roma 1
+          enabled: true
+        - canonical: Thomas Jefferson National Accelerator Facility
+          aliases:
+            - Jefferson Lab
+          enabled: true
+        - canonical: Universitaet Bonn
+          aliases:
+            - Bonn University
+          enabled: true
+        - canonical: KEK
+          aliases:
+            - Sokendai, the Graduate University for Advanced Studies
+            - High Energy Accelerator Research Organization
+          enabled: true
+IPAC27:
+    api_token_name: jacow-<username>
+    base_url: https://indico.jacow.org
+    event_id: 109
+    favorite: false
+    indico: true
+    timeout: 60s

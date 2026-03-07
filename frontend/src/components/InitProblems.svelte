@@ -114,14 +114,24 @@
         <span class="text-xs text-gray-500 dark:text-gray-400">
           Manage tokens in Configuration → Advanced → API Tokens
         </span>
-        <button
-          onclick={openSettingsConfig}
-          aria-label="Open Settings — Configuration"
-          class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-medium transition-colors shrink-0"
-        >
-          <Icon icon="mdi:cog" class="w-3.5 h-3.5" />
-          Open
-        </button>
+        <div class="flex items-center gap-2 shrink-0">
+          <button
+            onclick={() => window.dispatchEvent(new CustomEvent('open:setup-wizard'))}
+            aria-label="Open Setup Wizard"
+            class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-600 text-white text-xs font-medium transition-colors"
+          >
+            <Icon icon="mdi:auto-fix" class="w-3.5 h-3.5" />
+            Wizard
+          </button>
+          <button
+            onclick={openSettingsConfig}
+            aria-label="Open Settings — Configuration"
+            class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-medium transition-colors"
+          >
+            <Icon icon="mdi:cog" class="w-3.5 h-3.5" />
+            Open
+          </button>
+        </div>
       </div>
     </div>
   </div>
