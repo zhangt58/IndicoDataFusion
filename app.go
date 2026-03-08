@@ -10,6 +10,7 @@ import (
 	"IndicoDataFusion/backend/utils"
 	"context"
 	_ "embed"
+	"encoding/json"
 	"log"
 	"net/url"
 	"os"
@@ -848,6 +849,92 @@ func (a *App) OpenCacheDirectory() error {
 // GetWordFrequencies computes word frequencies from input text
 func (a *App) GetWordFrequencies(text string, minLength int, topN int, enablePluralNorm bool, customExcludedWords []string) []data.WordFrequency {
 	return data.GetWordFrequencies(text, minLength, topN, enablePluralNorm, customExcludedWords)
+}
+
+// GetRedactionConfig returns the current redaction configuration.
+// If none is set in the config file, the default (all fields redacted) is returned.
+func (a *App) GetRedactionConfig() (*reviewmode.RedactionConfig, error) {
+	if a.configPath == "" {
+		return reviewmode.DefaultRedactionConfig(), nil
+	}
+	cfg, err := config.LoadConfig(a.configPath)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to load config")
+	}
+	if cfg.RedactionSettings != nil {
+		return cfg.RedactionSettings, nil
+	}
+	return reviewmode.DefaultRedactionConfig(), nil
+}
+
+// SaveRedactionConfig persists the redaction configuration to the config file.
+func (a *App) SaveRedactionConfig(rc *reviewmode.RedactionConfig) error {
+	cfgData, err := a.GetStructuredConfigUI()
+	if err != nil {
+		return errors.Wrap(err, "failed to load structured config")
+	}
+	cfgData.RedactionSettings = rc
+	return a.ApplyStructuredConfigUI(cfgData)
+}
+
+// ExportAbstractsToFile fetches the raw abstracts payload from the Indico API,
+// applies the configured redaction, and writes the result to outputPath as JSON.
+// The output format is identical to the fetch-abstracts-data cmd:
+// the raw map[string]any from FetchAbstractsData ({"abstracts": [...], "questions": [...]})
+// with sensitive fields deleted from each abstract entry.
+func (a *App) ExportAbstractsToFile(outputPath string) error {
+	if a.handler == nil {
+		return errors.Errorf("data handler not initialized")
+	}
+	if outputPath == "" {
+		return errors.Errorf("output path is required")
+	}
+
+	// Fetch the raw map[string]any directly from the API — same as fetch-abstracts-data cmd.
+	rawData, err := a.handler.FetchAbstractsRaw(a.ctx)
+	if err != nil {
+		return errors.Wrap(err, "failed to fetch raw abstracts from API")
+	}
+
+	// Load redaction config (falls back to default if not configured).
+	rc, err := a.GetRedactionConfig()
+	if err != nil {
+		log.Printf("Warning: failed to load redaction config, using defaults: %v", err)
+		rc = reviewmode.DefaultRedactionConfig()
+	}
+
+	// Apply redaction by deleting keys from each abstract entry map.
+	redacted := rc.ApplyRedactionToRawMap(rawData)
+
+	// Marshal and write — identical to writeJSON in the fetch-abstracts-data cmd.
+	jsonData, err := json.MarshalIndent(redacted, "", "  ")
+	if err != nil {
+		return errors.Wrap(err, "failed to marshal abstracts to JSON")
+	}
+	if err := os.WriteFile(outputPath, jsonData, 0o644); err != nil {
+		return errors.Wrap(err, "failed to write abstracts file")
+	}
+
+	abstractCount := 0
+	if list, ok := redacted["abstracts"].([]any); ok {
+		abstractCount = len(list)
+	}
+	log.Printf("Exported %d abstracts (redacted) to %s", abstractCount, outputPath)
+	return nil
+}
+
+// SaveAbstractsFileDialog opens a native save-file dialog so the user can choose
+// where to save the exported abstracts JSON file. Returns the selected file path,
+// or an empty string when the user cancels.
+func (a *App) SaveAbstractsFileDialog() (string, error) {
+	return wailsruntime.SaveFileDialog(a.ctx, wailsruntime.SaveDialogOptions{
+		Title:           "Export Abstracts JSON",
+		DefaultFilename: "abstracts-export.json",
+		Filters: []wailsruntime.FileFilter{
+			{DisplayName: "JSON files (*.json)", Pattern: "*.json"},
+			{DisplayName: "All files (*.*)", Pattern: "*.*"},
+		},
+	})
 }
 
 // OpenAbstractsFileDialog opens a native file-picker dialog so the user can browse for a
