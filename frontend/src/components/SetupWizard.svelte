@@ -35,6 +35,8 @@
   let tokenErrors = $state({});
   let tokenSaving = $state(false);
   let tokenSaved = $state(false);
+  /** Whether the add/update token form <details> is open */
+  let tokenFormOpen = $state(true);
 
   // Step 3 – Data source form; eventId kept as string so empty/partial input works
   let dsForm = $state({
@@ -161,9 +163,11 @@
       const cfg = await GetStructuredConfigUI();
       existingTokens = cfg?.apiTokens ?? [];
 
-      // Pre-fill step-3 from the first indico data source
+      // Pre-fill step-3 from the active data source, falling back to the first one
       if (Array.isArray(cfg?.dataSources) && cfg.dataSources.length > 0) {
-        const ds = cfg.dataSources[0];
+        const activeName = cfg?.activeDataSourceName;
+        const ds =
+          (activeName && cfg.dataSources.find((d) => d?.name === activeName)) || cfg.dataSources[0];
         if (ds?.type === 'indico' && ds.indico) {
           dsForm = {
             name: ds.name || '',
@@ -195,6 +199,7 @@
     dsApplied = false;
     tokenErrors = {};
     dsErrors = {};
+    tokenFormOpen = existingTokens.length === 0;
     open = true;
   }
 
@@ -562,204 +567,240 @@
               class="text-sm font-bold text-gray-900 dark:text-white mb-1 flex items-center gap-2"
             >
               <Icon icon="mdi:key-variant" class="w-4 h-4 text-indigo-500" />
-              Add or update your API token
+              {existingTokens.length > 0 ? 'API tokens' : 'Add your API token'}
             </h3>
             <p class="text-xs text-gray-500 dark:text-gray-400 mb-3">
-              An Indico API token is required to authenticate requests. Tokens are stored securely
-              in your OS keychain — never in plain text files.
+              {#if existingTokens.length > 0}
+                You already have saved API tokens. You can proceed to the next step, or add / update
+                a token below if needed.
+              {:else}
+                An Indico API token is required to authenticate requests. Tokens are stored securely
+                in your OS keychain — never in plain text files.
+              {/if}
             </p>
 
-            <!-- How-to callout -->
-            <details
-              class="mb-3 rounded-lg border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-950/40 text-xs text-blue-800 dark:text-blue-200"
-            >
-              <summary
-                class="px-3 py-2 cursor-pointer font-semibold flex items-center gap-1.5 select-none"
-              >
-                <Icon icon="mdi:help-circle-outline" class="w-3.5 h-3.5" />
-                How to get an Indico API token
-              </summary>
-              <div class="px-3 pb-3 pt-1 leading-relaxed">
-                <ol class="list-decimal ml-4 space-y-1">
-                  <li>
-                    Log in to your Indico instance (e.g. <code
-                      class="font-mono bg-blue-100 dark:bg-blue-900 px-0.5 rounded"
-                      >https://indico.jacow.org</code
-                    >).
-                  </li>
-                  <li>
-                    Click your avatar / name in the top-right corner → <strong>My Profile</strong>.
-                  </li>
-                  <li>Navigate to <strong>Settings → API tokens</strong> tab.</li>
-                  <li>
-                    Click <strong>Create new token</strong>, give it a name, and enable all required
-                    scopes.
-                  </li>
-                  <li>
-                    Copy the token value and paste it below. <strong
-                      >You can only see it once!</strong
-                    >
-                  </li>
-                </ol>
-              </div>
-            </details>
-
-            <div class="space-y-3">
-              <div>
-                <label
-                  for="wiz-token-name"
-                  class="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1"
-                >
-                  Token name <span class="text-red-500">*</span>
-                  <span class="ml-1 font-normal text-gray-400"
-                    >(a short label, used to reference this token in data sources)</span
-                  >
-                </label>
-                <input
-                  id="wiz-token-name"
-                  type="text"
-                  placeholder="e.g. my-indico-token"
-                  bind:value={tokenForm.name}
-                  class="w-full rounded-lg border px-3 py-2 text-sm
-                    {tokenErrors.name
-                    ? 'border-red-400 dark:border-red-600'
-                    : 'border-gray-300 dark:border-gray-600'}
-                    bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-400"
-                />
-                {#if tokenErrors.name}<p class="mt-0.5 text-xs text-red-500">
-                    {tokenErrors.name}
-                  </p>{/if}
-              </div>
-
-              <div>
-                <label
-                  for="wiz-token-baseurl"
-                  class="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1"
-                >
-                  Indico instance URL <span class="text-red-500">*</span>
-                  <span class="ml-1 font-normal text-gray-400"
-                    >(the server this token belongs to)</span
-                  >
-                </label>
-                <input
-                  id="wiz-token-baseurl"
-                  type="text"
-                  placeholder="https://indico.jacow.org"
-                  bind:value={tokenForm.baseUrl}
-                  list="wiz-baseurl-suggestions"
-                  class="w-full rounded-lg border px-3 py-2 text-sm
-                    {tokenErrors.baseUrl
-                    ? 'border-red-400 dark:border-red-600'
-                    : 'border-gray-300 dark:border-gray-600'}
-                    bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-400"
-                />
-                <datalist id="wiz-baseurl-suggestions">
-                  <option value="https://indico.jacow.org">https://indico.jacow.org</option>
-                  <option value="https://indico.global">https://indico.global</option>
-                  <option value="https://indico.cern.ch">https://indico.cern.ch</option>
-                </datalist>
-                {#if tokenErrors.baseUrl}<p class="mt-0.5 text-xs text-red-500">
-                    {tokenErrors.baseUrl}
-                  </p>{/if}
-              </div>
-
-              <div>
-                <label
-                  for="wiz-token-username"
-                  class="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1"
-                >
-                  Username <span class="ml-1 font-normal text-gray-400"
-                    >(optional, for display only)</span
-                  >
-                </label>
-                <input
-                  id="wiz-token-username"
-                  type="text"
-                  placeholder="your.name@institution.org"
-                  bind:value={tokenForm.username}
-                  class="w-full rounded-lg border border-gray-300 dark:border-gray-600 px-3 py-2 text-sm
-                    bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-400"
-                />
-              </div>
-
-              <div>
-                <label
-                  for="wiz-token-secret"
-                  class="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1"
-                >
-                  API token value <span class="text-red-500">*</span>
-                  <span class="ml-1 font-normal text-gray-400"
-                    >(stored in OS keychain, never in config files)</span
-                  >
-                </label>
-                <input
-                  id="wiz-token-secret"
-                  type="password"
-                  placeholder="Paste your token here"
-                  bind:value={tokenForm.secret}
-                  autocomplete="off"
-                  class="w-full rounded-lg border px-3 py-2 text-sm font-mono
-                    {tokenErrors.secret
-                    ? 'border-red-400 dark:border-red-600'
-                    : 'border-gray-300 dark:border-gray-600'}
-                    bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-400"
-                />
-                {#if tokenErrors.secret}<p class="mt-0.5 text-xs text-red-500">
-                    {tokenErrors.secret}
-                  </p>{/if}
-                {#if tokenErrors.save}<p class="mt-0.5 text-xs text-red-500">
-                    {tokenErrors.save}
-                  </p>{/if}
-              </div>
-
-              <button
-                type="button"
-                onclick={saveToken}
-                disabled={tokenSaving}
-                class="w-full flex items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold transition-colors
-                  {tokenSaved
-                  ? 'bg-green-600 hover:bg-green-700'
-                  : 'bg-indigo-600 hover:bg-indigo-700'} text-white disabled:opacity-60"
-              >
-                {#if tokenSaving}
-                  <Icon icon="mdi:loading" class="w-4 h-4 animate-spin" />
-                  Saving…
-                {:else if tokenSaved}
-                  <Icon icon="mdi:check-circle" class="w-4 h-4" />
-                  Token saved — click again to update
-                {:else}
-                  <Icon icon="mdi:content-save-outline" class="w-4 h-4" />
-                  Save token to keychain
-                {/if}
-              </button>
-            </div>
-
+            <!-- Existing tokens summary — shown prominently when tokens exist -->
             {#if existingTokens.length > 0}
               <div
-                class="mt-3 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 px-3 py-2 text-xs text-gray-600 dark:text-gray-400"
+                class="mb-3 rounded-lg border border-green-200 dark:border-green-700 bg-green-50 dark:bg-green-950/40 px-3 py-2 text-xs text-green-800 dark:text-green-200"
               >
                 <p
-                  class="font-semibold mb-1 text-gray-700 dark:text-gray-300 flex items-center gap-1"
+                  class="font-semibold mb-1.5 flex items-center gap-1.5 text-green-700 dark:text-green-300"
                 >
-                  <Icon icon="mdi:information-outline" class="w-3.5 h-3.5" />
-                  Existing tokens ({existingTokens.length})
+                  <Icon icon="mdi:check-circle-outline" class="w-3.5 h-3.5" />
+                  {existingTokens.length} saved token{existingTokens.length > 1 ? 's' : ''}
                 </p>
-                <ul class="space-y-0.5">
+                <ul class="space-y-1">
                   {#each existingTokens as t}
                     <li class="flex items-center gap-1.5">
-                      <Icon icon="mdi:key" class="w-3 h-3 text-indigo-400 shrink-0" />
-                      <span class="font-mono">{t.name}</span>
+                      <Icon icon="mdi:key" class="w-3 h-3 text-green-500 shrink-0" />
+                      <span class="font-mono font-semibold">{t.name}</span>
                       {#if t.baseUrl || t.base_url}
-                        <span class="text-gray-400">— {t.baseUrl || t.base_url}</span>
+                        <span class="text-green-600 dark:text-green-400"
+                          >— {t.baseUrl || t.base_url}</span
+                        >
+                      {/if}
+                      {#if t.username}
+                        <span class="text-green-500 dark:text-green-500">({t.username})</span>
                       {/if}
                     </li>
                   {/each}
                 </ul>
-                <p class="mt-1 text-gray-400">
-                  You can skip this step if an existing token is still valid.
+                <p class="mt-1.5 text-green-600 dark:text-green-400">
+                  If these tokens are still valid, you can skip this step and go to Step 3.
                 </p>
               </div>
             {/if}
+
+            <!-- Add/update form — shown as secondary when tokens exist, primary otherwise -->
+            <details
+              class="rounded-lg border {existingTokens.length > 0
+                ? 'border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50'
+                : 'border-indigo-200 dark:border-indigo-800 bg-white dark:bg-gray-900'}"
+              bind:open={tokenFormOpen}
+            >
+              <summary
+                class="px-3 py-2 cursor-pointer font-semibold text-xs flex items-center gap-1.5 select-none
+                  {existingTokens.length > 0
+                  ? 'text-gray-600 dark:text-gray-400'
+                  : 'text-indigo-700 dark:text-indigo-300'}"
+              >
+                <Icon
+                  icon={existingTokens.length > 0
+                    ? 'mdi:pencil-outline'
+                    : 'mdi:plus-circle-outline'}
+                  class="w-3.5 h-3.5"
+                />
+                {existingTokens.length > 0 ? 'Add or update a token' : 'Enter your API token'}
+              </summary>
+
+              <div class="px-3 pb-3 pt-2 space-y-3">
+                <!-- How-to callout -->
+                <details
+                  class="rounded-lg border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-950/40 text-xs text-blue-800 dark:text-blue-200"
+                >
+                  <summary
+                    class="px-3 py-2 cursor-pointer font-semibold flex items-center gap-1.5 select-none"
+                  >
+                    <Icon icon="mdi:help-circle-outline" class="w-3.5 h-3.5" />
+                    How to get an Indico API token
+                  </summary>
+                  <div class="px-3 pb-3 pt-1 leading-relaxed">
+                    <ol class="list-decimal ml-4 space-y-1">
+                      <li>
+                        Log in to your Indico instance (e.g. <code
+                          class="font-mono bg-blue-100 dark:bg-blue-900 px-0.5 rounded"
+                          >https://indico.jacow.org</code
+                        >).
+                      </li>
+                      <li>
+                        Click your avatar / name in the top-right corner → <strong
+                          >My Profile</strong
+                        >.
+                      </li>
+                      <li>Navigate to <strong>Settings → API tokens</strong> tab.</li>
+                      <li>
+                        Click <strong>Create new token</strong>, give it a name, and enable all
+                        required scopes.
+                      </li>
+                      <li>
+                        Copy the token value and paste it below. <strong
+                          >You can only see it once!</strong
+                        >
+                      </li>
+                    </ol>
+                  </div>
+                </details>
+
+                <div>
+                  <label
+                    for="wiz-token-name"
+                    class="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1"
+                  >
+                    Token name <span class="text-red-500">*</span>
+                    <span class="ml-1 font-normal text-gray-400"
+                      >(a short label, used to reference this token in data sources)</span
+                    >
+                  </label>
+                  <input
+                    id="wiz-token-name"
+                    type="text"
+                    placeholder="e.g. my-indico-token"
+                    bind:value={tokenForm.name}
+                    class="w-full rounded-lg border px-3 py-2 text-sm
+                      {tokenErrors.name
+                      ? 'border-red-400 dark:border-red-600'
+                      : 'border-gray-300 dark:border-gray-600'}
+                      bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                  />
+                  {#if tokenErrors.name}<p class="mt-0.5 text-xs text-red-500">
+                      {tokenErrors.name}
+                    </p>{/if}
+                </div>
+
+                <div>
+                  <label
+                    for="wiz-token-baseurl"
+                    class="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1"
+                  >
+                    Indico instance URL <span class="text-red-500">*</span>
+                    <span class="ml-1 font-normal text-gray-400"
+                      >(the server this token belongs to)</span
+                    >
+                  </label>
+                  <input
+                    id="wiz-token-baseurl"
+                    type="text"
+                    placeholder="https://indico.jacow.org"
+                    bind:value={tokenForm.baseUrl}
+                    list="wiz-baseurl-suggestions"
+                    class="w-full rounded-lg border px-3 py-2 text-sm
+                      {tokenErrors.baseUrl
+                      ? 'border-red-400 dark:border-red-600'
+                      : 'border-gray-300 dark:border-gray-600'}
+                      bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                  />
+                  <datalist id="wiz-baseurl-suggestions">
+                    <option value="https://indico.jacow.org">https://indico.jacow.org</option>
+                    <option value="https://indico.global">https://indico.global</option>
+                    <option value="https://indico.cern.ch">https://indico.cern.ch</option>
+                  </datalist>
+                  {#if tokenErrors.baseUrl}<p class="mt-0.5 text-xs text-red-500">
+                      {tokenErrors.baseUrl}
+                    </p>{/if}
+                </div>
+
+                <div>
+                  <label
+                    for="wiz-token-username"
+                    class="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1"
+                  >
+                    Username <span class="ml-1 font-normal text-gray-400"
+                      >(optional, for display only)</span
+                    >
+                  </label>
+                  <input
+                    id="wiz-token-username"
+                    type="text"
+                    placeholder="your.name@institution.org"
+                    bind:value={tokenForm.username}
+                    class="w-full rounded-lg border border-gray-300 dark:border-gray-600 px-3 py-2 text-sm
+                      bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                  />
+                </div>
+
+                <div>
+                  <label
+                    for="wiz-token-secret"
+                    class="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1"
+                  >
+                    API token value <span class="text-red-500">*</span>
+                    <span class="ml-1 font-normal text-gray-400"
+                      >(stored in OS keychain, never in config files)</span
+                    >
+                  </label>
+                  <input
+                    id="wiz-token-secret"
+                    type="password"
+                    placeholder="Paste your token here"
+                    bind:value={tokenForm.secret}
+                    autocomplete="off"
+                    class="w-full rounded-lg border px-3 py-2 text-sm font-mono
+                      {tokenErrors.secret
+                      ? 'border-red-400 dark:border-red-600'
+                      : 'border-gray-300 dark:border-gray-600'}
+                      bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                  />
+                  {#if tokenErrors.secret}<p class="mt-0.5 text-xs text-red-500">
+                      {tokenErrors.secret}
+                    </p>{/if}
+                  {#if tokenErrors.save}<p class="mt-0.5 text-xs text-red-500">
+                      {tokenErrors.save}
+                    </p>{/if}
+                </div>
+
+                <button
+                  type="button"
+                  onclick={saveToken}
+                  disabled={tokenSaving}
+                  class="w-full flex items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold transition-colors
+                    {tokenSaved
+                    ? 'bg-green-600 hover:bg-green-700'
+                    : 'bg-indigo-600 hover:bg-indigo-700'} text-white disabled:opacity-60"
+                >
+                  {#if tokenSaving}
+                    <Icon icon="mdi:loading" class="w-4 h-4 animate-spin" />
+                    Saving…
+                  {:else if tokenSaved}
+                    <Icon icon="mdi:check-circle" class="w-4 h-4" />
+                    Token saved — click again to update
+                  {:else}
+                    <Icon icon="mdi:content-save-outline" class="w-4 h-4" />
+                    Save token to keychain
+                  {/if}
+                </button>
+              </div>
+            </details>
           </div>
 
           <!-- ── Step 3: Data Source ──────────────────────────────────────────── -->
@@ -873,31 +914,59 @@
                   </p>{/if}
               </div>
 
-              <!-- Event ID — kept as text to avoid type=number coercion quirks -->
-              <div>
-                <label
-                  for="wiz-ds-eventid"
-                  class="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1"
-                >
-                  Event ID <span class="text-red-500">*</span>
-                  <span class="ml-1 font-normal text-gray-400">(integer from the event URL)</span>
-                </label>
-                <input
-                  id="wiz-ds-eventid"
-                  type="text"
-                  inputmode="numeric"
-                  pattern="[0-9]*"
-                  placeholder="14439"
-                  bind:value={dsForm.eventId}
-                  class="w-full rounded-lg border px-3 py-2 text-sm font-mono
-                    {dsErrors.eventId
-                    ? 'border-red-400 dark:border-red-600'
-                    : 'border-gray-300 dark:border-gray-600'}
-                    bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-400"
-                />
-                {#if dsErrors.eventId}<p class="mt-0.5 text-xs text-red-500">
-                    {dsErrors.eventId}
-                  </p>{/if}
+              <!-- Event ID + Timeout in the same row -->
+              <div class="flex gap-3 items-start">
+                <!-- Event ID — kept as text to avoid type=number coercion quirks -->
+                <div class="flex-1 min-w-0">
+                  <label
+                    for="wiz-ds-eventid"
+                    class="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1"
+                  >
+                    Event ID <span class="text-red-500">*</span>
+                    <span class="ml-1 font-normal text-gray-400">(from event URL)</span>
+                  </label>
+                  <input
+                    id="wiz-ds-eventid"
+                    type="text"
+                    inputmode="numeric"
+                    pattern="[0-9]*"
+                    placeholder="14439"
+                    bind:value={dsForm.eventId}
+                    class="w-full rounded-lg border px-3 py-2 text-sm font-mono
+                      {dsErrors.eventId
+                      ? 'border-red-400 dark:border-red-600'
+                      : 'border-gray-300 dark:border-gray-600'}
+                      bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                  />
+                  {#if dsErrors.eventId}<p class="mt-0.5 text-xs text-red-500">
+                      {dsErrors.eventId}
+                    </p>{/if}
+                </div>
+
+                <!-- Timeout -->
+                <div class="w-36 shrink-0">
+                  <label
+                    for="wiz-ds-timeout"
+                    class="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1"
+                  >
+                    Timeout
+                    <span class="ml-1 font-normal text-gray-400">(default: 60s)</span>
+                  </label>
+                  <input
+                    id="wiz-ds-timeout"
+                    type="text"
+                    placeholder="60s"
+                    bind:value={dsForm.timeout}
+                    class="w-full rounded-lg border px-3 py-2 text-sm font-mono
+                      {dsErrors.timeout
+                      ? 'border-red-400 dark:border-red-600'
+                      : 'border-gray-300 dark:border-gray-600'}
+                      bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                  />
+                  {#if dsErrors.timeout}<p class="mt-0.5 text-xs text-red-500">
+                      {dsErrors.timeout}
+                    </p>{/if}
+                </div>
               </div>
 
               <!-- API token picker -->
@@ -946,31 +1015,6 @@
                 {/if}
                 {#if dsErrors.apiTokenName}<p class="mt-0.5 text-xs text-red-500">
                     {dsErrors.apiTokenName}
-                  </p>{/if}
-              </div>
-
-              <!-- Timeout -->
-              <div>
-                <label
-                  for="wiz-ds-timeout"
-                  class="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1"
-                >
-                  Request timeout
-                  <span class="ml-1 font-normal text-gray-400">(default: 60s)</span>
-                </label>
-                <input
-                  id="wiz-ds-timeout"
-                  type="text"
-                  placeholder="60s"
-                  bind:value={dsForm.timeout}
-                  class="w-32 rounded-lg border px-3 py-2 text-sm font-mono
-                    {dsErrors.timeout
-                    ? 'border-red-400 dark:border-red-600'
-                    : 'border-gray-300 dark:border-gray-600'}
-                    bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-400"
-                />
-                {#if dsErrors.timeout}<p class="mt-0.5 text-xs text-red-500">
-                    {dsErrors.timeout}
                   </p>{/if}
               </div>
 
