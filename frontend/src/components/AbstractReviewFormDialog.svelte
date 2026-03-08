@@ -3,6 +3,7 @@
   import Icon from '@iconify/svelte';
   import AbstractReviewForm from './AbstractReviewForm.svelte';
   import { RefreshAbstractByID } from '../../wailsjs/go/main/App';
+  import { voteStatsStore } from '../lib/voteStats.svelte.js';
   import { onMount, onDestroy } from 'svelte';
 
   /**
@@ -40,6 +41,9 @@
 
     try {
       const refreshed = await RefreshAbstractByID(abstract.id);
+      // Refresh vote stats AFTER the cache has been updated by RefreshAbstractByID,
+      // so GetVoteStats reads the freshly written review data.
+      voteStatsStore.refresh();
       if (onAbstractUpdated) {
         onAbstractUpdated(refreshed);
       }
@@ -48,6 +52,9 @@
       console.error('Failed to refresh abstract after review submission:', err);
       refreshError =
         'Review submitted, but failed to refresh abstract data. Please refresh manually.';
+      // Still refresh vote stats — the review was submitted successfully even if
+      // the abstract refresh failed. GetVoteStats reads from whatever is in cache now.
+      voteStatsStore.refresh();
       // Still notify parent with stale data so the UI isn't stuck
       if (onAbstractUpdated) {
         onAbstractUpdated(abstract);

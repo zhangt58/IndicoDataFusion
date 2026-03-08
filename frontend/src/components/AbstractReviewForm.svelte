@@ -415,8 +415,8 @@
         );
       }
       if (onSuccess) onSuccess();
-      // Refresh shared vote stats so AbstractMyReviews and any other consumer updates reactively
-      voteStatsStore.refresh();
+      // Vote stats refresh is handled by the caller (AbstractReviewFormDialog) after
+      // RefreshAbstractByID completes, ensuring GetVoteStats reads the updated cache.
     } catch (err) {
       error = err.message || String(err);
     } finally {
