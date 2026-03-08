@@ -31,8 +31,10 @@ type DataSourceHandler struct {
 	initProblems []string
 	// userID is the ID of the current user, populated from the Indico client after fetching review tracks
 	userID int
-	// abstractsFile is the optional override path set via --abstracts-file. When non-empty,
-	// GetAbstracts reads directly from this file instead of the configured data source or API.
+	// abstractsFile is the optional override path for abstract data. When non-empty,
+	// GetAbstracts reads directly from this file instead of the configured data
+	// source or the Indico API. The override can be provided via the data source
+	// configuration (Indico.abstracts_file) or programmatically via SetAbstractsFile/UI.
 	abstractsFile string
 
 	// Per-handler maps (moved from package scope)
@@ -168,7 +170,7 @@ func NewDataSourceHandler(ds *config.DataSource, cacheConfig *config.CacheConfig
 		log.Printf("Used Indico API token for %s: (%s) [REDACTED]", ds.Name, ds.Indico.APITokenName)
 
 		// If the data source specifies abstracts_file in the config, apply it now.
-		// This enables review mode without the --abstracts-file CLI flag.
+		// This enables review mode via the data source configuration or UI file selection.
 		if ds.Indico.AbstractsFile != "" {
 			log.Printf("abstracts_file set in config for %s: %s", ds.Name, ds.Indico.AbstractsFile)
 			handler.abstractsFile = ds.Indico.AbstractsFile
@@ -207,7 +209,7 @@ func (h *DataSourceHandler) SetAbstractsFile(path string) {
 // optional "questions" (array) fields.
 // When an Indico client is available it also fetches the caller's review
 // assignments (via GetReviewTracks) and merges IsMyReview / MyReview into
-// each abstract, mirrors the post-processing done by getAbstractsFromAPI.
+// each abstract, mirroring the post-processing done by getAbstractsFromAPI.
 func (h *DataSourceHandler) getAbstractsFromOverrideFile(ctx context.Context) ([]indico.AbstractData, error) {
 	filePath := h.abstractsFile
 	log.Printf("Reading abstract data from override file: %v\n", filePath)
@@ -482,7 +484,7 @@ func (h *DataSourceHandler) getInfoFromAPI(ctx context.Context) (*indico.Event, 
 
 // GetAbstracts retrieves abstract data from the configured data source.
 func (h *DataSourceHandler) GetAbstracts(ctx context.Context) ([]indico.AbstractData, error) {
-	// --abstracts-file override: read from the local file and enrich with live review
+	// file-override mode: read from the local file and enrich with live review
 	// data, then cache.  The cache is populated the same way as API mode so that
 	// RefreshCache (triggered by the Refresh button) can invalidate it and force a
 	// re-read of both the file and the live review-assignment API.
@@ -490,7 +492,7 @@ func (h *DataSourceHandler) GetAbstracts(ctx context.Context) ([]indico.Abstract
 		if h.cache != nil {
 			if cached, found := h.cache.Get("abstracts"); found {
 				if abstracts, ok := cached.([]indico.AbstractData); ok {
-					log.Printf("Using cached abstracts (abstracts-file mode): %d entries", len(abstracts))
+					log.Printf("Using cached abstracts (file-override mode): %d entries", len(abstracts))
 					return abstracts, nil
 				}
 				// Stale/corrupt entry – discard and re-read.
@@ -687,7 +689,7 @@ func (h *DataSourceHandler) parseAbstractsResponse(response *indico.AbstractsRes
 // enrichAbstractsWithClient merges review-assignment data (IsMyReview / MyReview) and,
 // when a live client is available, also sets IndicoURL and absolutises avatar URLs.
 // It also overrides ReviewedForTracks from the live review track assignments so
-// that abstracts loaded from a static file (--abstracts-file) carry up-to-date
+// that abstracts loaded from a static file (file-override mode) carry up-to-date
 // track info.
 // It is a no-op when h.client is nil (test / offline mode).
 func (h *DataSourceHandler) enrichAbstractsWithClient(ctx context.Context, abstracts []indico.AbstractData) {
@@ -873,7 +875,7 @@ type reviewAssignments struct {
 	isMyReview map[int]bool
 	// tracksByAbstract maps abstract friendly_id → review Track(s) the abstract
 	// is assigned to for this reviewer.  Used to update ReviewedForTracks when
-	// the abstract data comes from a static file (--abstracts-file mode).
+	// the abstract data comes from a static file (file-override mode).
 	tracksByAbstract map[int][]indico.Track
 }
 
@@ -1098,25 +1100,25 @@ func (h *DataSourceHandler) upsertAbstractInCache(abstract indico.AbstractData) 
 // RefreshAbstractByID fetches fresh data for a single abstract from the API.
 // This bypasses the cache and always fetches from the live API.
 //
-// Special case – abstractsFile mode (--abstracts-file flag):
+// Special case – file-override mode:
 // When abstract data is served from a local file the abstract fields themselves
 // are not re-fetched from the API; instead the existing abstract is taken from
 // the current data set.  The review page is still fetched so that MyReview is
 // updated after a submit / update, allowing the UI to show "Submit review" vs
 // "Update review" correctly.
 func (h *DataSourceHandler) RefreshAbstractByID(ctx context.Context, id int) (*indico.AbstractData, error) {
-	// ── abstractsFile mode: keep abstract data from file, refresh review only ─
+	// ── file-override mode: keep abstract data from file, refresh review only ─
 	if h.abstractsFile != "" {
 		if h.client == nil {
-			return nil, fmt.Errorf("indico client not initialized (cannot refresh review in abstracts-file mode)")
+			return nil, fmt.Errorf("indico client not initialized (cannot refresh review in file-override mode)")
 		}
 
-		log.Printf("RefreshAbstractByID (abstracts-file mode): refreshing review for abstract %d", id)
+		log.Printf("RefreshAbstractByID (file-override mode): refreshing review for abstract %d", id)
 
 		// Retrieve existing abstract from the cached/file data set.
 		existing, err := h.GetAbstractByID(ctx, id)
 		if err != nil {
-			return nil, fmt.Errorf("abstracts-file mode: abstract %d not found: %w", id, err)
+			return nil, fmt.Errorf("file-override mode: abstract %d not found: %w", id, err)
 		}
 		// Work on a copy so we don't mutate the cached slice in place.
 		abstract := *existing
@@ -1141,13 +1143,13 @@ func (h *DataSourceHandler) RefreshAbstractByID(ctx context.Context, id int) (*i
 
 		review, abstractState, err := h.scrapeMyReviewWithMaps(ctx, abstract.ID, abstractsByDBID, tracksByTitle)
 		if err != nil {
-			log.Printf("Warning: RefreshAbstractByID (abstracts-file mode): failed to fetch review page for abstract %d: %v", abstract.ID, err)
+			log.Printf("Warning: RefreshAbstractByID (file-override mode): failed to fetch review page for abstract %d: %v", abstract.ID, err)
 		} else {
 			// Override the abstract State with the value scraped from the HTML page
 			// (e.g. "Submitted", "Withdrawn") when available.
 			if abstractState != "" {
 				abstract.State = abstractState
-				log.Printf("RefreshAbstractByID (abstracts-file mode): overriding state of abstract %d with %q (from HTML page)", abstract.ID, abstractState)
+				log.Printf("RefreshAbstractByID (file-override mode): overriding state of abstract %d with %q (from HTML page)", abstract.ID, abstractState)
 			}
 			if review != nil {
 				// Upsert into abstract.Reviews by review ID.
@@ -1165,7 +1167,7 @@ func (h *DataSourceHandler) RefreshAbstractByID(ctx context.Context, id int) (*i
 				reviewCopy := *review
 				abstract.MyReview = &reviewCopy
 				abstract.IsMyReview = true
-				log.Printf("RefreshAbstractByID (abstracts-file mode): updated MyReview (review %d) for abstract %d", review.ID, abstract.ID)
+				log.Printf("RefreshAbstractByID (file-override mode): updated MyReview (review %d) for abstract %d", review.ID, abstract.ID)
 			} else {
 				abstract.MyReview = nil
 			}
@@ -1336,8 +1338,8 @@ func (h *DataSourceHandler) RefreshCache(ctx context.Context, key string) error 
 		}
 		h.cache.Set(key, event)
 	case "abstracts":
-		// Route through GetAbstracts so that the --abstracts-file override is
-		// respected; it already handles file, test, and API modes.
+		// Route through GetAbstracts so that any file-override is
+		// respected; GetAbstracts already handles file, test, and API modes.
 		abstracts, err := h.GetAbstracts(ctx)
 		if err != nil {
 			return fmt.Errorf("failed to refresh abstracts: %w", err)
@@ -1413,7 +1415,7 @@ func (h *DataSourceHandler) IsTestMode() bool {
 }
 
 // ReviewMode returns true when abstract data is served from the
-// --abstracts-file override rather than from the Indico API or test fixtures.
+// file-override (configured abstracts_file or UI-selected file) rather than from the Indico API or test fixtures.
 // In this mode certain UI elements should be hidden (e.g., priority ratings,
 // submission tab, and some review analytics tabs).
 func (h *DataSourceHandler) ReviewMode() bool {
@@ -1468,6 +1470,33 @@ func (h *DataSourceHandler) UpdateCacheTTL(newTTL time.Duration) {
 		return
 	}
 	h.cache.UpdateTTL(newTTL)
+}
+
+// FetchAbstractsRaw fetches the raw abstracts payload directly from the Indico API
+// and returns the decoded map[string]any exactly as FetchAbstractsData produces it —
+// the same data the fetch-abstracts-data cmd writes to disk.
+// No unmarshalling into typed structs, no enrichment, no caching.
+// Returns an error if the handler has no Indico client (test mode or no token configured).
+func (h *DataSourceHandler) FetchAbstractsRaw(ctx context.Context) (map[string]any, error) {
+	if h.client == nil {
+		return nil, fmt.Errorf("indico client not available (test mode or no API token configured)")
+	}
+
+	ids, err := h.client.GetAbstractIDsAndCSRFFromList(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get abstract IDs: %w", err)
+	}
+
+	if len(ids) == 0 {
+		return map[string]any{"abstracts": []any{}, "questions": []any{}}, nil
+	}
+
+	rawData, err := h.client.FetchAbstractsData(ctx, ids)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch abstracts data: %w", err)
+	}
+
+	return rawData, nil
 }
 
 // End of DataSourceHandler methods

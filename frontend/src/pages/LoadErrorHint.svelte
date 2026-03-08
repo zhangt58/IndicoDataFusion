@@ -35,7 +35,7 @@
       return { kind: 'auth', text: 'API token missing or invalid.' };
     // Trim long raw errors
     const trimmed = raw.length > 120 ? raw.slice(0, 120) + '…' : raw;
-    return { kind: 'generic', text: trimmed };
+    return { kind: 'generic', text: trimmed, full_text: raw };
   });
 
   // Per-kind fix guidance
@@ -51,7 +51,12 @@
       'Open Settings → Configuration and verify the Base URL is reachable from this machine.',
     generic:
       'Open Settings → Configuration and verify the Base URL, Event ID, and API Token are correct.',
+    review:
+      'If you cannot fix authentication immediately, you can still review abstracts by setting an "Additional abstracts file" on the data source (Settings → Data Sources) or by using the Open Setup Wizard button to configure it quickly — note that review assignments still require API access.',
   };
+
+  // Helper for rendering the always-visible review guidance
+  const reviewGuidanceText = guidance.review;
 
   const kindIcon = {
     auth: 'mdi:key-alert',
@@ -67,6 +72,14 @@
       window.dispatchEvent(new CustomEvent('open:settings', { detail: { tab: 'config' } }));
     } catch (e) {
       console.warn('Could not dispatch open:settings event', e);
+    }
+  }
+
+  function openSetupWizard() {
+    try {
+      window.dispatchEvent(new CustomEvent('open:setup-wizard'));
+    } catch (e) {
+      console.warn('Could not dispatch open:setup-wizard event', e);
     }
   }
 
@@ -97,7 +110,9 @@
             icon={kindIcon[reason.kind] ?? 'mdi:alert-circle'}
             class="w-5 h-5 mt-0.5 text-red-500 dark:text-red-400 shrink-0"
           />
-          <p class="text-sm text-red-700 dark:text-red-300 leading-snug">{reason.text}</p>
+          <p class="text-sm text-red-700 dark:text-red-300 leading-snug" title={reason.full_text}>
+            {reason.text}
+          </p>
         </div>
       {/if}
 
@@ -114,14 +129,36 @@
         </p>
       </div>
 
+      <!-- Review guidance (always shown) -->
+      <div
+        class="flex items-start gap-3 rounded-lg bg-sky-50 dark:bg-sky-950/50 border border-sky-200 dark:border-sky-800 px-4 py-3"
+      >
+        <Icon
+          icon="mdi:account-check"
+          class="w-5 h-5 mt-0.5 text-sky-500 dark:text-sky-400 shrink-0"
+        />
+        <p class="text-sm text-sky-800 dark:text-sky-200 leading-snug">
+          {reviewGuidanceText}
+        </p>
+      </div>
+
       <!-- Action -->
-      <div class="flex justify-end">
+      <div class="flex justify-end space-x-2">
         <button
           onclick={openSettings}
           class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white text-sm font-medium transition-colors"
         >
           <Icon icon="mdi:cog" class="w-4 h-4" />
           Open Settings
+        </button>
+        <button
+          onclick={openSetupWizard}
+          class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white text-sm font-medium transition-colors"
+          title="Open the Setup Wizard to guide issue resolution"
+          aria-label="Open Setup Wizard"
+        >
+          <Icon icon="mdi:auto-fix" class="w-4 h-4" />
+          Open Setup Wizard
         </button>
       </div>
     </div>

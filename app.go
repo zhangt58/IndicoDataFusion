@@ -10,6 +10,8 @@ import (
 	"IndicoDataFusion/backend/utils"
 	"context"
 	_ "embed"
+	"encoding/json"
+	"fmt"
 	"log"
 	"net/url"
 	"os"
@@ -34,9 +36,9 @@ type App struct {
 	ctx        context.Context
 	handler    *data.DataSourceHandler
 	configPath string
-	// abstractsFile is the optional path from the --abstracts-file CLI flag.
-	// When non-empty, all GetAbstracts calls read from this file instead of the
-	// configured data source.
+	// abstractsFile is the optional path used to override abstract data.
+	// This can be set from the data source config (Indico.abstracts_file) or
+	// via the application UI.
 	abstractsFile string
 	// DataSourceName caches the active data source name from the handler
 	DataSourceName string
@@ -70,11 +72,11 @@ func (a *App) startup(ctx context.Context, configPath string) {
 	a.configPath = configPath
 
 	// Apply the abstracts file override if one was explicitly provided via the
-	// --abstracts-file CLI flag or IDF_ABSTRACTS_FILE env var.  The handler may
+	// data source config or previously-set UI value.  The handler may
 	// already have an abstractsFile set from the config's abstracts_file field;
-	// the explicit CLI/env value takes precedence and overwrites it.
+	// an explicit UI/config value takes precedence and overwrites it.
 	if a.abstractsFile != "" {
-		log.Printf("Abstracts override file (CLI/env): %s\n", a.abstractsFile)
+		log.Printf("Abstracts override file: %s\n", a.abstractsFile)
 		a.handler.SetAbstractsFile(a.abstractsFile)
 	}
 
@@ -464,12 +466,52 @@ func (a *App) ExportConfig(password string) (string, error) {
 	}
 
 	// Export with encryption, passing token retriever to fetch secrets from keyring
-	data, err := config.ExportConfig(cfg, password, utils.GetAPITokenSecret)
+	exportedData, err := config.ExportConfig(cfg, password, utils.GetAPITokenSecret)
 	if err != nil {
 		return "", errors.Wrap(err, "failed to export config")
 	}
 
-	return string(data), nil
+	return string(exportedData), nil
+}
+
+// ExportConfigToFile opens a native save-file dialog, exports the configuration (encrypted with
+// the provided password) and writes it to the selected file path. Returns the selected path, or
+// an empty string if the user cancelled the dialog.
+func (a *App) ExportConfigToFile(password string) (string, error) {
+	if a.configPath == "" {
+		return "", errors.Errorf("config path not set")
+	}
+
+	// Ask user where to save the exported config
+	path, err := wailsruntime.SaveFileDialog(a.ctx, wailsruntime.SaveDialogOptions{
+		Title:           "Export Configuration",
+		DefaultFilename: fmt.Sprintf("idf-config-export-%s.json", time.Now().Format("2006-01-02")),
+		Filters: []wailsruntime.FileFilter{
+			{DisplayName: "JSON files (*.json)", Pattern: "*.json"},
+			{DisplayName: "All files (*.*)", Pattern: "*.*"},
+		},
+	})
+	if err != nil {
+		return "", errors.Wrap(err, "save file dialog failed")
+	}
+	if path == "" {
+		// user cancelled
+		return "", nil
+	}
+
+	// Generate exported (encrypted) data using the existing ExportConfig method
+	dataStr, err := a.ExportConfig(password)
+	if err != nil {
+		return "", errors.Wrap(err, "failed to export config data")
+	}
+
+	// Write file
+	if err := os.WriteFile(path, []byte(dataStr), 0o644); err != nil {
+		return "", errors.Wrap(err, "failed to write exported config file")
+	}
+
+	log.Printf("Exported configuration to %s", path)
+	return path, nil
 }
 
 // ImportConfig imports and decrypts a configuration file, then applies it.
@@ -594,8 +636,8 @@ func (a *App) IsTestMode() bool {
 }
 
 // ReviewMode returns true when abstract data is being served from
-// an --abstracts-file override. In this mode certain UI elements should be
-// hidden (e.g., priority ratings, submission tab, and some review analytics).
+// a file-override (e.g., data source config's abstracts_file or a file selected via UI).
+// In this mode certain UI elements should be hidden (e.g., priority ratings, submission tab, and some review analytics).
 func (a *App) ReviewMode() bool {
 	if a.handler == nil {
 		return false
@@ -848,6 +890,92 @@ func (a *App) OpenCacheDirectory() error {
 // GetWordFrequencies computes word frequencies from input text
 func (a *App) GetWordFrequencies(text string, minLength int, topN int, enablePluralNorm bool, customExcludedWords []string) []data.WordFrequency {
 	return data.GetWordFrequencies(text, minLength, topN, enablePluralNorm, customExcludedWords)
+}
+
+// GetRedactionConfig returns the current redaction configuration.
+// If none is set in the config file, the default (all fields redacted) is returned.
+func (a *App) GetRedactionConfig() (*reviewmode.RedactionConfig, error) {
+	if a.configPath == "" {
+		return reviewmode.DefaultRedactionConfig(), nil
+	}
+	cfg, err := config.LoadConfig(a.configPath)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to load config")
+	}
+	if cfg.RedactionSettings != nil {
+		return cfg.RedactionSettings, nil
+	}
+	return reviewmode.DefaultRedactionConfig(), nil
+}
+
+// SaveRedactionConfig persists the redaction configuration to the config file.
+func (a *App) SaveRedactionConfig(rc *reviewmode.RedactionConfig) error {
+	cfgData, err := a.GetStructuredConfigUI()
+	if err != nil {
+		return errors.Wrap(err, "failed to load structured config")
+	}
+	cfgData.RedactionSettings = rc
+	return a.ApplyStructuredConfigUI(cfgData)
+}
+
+// ExportAbstractsToFile fetches the raw abstracts payload from the Indico API,
+// applies the configured redaction, and writes the result to outputPath as JSON.
+// The output format is identical to the fetch-abstracts-data cmd:
+// the raw map[string]any from FetchAbstractsData ({"abstracts": [...], "questions": [...]})
+// with sensitive fields deleted from each abstract entry.
+func (a *App) ExportAbstractsToFile(outputPath string) error {
+	if a.handler == nil {
+		return errors.Errorf("data handler not initialized")
+	}
+	if outputPath == "" {
+		return errors.Errorf("output path is required")
+	}
+
+	// Fetch the raw map[string]any directly from the API — same as fetch-abstracts-data cmd.
+	rawData, err := a.handler.FetchAbstractsRaw(a.ctx)
+	if err != nil {
+		return errors.Wrap(err, "failed to fetch raw abstracts from API")
+	}
+
+	// Load redaction config (falls back to default if not configured).
+	rc, err := a.GetRedactionConfig()
+	if err != nil {
+		log.Printf("Warning: failed to load redaction config, using defaults: %v", err)
+		rc = reviewmode.DefaultRedactionConfig()
+	}
+
+	// Apply redaction by deleting keys from each abstract entry map.
+	redacted := rc.ApplyRedactionToRawMap(rawData)
+
+	// Marshal and write — identical to writeJSON in the fetch-abstracts-data cmd.
+	jsonData, err := json.MarshalIndent(redacted, "", "  ")
+	if err != nil {
+		return errors.Wrap(err, "failed to marshal abstracts to JSON")
+	}
+	if err := os.WriteFile(outputPath, jsonData, 0o644); err != nil {
+		return errors.Wrap(err, "failed to write abstracts file")
+	}
+
+	abstractCount := 0
+	if list, ok := redacted["abstracts"].([]any); ok {
+		abstractCount = len(list)
+	}
+	log.Printf("Exported %d abstracts (redacted) to %s", abstractCount, outputPath)
+	return nil
+}
+
+// SaveAbstractsFileDialog opens a native save-file dialog so the user can choose
+// where to save the exported abstracts JSON file. Returns the selected file path,
+// or an empty string when the user cancels.
+func (a *App) SaveAbstractsFileDialog() (string, error) {
+	return wailsruntime.SaveFileDialog(a.ctx, wailsruntime.SaveDialogOptions{
+		Title:           "Export Abstracts JSON",
+		DefaultFilename: "abstracts-export.json",
+		Filters: []wailsruntime.FileFilter{
+			{DisplayName: "JSON files (*.json)", Pattern: "*.json"},
+			{DisplayName: "All files (*.*)", Pattern: "*.*"},
+		},
+	})
 }
 
 // OpenAbstractsFileDialog opens a native file-picker dialog so the user can browse for a

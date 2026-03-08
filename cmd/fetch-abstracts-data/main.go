@@ -1,7 +1,9 @@
 // fetch-abstracts-data retrieves raw abstract data from an Indico data source
 // using the IndicoClient.FetchAbstractsData API and writes the response to a
-// JSON file.  The output file can be fed back to the application via the
-// --abstracts-file flag to bypass live API calls during development / testing.
+// JSON file.  The output file can be fed back to the application by setting
+// the data source `abstracts_file` in the YAML config or by selecting the file
+// via the application's UI to operate in file-override (review) mode during
+// development / testing.
 //
 // Usage:
 //
@@ -14,13 +16,10 @@ import (
 	"flag"
 	"fmt"
 	"log"
-	"net/http"
 	"os"
-	"time"
 
 	"IndicoDataFusion/backend/config"
-	"IndicoDataFusion/backend/indico"
-	"IndicoDataFusion/backend/utils"
+	"IndicoDataFusion/backend/data"
 )
 
 func writeJSON(path string, v any) error {
@@ -67,70 +66,26 @@ func main() {
 		log.Fatalf("data source %q is not an Indico source (type=%q); only Indico sources are supported", name, ds.Type)
 	}
 
-	// Resolve the API token.
-	apiToken := ""
-	if ds.Indico.APITokenName == "" {
-		log.Fatalf("data source %q has no api_token_name configured", name)
-	}
-	var matched *config.APITokenEntry
-	for i := range cfg.APITokens {
-		if cfg.APITokens[i].Name == ds.Indico.APITokenName {
-			matched = &cfg.APITokens[i]
-			break
-		}
-	}
-	if matched == nil {
-		log.Fatalf("api token %q not found in config api-tokens for data source %q", ds.Indico.APITokenName, name)
-	}
-	apiToken = matched.Token
-	if apiToken == "" {
-		// Fall back to keyring.
-		secret, err := utils.GetAPITokenSecret(matched.Name)
-		if err != nil {
-			log.Fatalf("api token %q has no token in config and keyring lookup failed: %v", matched.Name, err)
-		}
-		apiToken = secret
-	}
-
-	// Build the Indico client.
-	client := indico.NewIndicoClient(ds.Indico.BaseURL, ds.Indico.EventID, apiToken)
-	if ds.Indico.Timeout != "" {
-		if d, err := time.ParseDuration(ds.Indico.Timeout); err == nil {
-			client.Timeout = d
-			client.Client = &http.Client{Timeout: d}
-		} else {
-			log.Printf("warning: invalid timeout %q, using default: %v", ds.Indico.Timeout, err)
-		}
+	// Initialize a DataSourceHandler which resolves API tokens / keyring and builds the Indico client.
+	handler, err := data.NewDataSourceHandler(ds, cfg.Cache, cfg.APITokens)
+	if err != nil {
+		log.Fatalf("failed to initialize data handler for %q: %v", name, err)
 	}
 
 	ctx := context.Background()
 
-	// Step 1 – fetch the abstract list page to get IDs and cache the CSRF token.
-	log.Printf("Fetching abstract IDs from data source %q (%s, event %d)…",
-		name, ds.Indico.BaseURL, ds.Indico.EventID)
-	ids, err := client.GetAbstractIDsAndCSRFFromList(ctx)
+	log.Printf("Fetching abstracts from data source %q (%s, event %d)…", name, ds.Indico.BaseURL, ds.Indico.EventID)
+
+	rawData, err := handler.FetchAbstractsRaw(ctx)
 	if err != nil {
-		log.Fatalf("GetAbstractIDsAndCSRFFromList: %v", err)
-	}
-	log.Printf("Found %d abstract(s)", len(ids))
-
-	if len(ids) == 0 {
-		log.Printf("No abstracts found; writing empty result to %s", *out)
-		if err := writeJSON(*out, map[string]any{"abstracts": []any{}, "questions": []any{}}); err != nil {
-			log.Fatalf("write output: %v", err)
-		}
-		fmt.Printf("Wrote %s\n", *out)
-		return
+		log.Fatalf("FetchAbstractsRaw: %v", err)
 	}
 
-	// Step 2 – fetch the full abstracts payload.
-	log.Printf("Fetching abstracts data…")
-	rawData, err := client.FetchAbstractsData(ctx, ids)
-	if err != nil {
-		log.Fatalf("FetchAbstractsData: %v", err)
+	if rawData == nil {
+		// Defensive: write an empty payload if nil returned
+		rawData = map[string]any{"abstracts": []any{}, "questions": []any{}}
 	}
 
-	// Step 3 – write the raw payload to disk.
 	if err := writeJSON(*out, rawData); err != nil {
 		log.Fatalf("write output: %v", err)
 	}

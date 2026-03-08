@@ -6,7 +6,6 @@ import (
 	"embed"
 	"flag"
 	"fmt"
-	"os"
 
 	"github.com/wailsapp/wails/v2"
 	"github.com/wailsapp/wails/v2/pkg/options"
@@ -28,21 +27,12 @@ func main() {
 
 	// Load configuration path (optional)
 	cfgPath := flag.String("config", "", "path to config yaml")
-	abstractsFile := flag.String("abstracts-file", "", "path to a pre-processed abstracts JSON file; overrides the data source for all GetAbstracts calls")
 	flag.Parse()
 
 	// Determine which config path to use (flag > existing default > create from sample)
 	chosenConfig := app.DetermineConfigPath(*cfgPath)
 	if chosenConfig == "" {
 		fmt.Printf("No config path determined; startup will require an explicit path\n")
-	}
-
-	// Store the abstracts file override so startup can apply it to the handler
-	if env := os.Getenv("IDF_ABSTRACTS_FILE"); env != "" {
-		fmt.Printf("Using abstracts file from env: %s\n", env)
-		app.abstractsFile = env
-	} else {
-		app.abstractsFile = *abstractsFile
 	}
 
 	// Create application with options

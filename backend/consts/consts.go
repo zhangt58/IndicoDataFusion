@@ -8,5 +8,5 @@ const (
 	Department  = "Facility for Rare Isotope Beams"
 	Company     = "Michigan State University"
 	AuthorEmail = "zhangt@frib.msu.edu"
-	ConfEnvName = "INDICO_DATA_FUSION_CONFIG_PATH"
+	ConfEnvName = "IDF_CONFIG_PATH"
 )

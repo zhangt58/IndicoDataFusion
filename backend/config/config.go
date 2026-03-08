@@ -6,6 +6,8 @@ import (
 	"strings"
 	"time"
 
+	"IndicoDataFusion/backend/reviewmode"
+
 	"gopkg.in/yaml.v3"
 )
 
@@ -46,7 +48,8 @@ type IndicoConfig struct {
 	Timeout      string `yaml:"timeout,omitempty" json:"timeout,omitempty"`
 	// AbstractsFile is an optional path to a pre-processed abstracts JSON file.
 	// When set, all GetAbstracts calls read from this file instead of the Indico
-	// API, enabling review mode without the --abstracts-file CLI flag.
+	// API. This enables review mode via the data source configuration (abstracts_file)
+	// or when a file is selected through the application's UI.
 	AbstractsFile string `yaml:"abstracts_file,omitempty" json:"abstractsFile,omitempty"`
 }
 
@@ -101,11 +104,12 @@ type ChartSettings struct {
 
 // Config holds the complete configuration with multiple data sources.
 type Config struct {
-	ActiveDataSource ActiveDataSource          `yaml:"data-source"`
-	Cache            *CacheConfig              `yaml:"cache,omitempty"`
-	APITokens        []APITokenEntry           `yaml:"api-tokens,omitempty"`
-	ChartSettings    *ChartSettings            `yaml:"chart-settings,omitempty"`
-	DataSources      map[string]map[string]any `yaml:",inline"`
+	ActiveDataSource  ActiveDataSource            `yaml:"data-source"`
+	Cache             *CacheConfig                `yaml:"cache,omitempty"`
+	APITokens         []APITokenEntry             `yaml:"api-tokens,omitempty"`
+	ChartSettings     *ChartSettings              `yaml:"chart-settings,omitempty"`
+	RedactionSettings *reviewmode.RedactionConfig `yaml:"redaction-settings,omitempty"`
+	DataSources       map[string]map[string]any   `yaml:",inline"`
 }
 
 // GetDataSource retrieves a specific data source by name.
@@ -305,6 +309,42 @@ func LoadConfigFromBytes(b []byte) (*Config, error) {
 		delete(rawConfig, "chart-settings")
 	}
 
+	// Extract redaction-settings section
+	if redactionSection, ok := rawConfig["redaction-settings"].(map[string]any); ok {
+		cfg.RedactionSettings = &reviewmode.RedactionConfig{}
+		if v, ok := redactionSection["redact_score"].(bool); ok {
+			cfg.RedactionSettings.RedactScore = v
+		}
+		if v, ok := redactionSection["redact_judge"].(bool); ok {
+			cfg.RedactionSettings.RedactJudge = v
+		}
+		if v, ok := redactionSection["redact_judgment_comment"].(bool); ok {
+			cfg.RedactionSettings.RedactJudgmentComment = v
+		}
+		if v, ok := redactionSection["redact_judgment_dt"].(bool); ok {
+			cfg.RedactionSettings.RedactJudgmentDT = v
+		}
+		if v, ok := redactionSection["redact_submitter"].(bool); ok {
+			cfg.RedactionSettings.RedactSubmitter = v
+		}
+		if v, ok := redactionSection["redact_reviews"].(bool); ok {
+			cfg.RedactionSettings.RedactReviews = v
+		}
+		if v, ok := redactionSection["redact_comments"].(bool); ok {
+			cfg.RedactionSettings.RedactComments = v
+		}
+		if v, ok := redactionSection["redact_custom_fields"].(bool); ok {
+			cfg.RedactionSettings.RedactCustomFields = v
+		}
+		if v, ok := redactionSection["redact_modified_by"].(bool); ok {
+			cfg.RedactionSettings.RedactModifiedBy = v
+		}
+		if v, ok := redactionSection["redact_files"].(bool); ok {
+			cfg.RedactionSettings.RedactFiles = v
+		}
+		delete(rawConfig, "redaction-settings")
+	}
+
 	// All remaining sections are data sources
 	for name, val := range rawConfig {
 		if section, ok := val.(map[string]any); ok {
@@ -359,8 +399,9 @@ type ConfigDataUI struct {
 	Cache                *CacheConfig   `json:"cache,omitempty"`
 	PathInfo             ConfigPathInfo `json:"pathInfo"`
 	// Include APITokens so the UI can present/manage named tokens
-	APITokens     []APITokenEntry `json:"apiTokens,omitempty"`
-	ChartSettings *ChartSettings  `json:"chartSettings,omitempty"`
+	APITokens         []APITokenEntry             `json:"apiTokens,omitempty"`
+	ChartSettings     *ChartSettings              `json:"chartSettings,omitempty"`
+	RedactionSettings *reviewmode.RedactionConfig `json:"redactionSettings,omitempty"`
 }
 
 // GetStructuredConfigUI converts a Config to structured format for the UI.
@@ -372,6 +413,7 @@ func GetStructuredConfigUI(cfg *Config, pathInfo ConfigPathInfo) *ConfigDataUI {
 		PathInfo:             pathInfo,
 		APITokens:            cfg.APITokens,
 		ChartSettings:        cfg.ChartSettings,
+		RedactionSettings:    cfg.RedactionSettings,
 	}
 
 	// Use GetDataSource to build each entry
@@ -394,10 +436,11 @@ func BuildConfigFromStructuredUI(configData *ConfigDataUI) *Config {
 		ActiveDataSource: ActiveDataSource{
 			Use: configData.ActiveDataSourceName,
 		},
-		Cache:         configData.Cache,
-		DataSources:   make(map[string]map[string]any),
-		APITokens:     configData.APITokens,
-		ChartSettings: configData.ChartSettings,
+		Cache:             configData.Cache,
+		DataSources:       make(map[string]map[string]any),
+		APITokens:         configData.APITokens,
+		ChartSettings:     configData.ChartSettings,
+		RedactionSettings: configData.RedactionSettings,
 	}
 
 	// Convert each data source
