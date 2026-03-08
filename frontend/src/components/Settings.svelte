@@ -48,12 +48,65 @@
     activeTab = tab;
   }
 
+  // Refactored: open the repository's "new issue" page prefilled with title/body
   function reportIssue() {
     if (!appInfo) return;
-    const subject = encodeURIComponent(`${appInfo.name} ${appInfo.version} Issue Report`);
-    const body = encodeURIComponent('Please describe the issue here...\n\n');
-    const mailto = `mailto:${appInfo.authorEmail}?subject=${subject}&body=${body}`;
-    OpenSafeURL(mailto);
+    try {
+      const repo = appInfo.repoURL || appInfo.RepoURL || null;
+      if (!repo) {
+        console.error('No repository URL available to report an issue');
+        return;
+      }
+
+      // Normalize repo URL: remove trailing .git and trailing slash
+      let repoURL = String(repo)
+        .replace(/\.git$/i, '')
+        .replace(/\/$/, '');
+
+      // Prepare common title/body values
+      const title = encodeURIComponent(
+        `${appInfo.name || ''} ${appInfo.version || ''} Issue Report`.trim(),
+      );
+
+      const bodyLines = [
+        'Please describe the issue here:',
+        '',
+        `App: ${appInfo.name || ''}`,
+        `Version: ${appInfo.version || ''}`,
+        `Build Date: ${appInfo.buildDate || ''}`,
+        `Data Source: ${appInfo.dataSource || ''}`,
+        '',
+        'Steps to reproduce:',
+        '1.',
+        '',
+        'Expected behavior:',
+        '',
+        'Actual behavior:',
+        '',
+        'Additional details (logs, screenshots, etc):',
+      ];
+      const body = encodeURIComponent(bodyLines.join('\n'));
+
+      let issueURL = repoURL;
+
+      // GitHub: /issues/new?title=...&body=...
+      if (/github\.com/i.test(repoURL)) {
+        issueURL = `${repoURL}/issues/new?title=${title}&body=${body}`;
+      } else if (/gitlab\.com/i.test(repoURL)) {
+        // GitLab: /-/issues/new?issue[title]=...&issue[description]=...
+        const glTitle = encodeURIComponent(
+          `${appInfo.name || ''} ${appInfo.version || ''} Issue Report`.trim(),
+        );
+        issueURL = `${repoURL}/-/issues/new?issue[title]=${glTitle}&issue[description]=${body}`;
+      } else {
+        // Fallback: open the repo page so user can find issue tracker
+        issueURL = repoURL;
+      }
+
+      OpenSafeURL(issueURL);
+    } catch (err) {
+      console.error('reportIssue error', err);
+    }
   }
 
   onMount(async () => {
