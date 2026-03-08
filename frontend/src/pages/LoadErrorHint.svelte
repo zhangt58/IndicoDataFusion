@@ -40,7 +40,7 @@
 
   // Per-kind fix guidance
   const guidance = {
-    auth: 'Open Settings → Configuration → Advanced → API Tokens and verify the token is correct and has the required scope. If you cannot fix authentication immediately, you can still review abstracts by setting an "Additional abstracts file" on the data source (Settings → Data Sources) or by using the Open Setup Wizard button to configure it quickly — note that review assignments still require API access.',
+    auth: 'Open Settings → Configuration → Advanced → API Tokens and verify the token is correct and has the required scope.',
     config:
       'Open Settings → Configuration and double-check the Base URL and Event ID for the active data source.',
     server:
@@ -51,7 +51,12 @@
       'Open Settings → Configuration and verify the Base URL is reachable from this machine.',
     generic:
       'Open Settings → Configuration and verify the Base URL, Event ID, and API Token are correct.',
+    review:
+      'If you cannot fix authentication immediately, you can still review abstracts by setting an "Additional abstracts file" on the data source (Settings → Data Sources) or by using the Open Setup Wizard button to configure it quickly — note that review assignments still require API access.',
   };
+
+  // Helper for rendering the always-visible review guidance
+  const reviewGuidanceText = guidance.review;
 
   const kindIcon = {
     auth: 'mdi:key-alert',
@@ -121,6 +126,19 @@
         />
         <p class="text-sm text-amber-800 dark:text-amber-200 leading-snug">
           {guidance[reason?.kind ?? 'generic']}
+        </p>
+      </div>
+
+      <!-- Review guidance (always shown) -->
+      <div
+        class="flex items-start gap-3 rounded-lg bg-sky-50 dark:bg-sky-950/50 border border-sky-200 dark:border-sky-800 px-4 py-3"
+      >
+        <Icon
+          icon="mdi:account-check"
+          class="w-5 h-5 mt-0.5 text-sky-500 dark:text-sky-400 shrink-0"
+        />
+        <p class="text-sm text-sky-800 dark:text-sky-200 leading-snug">
+          {reviewGuidanceText}
         </p>
       </div>
 
