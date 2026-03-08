@@ -320,27 +320,27 @@ func (a *App) UpdateAbstractReview(
 
 // AppInfo holds application metadata
 type AppInfo struct {
-	Name        string `json:"name"`
-	NameAbbr    string `json:"nameAbbr"`
-	Version     string `json:"version"`
-	Author      string `json:"author"`
-	Company     string `json:"company"`
-	AuthorEmail string `json:"authorEmail"`
-	BuildDate   string `json:"buildDate"`
-	DataSource  string `json:"dataSource"` // New field for data source name
+	Name         string `json:"name"`
+	NameAbbr     string `json:"nameAbbr"`
+	Version      string `json:"version"`
+	Author       string `json:"author"`
+	Organization string `json:"organization"`
+	RepoURL      string `json:"repoURL"`
+	BuildDate    string `json:"buildDate"`
+	DataSource   string `json:"dataSource"` // New field for data source name
 }
 
 // GetAppInfo returns application metadata
 func (a *App) GetAppInfo() AppInfo {
 	return AppInfo{
-		Name:        consts.AppName,
-		NameAbbr:    consts.AppNameAbbr,
-		Version:     consts.AppVersion,
-		Author:      consts.Author,
-		Company:     consts.Company,
-		AuthorEmail: consts.AuthorEmail,
-		BuildDate:   BuildDate,
-		DataSource:  a.DataSourceName,
+		Name:         consts.AppName,
+		NameAbbr:     consts.AppNameAbbr,
+		Version:      consts.AppVersion,
+		Author:       consts.Author,
+		Organization: consts.Organization,
+		RepoURL:      consts.RepoURL,
+		BuildDate:    BuildDate,
+		DataSource:   a.DataSourceName,
 	}
 }
 
