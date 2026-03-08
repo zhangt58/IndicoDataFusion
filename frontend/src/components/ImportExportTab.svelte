@@ -1,7 +1,6 @@
 <script>
   import { tick } from 'svelte';
   import {
-    ExportConfig,
     ImportConfig,
     GetStructuredConfigUI,
     GetRedactionConfig,
@@ -10,6 +9,7 @@
     SaveAbstractsFileDialog,
     IsTestMode,
     ReviewMode,
+    ExportConfigToFile,
   } from '../../wailsjs/go/main/App';
   import PasswordDialog from './PasswordDialog.svelte';
   import Icon from '@iconify/svelte';
@@ -75,23 +75,19 @@
   async function handleExport(password) {
     exportingConfig = true;
     try {
-      const encryptedData = await ExportConfig(password);
-
-      // Download the file
-      const blob = new Blob([encryptedData], { type: 'application/json' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `idf-config-export-${new Date().toISOString().split('T')[0]}.json`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-
-      showToastMsg('Configuration exported successfully', 'success');
+      // Use native save dialog in backend to write encrypted export file
+      const savedPath = await ExportConfigToFile(password);
+      if (!savedPath) {
+        // user cancelled
+        showToastMsg('Export cancelled', 'info');
+      } else {
+        showToastMsg(`Configuration exported to ${savedPath}`, 'success');
+      }
       showExportPasswordDialog = false;
     } catch (e) {
-      throw new Error(`Export failed: ${e}`);
+      console.error('Export failed:', e);
+      showToastMsg(`Export failed: ${e}`, 'error');
+      // rethrowing is not necessary; already displayed toast
     } finally {
       exportingConfig = false;
     }
@@ -261,7 +257,7 @@
         title="Export configuration with encrypted API tokens"
       >
         <Icon icon="mdi:export" class="w-5 h-5 inline-block mr-2" />
-        Export Configuration
+        Export
       </button>
 
       <button
@@ -272,7 +268,7 @@
         title="Import configuration from encrypted file"
       >
         <Icon icon="mdi:import" class="w-5 h-5 inline-block mr-2" />
-        Import Configuration
+        Import
       </button>
 
       <!-- Hidden file input for import -->

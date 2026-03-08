@@ -11,6 +11,7 @@ import (
 	"context"
 	_ "embed"
 	"encoding/json"
+	"fmt"
 	"log"
 	"net/url"
 	"os"
@@ -465,12 +466,52 @@ func (a *App) ExportConfig(password string) (string, error) {
 	}
 
 	// Export with encryption, passing token retriever to fetch secrets from keyring
-	data, err := config.ExportConfig(cfg, password, utils.GetAPITokenSecret)
+	exportedData, err := config.ExportConfig(cfg, password, utils.GetAPITokenSecret)
 	if err != nil {
 		return "", errors.Wrap(err, "failed to export config")
 	}
 
-	return string(data), nil
+	return string(exportedData), nil
+}
+
+// ExportConfigToFile opens a native save-file dialog, exports the configuration (encrypted with
+// the provided password) and writes it to the selected file path. Returns the selected path, or
+// an empty string if the user cancelled the dialog.
+func (a *App) ExportConfigToFile(password string) (string, error) {
+	if a.configPath == "" {
+		return "", errors.Errorf("config path not set")
+	}
+
+	// Ask user where to save the exported config
+	path, err := wailsruntime.SaveFileDialog(a.ctx, wailsruntime.SaveDialogOptions{
+		Title:           "Export Configuration",
+		DefaultFilename: fmt.Sprintf("idf-config-export-%s.json", time.Now().Format("2006-01-02")),
+		Filters: []wailsruntime.FileFilter{
+			{DisplayName: "JSON files (*.json)", Pattern: "*.json"},
+			{DisplayName: "All files (*.*)", Pattern: "*.*"},
+		},
+	})
+	if err != nil {
+		return "", errors.Wrap(err, "save file dialog failed")
+	}
+	if path == "" {
+		// user cancelled
+		return "", nil
+	}
+
+	// Generate exported (encrypted) data using the existing ExportConfig method
+	dataStr, err := a.ExportConfig(password)
+	if err != nil {
+		return "", errors.Wrap(err, "failed to export config data")
+	}
+
+	// Write file
+	if err := os.WriteFile(path, []byte(dataStr), 0o644); err != nil {
+		return "", errors.Wrap(err, "failed to write exported config file")
+	}
+
+	log.Printf("Exported configuration to %s", path)
+	return path, nil
 }
 
 // ImportConfig imports and decrypts a configuration file, then applies it.
