@@ -45,7 +45,7 @@
         class="flex justify-between items-center py-2 border-b border-blue-200 dark:border-blue-800"
       >
         <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Organization</span>
-        <span class="text-sm text-gray-600 dark:text-gray-400">{appInfo.company}</span>
+        <span class="text-sm text-gray-600 dark:text-gray-400">{appInfo.organization}</span>
       </div>
       <div class="flex justify-between items-center py-2">
         <span class="text-sm font-medium text-gray-700 dark:text-gray-300">See an Issue?</span>
