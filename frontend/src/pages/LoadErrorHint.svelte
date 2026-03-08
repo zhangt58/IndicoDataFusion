@@ -35,7 +35,7 @@
       return { kind: 'auth', text: 'API token missing or invalid.' };
     // Trim long raw errors
     const trimmed = raw.length > 120 ? raw.slice(0, 120) + '…' : raw;
-    return { kind: 'generic', text: trimmed };
+    return { kind: 'generic', text: trimmed, full_text: raw };
   });
 
   // Per-kind fix guidance
@@ -105,7 +105,9 @@
             icon={kindIcon[reason.kind] ?? 'mdi:alert-circle'}
             class="w-5 h-5 mt-0.5 text-red-500 dark:text-red-400 shrink-0"
           />
-          <p class="text-sm text-red-700 dark:text-red-300 leading-snug">{reason.text}</p>
+          <p class="text-sm text-red-700 dark:text-red-300 leading-snug" title={reason.full_text}>
+            {reason.text}
+          </p>
         </div>
       {/if}
 
