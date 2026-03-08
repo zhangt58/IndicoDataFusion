@@ -1472,4 +1472,31 @@ func (h *DataSourceHandler) UpdateCacheTTL(newTTL time.Duration) {
 	h.cache.UpdateTTL(newTTL)
 }
 
+// FetchAbstractsRaw fetches the raw abstracts payload directly from the Indico API
+// and returns the decoded map[string]any exactly as FetchAbstractsData produces it —
+// the same data the fetch-abstracts-data cmd writes to disk.
+// No unmarshalling into typed structs, no enrichment, no caching.
+// Returns an error if the handler has no Indico client (test mode or no token configured).
+func (h *DataSourceHandler) FetchAbstractsRaw(ctx context.Context) (map[string]any, error) {
+	if h.client == nil {
+		return nil, fmt.Errorf("indico client not available (test mode or no API token configured)")
+	}
+
+	ids, err := h.client.GetAbstractIDsAndCSRFFromList(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get abstract IDs: %w", err)
+	}
+
+	if len(ids) == 0 {
+		return map[string]any{"abstracts": []any{}, "questions": []any{}}, nil
+	}
+
+	rawData, err := h.client.FetchAbstractsData(ctx, ids)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch abstracts data: %w", err)
+	}
+
+	return rawData, nil
+}
+
 // End of DataSourceHandler methods
