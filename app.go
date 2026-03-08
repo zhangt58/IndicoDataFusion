@@ -344,6 +344,73 @@ func (a *App) GetAppInfo() AppInfo {
 	}
 }
 
+// GetOSInfo returns a short human-friendly OS name and version string.
+// It attempts platform-specific detection (macOS sw_vers, /etc/os-release on Linux,
+// and cmd ver on Windows) and falls back to the runtime GOOS value when detection fails.
+func (a *App) GetOSInfo() string {
+	// Prefer reliable host information via OS utilities where available.
+	switch goruntime.GOOS {
+	case "darwin":
+		// macOS: prefer sw_vers
+		name := "macOS"
+		if out, err := exec.Command("sw_vers", "-productName").Output(); err == nil {
+			if n := strings.TrimSpace(string(out)); n != "" {
+				name = n
+			}
+		}
+		if out, err := exec.Command("sw_vers", "-productVersion").Output(); err == nil {
+			ver := strings.TrimSpace(string(out))
+			if ver != "" {
+				return fmt.Sprintf("%s %s", name, ver)
+			}
+		}
+		return name
+	case "linux":
+		// Try /etc/os-release first for PRETTY_NAME
+		if b, err := os.ReadFile("/etc/os-release"); err == nil {
+			s := string(b)
+			for _, line := range strings.Split(s, "\n") {
+				if strings.HasPrefix(line, "PRETTY_NAME=") {
+					val := strings.TrimPrefix(line, "PRETTY_NAME=")
+					val = strings.Trim(val, `"`)
+					if val != "" {
+						return val
+					}
+				}
+			}
+			// Fallback to NAME+VERSION if PRETTY_NAME not set
+			name := "Linux"
+			ver := ""
+			for _, line := range strings.Split(s, "\n") {
+				if strings.HasPrefix(line, "NAME=") && name == "Linux" {
+					name = strings.Trim(strings.TrimPrefix(line, "NAME="), `"`)
+				}
+				if strings.HasPrefix(line, "VERSION=") {
+					ver = strings.Trim(strings.TrimPrefix(line, "VERSION="), `"`)
+				}
+			}
+			if name != "" && ver != "" {
+				return fmt.Sprintf("%s %s", name, ver)
+			}
+		}
+		// Try lsb_release if available
+		if out, err := exec.Command("lsb_release", "-ds").Output(); err == nil {
+			return strings.Trim(string(out), " \n\"")
+		}
+		return "Linux"
+	case "windows":
+		// Use cmd /c ver
+		if out, err := exec.Command("cmd", "/c", "ver").Output(); err == nil {
+			if s := strings.TrimSpace(string(out)); s != "" {
+				return s
+			}
+		}
+		return "Windows"
+	default:
+		return goruntime.GOOS
+	}
+}
+
 // GetConfigPath returns the current config path and whether it was from env.
 func (a *App) GetConfigPath() config.ConfigPathInfo {
 	return config.ConfigPathInfo{Path: a.configPath}
