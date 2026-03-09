@@ -2,7 +2,7 @@
   import { onMount, onDestroy } from 'svelte';
   import { Modal } from 'flowbite-svelte';
   import Icon from '@iconify/svelte';
-  import { GetAppInfo, OpenSafeURL } from '../../wailsjs/go/main/App';
+  import { GetAppInfo, OpenSafeURL, GetOSInfo } from '../../wailsjs/go/main/App';
   import AboutTab from './AboutTab.svelte';
   import WindowTab from './WindowTab.svelte';
   import DataSourceTab from './DataSourceTab.svelte';
@@ -48,12 +48,61 @@
     activeTab = tab;
   }
 
-  function reportIssue() {
+  // Refactored: open the repository's "new issue" page with an empty title so the reporter
+  // must provide a meaningful title, and a body that contains only the IDF version, OS,
+  // and an issue description placeholder (no other metadata).
+  async function reportIssue() {
     if (!appInfo) return;
-    const subject = encodeURIComponent(`${appInfo.name} ${appInfo.version} Issue Report`);
-    const body = encodeURIComponent('Please describe the issue here...\n\n');
-    const mailto = `mailto:${appInfo.authorEmail}?subject=${subject}&body=${body}`;
-    OpenSafeURL(mailto);
+    try {
+      const repo = appInfo.repoURL || appInfo.RepoURL || null;
+      if (!repo) {
+        console.error('No repository URL available to report an issue');
+        return;
+      }
+
+      // Normalize repo URL: remove trailing .git and trailing slash
+      let repoURL = String(repo)
+        .replace(/\.git$/i, '')
+        .replace(/\/$/, '');
+
+      // Leave title empty so the reporter provides a meaningful title
+      const title = ''; // intentionally empty
+
+      // Ask backend for OS info (reliable host info)
+      let os = 'Unknown OS';
+      try {
+        os = await GetOSInfo();
+      } catch (e) {
+        console.debug('GetOSInfo failed, falling back to Unknown OS', e);
+      }
+
+      // Body: only include IDF version, OS info, and a spot for the reporter to describe the issue
+      const bodyLines = [
+        `Version: ${appInfo.version || ''}`,
+        `OS: ${os}`,
+        '',
+        'Describe the issue here:',
+      ];
+      const body = encodeURIComponent(bodyLines.join('\n'));
+
+      let issueURL = repoURL;
+
+      // GitHub: /issues/new?title=...&body=...
+      if (/github\.com/i.test(repoURL)) {
+        issueURL = `${repoURL}/issues/new?title=${title}&body=${body}`;
+      } else if (/gitlab\.com/i.test(repoURL)) {
+        // GitLab: /-/issues/new?issue[title]=...&issue[description]=...
+        // leave title empty
+        issueURL = `${repoURL}/-/issues/new?issue[title]=${title}&issue[description]=${body}`;
+      } else {
+        // Fallback: open the repo page so user can find issue tracker
+        issueURL = repoURL;
+      }
+
+      OpenSafeURL(issueURL);
+    } catch (err) {
+      console.error('reportIssue error', err);
+    }
   }
 
   onMount(async () => {
