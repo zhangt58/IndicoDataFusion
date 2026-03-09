@@ -344,6 +344,14 @@ func (a *App) GetAppInfo() AppInfo {
 	}
 }
 
+// CheckForNewRelease queries the repository configured in consts.RepoURL for the
+// latest GitHub release and returns structured information about it. This
+// wrapper delegates the actual HTTP work to backend/utils/release.go so the
+// implementation can be tested separately.
+func (a *App) CheckForNewRelease() (*utils.ReleaseCheckResult, error) {
+	return utils.CheckLatestRelease(consts.RepoURL, consts.AppVersion)
+}
+
 // GetOSInfo returns a short human-friendly OS name and version string.
 // It attempts platform-specific detection (macOS sw_vers, /etc/os-release on Linux,
 // and cmd ver on Windows) and falls back to the runtime GOOS value when detection fails.
