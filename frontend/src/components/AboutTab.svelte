@@ -1,5 +1,6 @@
 <script>
   import iconImage from '../assets/images/icon.png';
+  import CheckForUpdates from './CheckForUpdates.svelte';
 
   let { appInfo = null, reportIssue } = $props();
 </script>
@@ -23,7 +24,10 @@
         class="flex justify-between items-center py-2 border-b border-gray-200 dark:border-gray-700"
       >
         <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Version</span>
-        <span class="text-sm text-gray-600 dark:text-gray-400">{appInfo.version}</span>
+        <div class="flex items-center gap-2">
+          <CheckForUpdates />
+          <span class="text-sm text-gray-600 dark:text-gray-400">{appInfo.version}</span>
+        </div>
       </div>
       <div
         class="flex justify-between items-center py-2 border-b border-gray-200 dark:border-gray-700"
