@@ -1,11 +1,6 @@
 <script>
   import { onMount, onDestroy } from 'svelte';
-  import {
-    GetEventInfo,
-    IsTestMode,
-    GetCacheStats,
-    GetCacheEntryMetadata,
-  } from '../../wailsjs/go/main/App';
+  import { GetEventInfo, GetCacheStats, GetCacheEntryMetadata } from '../../wailsjs/go/main/App';
   import { EventsOn, EventsOff } from '../../wailsjs/runtime/runtime';
   import { convertDateTimeToLocal } from '../utils/dateUtils.js';
   import { createCachePage } from '../utils/cacheUtils.js';
@@ -18,7 +13,6 @@
   let refreshing = $state(false);
   let error = $state(null);
   let errorString = $state(null);
-  let isTestMode = $state(false);
   let cacheExpired = $state(false);
   let lastRefreshed = $state(null);
 
@@ -64,12 +58,6 @@
   );
 
   onMount(async () => {
-    try {
-      isTestMode = await IsTestMode();
-    } catch (e) {
-      console.error('Failed to check test mode', e);
-    }
-
     await loadData();
 
     EventsOn('cache:updated', async (...data) => {
@@ -106,9 +94,6 @@
 
     // Reload when the active data source changes (Settings → Apply)
     EventsOn('app:datasource', async () => {
-      try {
-        isTestMode = await IsTestMode();
-      } catch (_) {}
       await loadData();
     });
   });
@@ -180,36 +165,34 @@
             {/if}
           </span>
         </div>
-        {#if !isTestMode}
-          <div class="relative">
-            <button
-              onclick={() => handleRefresh()}
-              disabled={refreshing}
-              class="p-2 rounded-lg bg-white/20 hover:bg-white/30 transition-colors disabled:opacity-50"
-              title={cacheExpired
-                ? 'Cache expired - Click to refresh'
-                : lastRefreshed
-                  ? `Last refreshed: ${formatRelativeTime(lastRefreshed)}\n${formatFullDateTime(lastRefreshed)}`
-                  : 'Refresh from API'}
-            >
-              <Icon
-                icon="mdi:refresh"
-                class={`shrink-0 h-6 w-6 ${refreshing ? 'animate-spin' : ''}`}
-              />
-            </button>
-            {#if cacheExpired && !refreshing}
-              <span class="absolute -top-1 -right-1 flex h-3 w-3">
-                <span
-                  class="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"
-                ></span>
-                <span
-                  class="relative inline-flex rounded-full h-3 w-3 bg-red-500"
-                  title="Cache expired"
-                ></span>
-              </span>
-            {/if}
-          </div>
-        {/if}
+        <div class="relative">
+          <button
+            onclick={() => handleRefresh()}
+            disabled={refreshing}
+            class="p-2 rounded-lg bg-white/20 hover:bg-white/30 transition-colors disabled:opacity-50"
+            title={cacheExpired
+              ? 'Cache expired - Click to refresh'
+              : lastRefreshed
+                ? `Last refreshed: ${formatRelativeTime(lastRefreshed)}\n${formatFullDateTime(lastRefreshed)}`
+                : 'Refresh from API'}
+          >
+            <Icon
+              icon="mdi:refresh"
+              class={`shrink-0 h-6 w-6 ${refreshing ? 'animate-spin' : ''}`}
+            />
+          </button>
+          {#if cacheExpired && !refreshing}
+            <span class="absolute -top-1 -right-1 flex h-3 w-3">
+              <span
+                class="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"
+              ></span>
+              <span
+                class="relative inline-flex rounded-full h-3 w-3 bg-red-500"
+                title="Cache expired"
+              ></span>
+            </span>
+          {/if}
+        </div>
       </div>
       <h1 class="text-2xl md:text-3xl font-bold">{eventInfo.title}</h1>
     </div>
