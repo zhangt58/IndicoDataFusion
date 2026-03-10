@@ -702,14 +702,6 @@ func (a *App) GetCacheKeys() []string {
 	return a.handler.GetCacheKeys()
 }
 
-// IsTestMode returns true if the current data source is test mode (local files)
-func (a *App) IsTestMode() bool {
-	if a.handler == nil {
-		return false
-	}
-	return a.handler.IsTestMode()
-}
-
 // ReviewMode returns true when abstract data is being served from
 // a file-override (e.g., data source config's abstracts_file or a file selected via UI).
 // In this mode certain UI elements should be hidden (e.g., priority ratings, submission tab, and some review analytics).

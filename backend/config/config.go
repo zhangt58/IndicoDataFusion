@@ -1,6 +1,7 @@
 package config
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -53,20 +54,11 @@ type IndicoConfig struct {
 	AbstractsFile string `yaml:"abstracts_file,omitempty" json:"abstractsFile,omitempty"`
 }
 
-// TestConfig holds test/local data configuration.
-type TestConfig struct {
-	DataDir   string `yaml:"data_dir" json:"dataDir"`
-	EventInfo string `yaml:"event_info" json:"eventInfo"`
-	Abstracts string `yaml:"abstracts" json:"abstracts"`
-	Contribs  string `yaml:"contribs" json:"contribs"`
-}
-
 // DataSource represents a named data source configuration.
 type DataSource struct {
 	Name        string        `json:"name"`
-	Type        string        `json:"type"` // "indico" or "test"
+	Type        string        `json:"type"` // "indico"
 	Indico      *IndicoConfig `json:"indico,omitempty"`
-	Test        *TestConfig   `json:"test,omitempty"`
 	Favorite    bool          `json:"favorite,omitempty" yaml:"favorite,omitempty"`
 	Description string        `json:"description,omitempty" yaml:"description,omitempty"`
 	Tags        []string      `json:"tags,omitempty" yaml:"tags,omitempty"`
@@ -121,51 +113,31 @@ func (c *Config) GetDataSource(name string) (*DataSource, error) {
 
 	ds := &DataSource{Name: name}
 
-	// Check explicit indico field to determine type
-	isIndico := false
-	if indicoFlag, ok := rawData["indico"].(bool); ok {
-		isIndico = indicoFlag
+	// All data sources use the Indico API (indico: true).
+	// Entries with indico: false are no longer supported.
+	if indicoFlag, ok := rawData["indico"].(bool); ok && !indicoFlag {
+		return nil, fmt.Errorf("data source %s: test data sources (indico: false) are no longer supported", name)
 	}
 
-	if isIndico {
-		// Parse as IndicoConfig
-		ds.Type = "indico"
-		ic := &IndicoConfig{}
-		if baseURL, ok := rawData["base_url"].(string); ok {
-			ic.BaseURL = baseURL
-		}
-		if eventID, ok := rawData["event_id"].(int); ok {
-			ic.EventID = eventID
-		}
-		// New: api_token_name references a token entry (username) stored in top-level api_tokens
-		if apiTokenName, ok := rawData["api_token_name"].(string); ok {
-			ic.APITokenName = apiTokenName
-		}
-		if timeout, ok := rawData["timeout"].(string); ok {
-			ic.Timeout = timeout
-		}
-		if abstractsFile, ok := rawData["abstracts_file"].(string); ok {
-			ic.AbstractsFile = abstractsFile
-		}
-		ds.Indico = ic
-	} else {
-		// Parse as TestConfig
-		ds.Type = "test"
-		tc := &TestConfig{}
-		if dataDir, ok := rawData["data_dir"].(string); ok {
-			tc.DataDir = dataDir
-		}
-		if eventInfo, ok := rawData["event_info"].(string); ok {
-			tc.EventInfo = eventInfo
-		}
-		if abstracts, ok := rawData["abstracts"].(string); ok {
-			tc.Abstracts = abstracts
-		}
-		if contribs, ok := rawData["contribs"].(string); ok {
-			tc.Contribs = contribs
-		}
-		ds.Test = tc
+	// Parse as IndicoConfig
+	ds.Type = "indico"
+	ic := &IndicoConfig{}
+	if baseURL, ok := rawData["base_url"].(string); ok {
+		ic.BaseURL = baseURL
 	}
+	if eventID, ok := rawData["event_id"].(int); ok {
+		ic.EventID = eventID
+	}
+	if apiTokenName, ok := rawData["api_token_name"].(string); ok {
+		ic.APITokenName = apiTokenName
+	}
+	if timeout, ok := rawData["timeout"].(string); ok {
+		ic.Timeout = timeout
+	}
+	if abstractsFile, ok := rawData["abstracts_file"].(string); ok {
+		ic.AbstractsFile = abstractsFile
+	}
+	ds.Indico = ic
 
 	// Optional common fields: favorite, description, tags
 	if fav, ok := rawData["favorite"].(bool); ok {
@@ -458,12 +430,6 @@ func BuildConfigFromStructuredUI(configData *ConfigDataUI) *Config {
 			if ds.Indico.AbstractsFile != "" {
 				rawData["abstracts_file"] = ds.Indico.AbstractsFile
 			}
-		} else if ds.Type == "test" && ds.Test != nil {
-			rawData["indico"] = false
-			rawData["data_dir"] = ds.Test.DataDir
-			rawData["event_info"] = ds.Test.EventInfo
-			rawData["abstracts"] = ds.Test.Abstracts
-			rawData["contribs"] = ds.Test.Contribs
 		}
 
 		// Include optional fields so they are persisted

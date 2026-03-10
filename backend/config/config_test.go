@@ -40,7 +40,7 @@ func TestSaveLoadConfig(t *testing.T) {
 
 	cfg := &Config{
 		ActiveDataSource: ActiveDataSource{
-			Use: "test",
+			Use: "indico",
 		},
 		APITokens: []APITokenEntry{
 			{
@@ -57,13 +57,6 @@ func TestSaveLoadConfig(t *testing.T) {
 				"api_token_name": "bot",
 				"event_id":       42,
 				"timeout":        "7s",
-			},
-			"test": {
-				"indico":     false,
-				"data_dir":   "./testdata",
-				"event_info": "info.json",
-				"abstracts":  "abstracts.json",
-				"contribs":   "contribs.json",
 			},
 		},
 	}
@@ -105,34 +98,16 @@ func TestSaveLoadConfig(t *testing.T) {
 		t.Fatalf("Indico APITokenName mismatch: got %q want %q", indicoDS.Indico.APITokenName, "bot")
 	}
 
-	// Test GetDataSource for Test
-	testDS, err := loaded.GetDataSource("test")
-	if err != nil {
-		t.Fatalf("GetDataSource(test) failed: %v", err)
-	}
-	if testDS.Type != "test" {
-		t.Fatalf("Test Type mismatch: got %q want %q", testDS.Type, "test")
-	}
-	if testDS.Test == nil {
-		t.Fatalf("expected Test config, got nil")
-	}
-	if testDS.Test.DataDir != "./testdata" {
-		t.Fatalf("Test DataDir mismatch: got %q want %q", testDS.Test.DataDir, "./testdata")
-	}
-	if testDS.Test.EventInfo != "info.json" {
-		t.Fatalf("Test EventInfo mismatch: got %q want %q", testDS.Test.EventInfo, "info.json")
-	}
-
-	// Test GetDefaultDataSource
+	// Test GetActiveDataSource
 	defaultDS, err := loaded.GetActiveDataSource()
 	if err != nil {
-		t.Fatalf("GetDefaultDataSource failed: %v", err)
+		t.Fatalf("GetActiveDataSource failed: %v", err)
 	}
-	if defaultDS.Name != "test" {
-		t.Fatalf("Default data source name mismatch: got %q want %q", defaultDS.Name, "test")
+	if defaultDS.Name != "indico" {
+		t.Fatalf("Default data source name mismatch: got %q want %q", defaultDS.Name, "indico")
 	}
-	if defaultDS.Test == nil {
-		t.Fatalf("expected Test config for default data source, got nil")
+	if defaultDS.Indico == nil {
+		t.Fatalf("expected Indico config for default data source, got nil")
 	}
 }
 
@@ -159,7 +134,7 @@ func TestLoadRealConfig(t *testing.T) {
 	t.Logf("Successfully loaded data source: %s", ds.Name)
 
 	// Verify data source is properly parsed
-	if ds.Indico == nil && ds.Test == nil {
-		t.Fatalf("Data source has neither Indico nor Test configuration")
+	if ds.Indico == nil {
+		t.Fatalf("Data source has no Indico configuration")
 	}
 }
