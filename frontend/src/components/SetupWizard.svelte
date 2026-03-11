@@ -22,6 +22,7 @@
     GetStructuredConfigUI,
     ApplyStructuredConfigUI,
     OpenAbstractsFileDialog,
+    CheckAllAPITokenSecrets,
   } from '../../wailsjs/go/main/App.js';
 
   // ── State ────────────────────────────────────────────────────────────────────
@@ -54,6 +55,10 @@
 
   // Existing API tokens loaded from config (for step 3 picker)
   let existingTokens = $state([]);
+
+  // Keyring / secret check state
+  /** @type {boolean} */
+  let checkingKeyring = $state(false);
 
   // Toast
   let toast = $state({ show: false, msg: '', type: 'success' });
@@ -203,6 +208,32 @@
     open = true;
   }
 
+  // Check keyring status for all configured tokens and attach a `secretFound` boolean
+  // to each token object in `existingTokens`.
+  async function checkAllTokenSecrets() {
+    if (checkingKeyring) return;
+    checkingKeyring = true;
+    try {
+      const res = await CheckAllAPITokenSecrets();
+      const map = res || {};
+      // Map results onto existingTokens (preserve other fields)
+      existingTokens = existingTokens.map((t) => ({ ...t, secretFound: !!map[t.name] }));
+    } catch (e) {
+      const msg = e?.message ?? String(e);
+      showToast('Failed to check token secrets: ' + msg, 'error');
+    } finally {
+      checkingKeyring = false;
+    }
+  }
+
+  // When the wizard enters Step 2, run the keyring check so the UI shows which tokens have secrets.
+  $effect(() => {
+    if (step === 2 && !checkingKeyring && existingTokens.length > 0) {
+      // Fire-and-forget; the function itself guards against concurrent calls
+      checkAllTokenSecrets();
+    }
+  });
+
   function handleInitProblemsEvent(...args) {
     const payload = args?.[0];
     const p = Array.isArray(payload) ? payload : [];
@@ -232,11 +263,16 @@
 
   // ── Step 2 – API token ───────────────────────────────────────────────────────
 
+  /** True when the current tokenForm.name matches an already-saved token (update mode). */
+  let isUpdatingToken = $derived(existingTokens.some((t) => t.name === tokenForm.name.trim()));
+
   function validateTokenForm() {
     /** @type {Record<string, string>} */
     const errs = {};
     if (!tokenForm.name.trim()) errs.name = 'Token name is required (e.g. "my-indico-token").';
-    if (!tokenForm.secret.trim()) errs.secret = 'Paste your Indico API token here.';
+    // Secret is required when adding a new token; optional when updating (leave blank = keep existing)
+    if (!isUpdatingToken && !tokenForm.secret.trim())
+      errs.secret = 'Paste your Indico API token here.';
     try {
       const u = new URL(tokenForm.baseUrl.trim());
       if (u.protocol !== 'http:' && u.protocol !== 'https:')
@@ -258,7 +294,22 @@
         username: tokenForm.username.trim(),
         token: '',
       };
-      await AddAPIToken(entry, tokenForm.secret.trim());
+      // Only call AddAPIToken (which writes to keyring) when a new secret was provided.
+      // When updating metadata only (no new secret), just persist via ApplyStructuredConfigUI.
+      if (tokenForm.secret.trim()) {
+        await AddAPIToken(entry, tokenForm.secret.trim());
+      } else {
+        // Update metadata only: load config, replace/append entry, save back
+        const cfg = await GetStructuredConfigUI();
+        if (!Array.isArray(cfg.apiTokens)) cfg.apiTokens = [];
+        const idx = cfg.apiTokens.findIndex((t) => t.name === entry.name);
+        if (idx >= 0) {
+          cfg.apiTokens[idx] = { ...cfg.apiTokens[idx], ...entry };
+        } else {
+          cfg.apiTokens.push(entry);
+        }
+        await ApplyStructuredConfigUI(cfg);
+      }
       tokenSaved = true;
       // Update the in-memory token list (replace existing entry with same name or append)
       existingTokens = [...existingTokens.filter((t) => t.name !== entry.name), { ...entry }];
@@ -266,7 +317,12 @@
       if (!dsForm.apiTokenName) dsForm = { ...dsForm, apiTokenName: entry.name };
       if (!dsForm.baseUrl || dsForm.baseUrl === 'https://')
         dsForm = { ...dsForm, baseUrl: entry.baseUrl };
-      showToast('API token saved to system keyring ✓', 'success');
+      showToast(
+        tokenForm.secret.trim()
+          ? 'API token saved to system keyring ✓'
+          : 'Token metadata updated ✓',
+        'success',
+      );
     } catch (e) {
       const msg = e?.message ?? String(e);
       tokenErrors = { ...tokenErrors, save: msg }; // whole-object assignment
@@ -589,24 +645,66 @@
                 >
                   <Icon icon="mdi:check-circle-outline" class="w-3.5 h-3.5" />
                   {existingTokens.length} saved token{existingTokens.length > 1 ? 's' : ''}
+                  <span class="ml-1 font-normal text-green-600 dark:text-green-400"
+                    >— click a token to update it</span
+                  >
                 </p>
                 <ul class="space-y-1">
                   {#each existingTokens as t}
-                    <li class="flex items-center gap-1.5">
-                      <Icon icon="mdi:key" class="w-3 h-3 text-green-500 shrink-0" />
-                      <span class="font-mono font-semibold">{t.name}</span>
-                      {#if t.baseUrl || t.base_url}
-                        <span class="text-green-600 dark:text-green-400"
-                          >— {t.baseUrl || t.base_url}</span
-                        >
-                      {/if}
-                      {#if t.username}
-                        <span class="text-green-500 dark:text-green-500">({t.username})</span>
-                      {/if}
+                    <li>
+                      <button
+                        type="button"
+                        class="flex items-center gap-1.5 w-full text-left rounded px-1.5 py-1 hover:bg-green-100 dark:hover:bg-green-900/40 focus:outline-none focus-visible:ring-2 focus-visible:ring-green-500 transition-colors"
+                        title="Click to fill the form to update this token"
+                        onclick={() => {
+                          tokenForm = {
+                            name: t.name,
+                            baseUrl: t.baseUrl || t.base_url || 'https://',
+                            username: t.username || '',
+                            secret: '',
+                          };
+                          tokenErrors = {};
+                          tokenSaved = false;
+                          tokenFormOpen = true;
+                        }}
+                      >
+                        <Icon icon="mdi:key" class="w-3 h-3 text-green-500 shrink-0" />
+                        {#if typeof t.secretFound !== 'undefined'}
+                          {#if t.secretFound}
+                            <span title="Secret found in keyring" class="shrink-0 ml-1">
+                              <Icon icon="mdi:check-circle" class="w-3.5 h-3.5 text-green-500" />
+                            </span>
+                          {:else}
+                            <span title="Secret NOT found in keyring" class="shrink-0 ml-1">
+                              <Icon icon="mdi:alert-circle" class="w-3.5 h-3.5 text-red-500" />
+                            </span>
+                          {/if}
+                        {:else}
+                          <span title="Keyring status not checked yet" class="shrink-0 ml-1">
+                            <Icon
+                              icon="mdi:circle-outline"
+                              class="w-3.5 h-3.5 text-gray-300 dark:text-gray-600"
+                            />
+                          </span>
+                        {/if}
+                        <span class="font-mono font-semibold ml-2">{t.name}</span>
+                        {#if t.baseUrl || t.base_url}
+                          <span class="text-green-600 dark:text-green-400"
+                            >— {t.baseUrl || t.base_url}</span
+                          >
+                        {/if}
+                        {#if t.username}
+                          <span class="text-green-500 dark:text-green-500">({t.username})</span>
+                        {/if}
+                        <Icon
+                          icon="mdi:pencil-outline"
+                          class="w-3 h-3 ml-auto text-green-400 dark:text-green-600 shrink-0"
+                        />
+                      </button>
                     </li>
                   {/each}
                 </ul>
-                <p class="mt-1.5 text-green-600 dark:text-green-400">
+                <p class="mt-1.5 text-green-600 dark:text-green-400 px-1.5">
                   If these tokens are still valid, you can skip this step and go to Step 3.
                 </p>
               </div>
@@ -754,15 +852,24 @@
                     for="wiz-token-secret"
                     class="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1"
                   >
-                    API token value <span class="text-red-500">*</span>
-                    <span class="ml-1 font-normal text-gray-400"
-                      >(stored in OS keychain, never in config files)</span
-                    >
+                    API token value
+                    {#if isUpdatingToken}
+                      <span class="ml-1 font-normal text-gray-400"
+                        >(leave blank to keep the existing secret)</span
+                      >
+                    {:else}
+                      <span class="text-red-500">*</span>
+                      <span class="ml-1 font-normal text-gray-400"
+                        >(stored in OS keychain, never in config files)</span
+                      >
+                    {/if}
                   </label>
                   <input
                     id="wiz-token-secret"
                     type="password"
-                    placeholder="Paste your token here"
+                    placeholder={isUpdatingToken
+                      ? 'Paste new token value to overwrite, or leave blank'
+                      : 'Paste your token here'}
                     bind:value={tokenForm.secret}
                     autocomplete="off"
                     class="w-full rounded-lg border px-3 py-2 text-sm font-mono
@@ -793,7 +900,12 @@
                     Saving…
                   {:else if tokenSaved}
                     <Icon icon="mdi:check-circle" class="w-4 h-4" />
-                    Token saved — click again to update
+                    {isUpdatingToken
+                      ? 'Token updated — click again to change'
+                      : 'Token saved — click again to update'}
+                  {:else if isUpdatingToken}
+                    <Icon icon="mdi:content-save-edit-outline" class="w-4 h-4" />
+                    Update token
                   {:else}
                     <Icon icon="mdi:content-save-outline" class="w-4 h-4" />
                     Save token to keychain
