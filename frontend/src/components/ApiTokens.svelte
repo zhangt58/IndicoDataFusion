@@ -1,5 +1,10 @@
 <script>
-  import { AddAPIToken, DeleteAPIToken, RevealAPIToken } from '../../wailsjs/go/main/App';
+  import {
+    AddAPIToken,
+    DeleteAPIToken,
+    RevealAPIToken,
+    CheckAllAPITokenSecrets,
+  } from '../../wailsjs/go/main/App';
   import ConfirmDialog from './ConfirmDialog.svelte';
   import RevealDialog from './RevealDialog.svelte';
   import { Toast } from 'flowbite-svelte';
@@ -18,6 +23,24 @@
   let showHelp = $state(false);
   let editingIndex = $state(-1);
   let token = $state({ name: '', baseUrl: '', username: '', token: '' });
+
+  // keyring status map: token name → true (found) | false (missing) | undefined (unchecked)
+  /** @type {Record<string, boolean>} */
+  let keyringStatus = $state({});
+  let checkingKeyring = $state(false);
+
+  async function checkAllTokens() {
+    if (checkingKeyring) return;
+    checkingKeyring = true;
+    try {
+      const result = await CheckAllAPITokenSecrets();
+      keyringStatus = result || {};
+    } catch (e) {
+      showToastMsg('Failed to check keyring: ' + (e && e.message ? e.message : e), 'error');
+    } finally {
+      checkingKeyring = false;
+    }
+  }
 
   // toast state (local, transient feedback in place of alert())
   let showToast = $state(false);
@@ -164,12 +187,13 @@
     try {
       await DeleteAPIToken(name);
     } catch (e) {
-      showToastMsg(
-        'Failed to delete token from keyring: ' + (e && e.message ? e.message : e),
-        'error',
-      );
+      showToastMsg('Failed to delete token: ' + (e && e.message ? e.message : e), 'error');
       return;
     }
+    // remove keyring status entry
+    const newStatus = { ...keyringStatus };
+    delete newStatus[name];
+    keyringStatus = newStatus;
     onDelete(i);
     deleteTokenIndex = -1;
     deleteTokenName = '';
@@ -261,6 +285,20 @@
         ⓘ Info
       </button>
       <button
+        class="text-xs px-2 py-1 rounded bg-gray-200 dark:bg-gray-700 flex items-center gap-1 disabled:opacity-50"
+        onclick={checkAllTokens}
+        disabled={checkingKeyring || disabled}
+        title="Check all tokens against the system keyring"
+        aria-label="Check all tokens in keyring"
+      >
+        {#if checkingKeyring}
+          <Icon icon="mdi:loading" class="h-4 w-4 animate-spin" />
+        {:else}
+          <Icon icon="mdi:shield-check-outline" class="h-4 w-4" />
+        {/if}
+        Check
+      </button>
+      <button
         class="px-3 py-1 rounded bg-indigo-600 text-white text-sm hover:bg-indigo-700 disabled:opacity-50"
         onclick={openAdd}
         {disabled}>Add</button
@@ -273,14 +311,34 @@
         <li
           class="flex items-center justify-between p-2 rounded border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-700"
         >
-          <div>
-            <div class="font-medium">{t.name} {t.username ? ` — ${t.username}` : ''}</div>
-            <div class="text-xs text-gray-500 dark:text-gray-400">{t.baseUrl || t.base_url}</div>
-            {#if t.token}
-              <div class="text-xs text-gray-500 dark:text-gray-400 mt-1">{t.token}</div>
+          <div class="flex items-center gap-2 min-w-0">
+            <!-- Keyring status icon (visible after Check is run) -->
+            {#if t.name in keyringStatus}
+              {#if keyringStatus[t.name]}
+                <span title="Secret found in keyring" class="shrink-0">
+                  <Icon icon="mdi:check-circle" class="h-4 w-4 text-green-500" />
+                </span>
+              {:else}
+                <span title="Secret NOT found in keyring" class="shrink-0">
+                  <Icon icon="mdi:alert-circle" class="h-4 w-4 text-red-500" />
+                </span>
+              {/if}
+            {:else}
+              <span title="Keyring status not checked yet" class="shrink-0">
+                <Icon icon="mdi:circle-outline" class="h-4 w-4 text-gray-300 dark:text-gray-600" />
+              </span>
             {/if}
+            <div class="min-w-0">
+              <div class="font-medium truncate">{t.name}{t.username ? ` — ${t.username}` : ''}</div>
+              <div class="text-xs text-gray-500 dark:text-gray-400 truncate">
+                {t.baseUrl || t.base_url || ''}
+              </div>
+              {#if t.token}
+                <div class="text-xs text-gray-500 dark:text-gray-400 mt-1 truncate">{t.token}</div>
+              {/if}
+            </div>
           </div>
-          <div class="flex items-center gap-2">
+          <div class="flex items-center gap-2 ml-2 shrink-0">
             <button
               class="text-sm px-2 py-1 rounded bg-gray-200 dark:bg-gray-600"
               onclick={() => openEdit(i)}
@@ -455,7 +513,7 @@
   <ConfirmDialog
     bind:open={showDeleteTokenConfirm}
     title="Delete API Token"
-    message={`Delete API token "${deleteTokenName || ''}"? This will remove the secret from the system keyring.`}
+    message={`Delete API token "${deleteTokenName || ''}"? The entry will be removed from the config. If the secret exists in the system keyring it will also be deleted.`}
     confirmLabel="Delete"
     cancelLabel="Cancel"
     danger={true}
