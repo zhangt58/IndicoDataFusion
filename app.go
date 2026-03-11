@@ -781,13 +781,20 @@ func (a *App) AddAPIToken(entry config.APITokenEntry, rawToken string) error {
 	return nil
 }
 
-// DeleteAPIToken removes the secret from keyring and the metadata from config
+// DeleteAPIToken removes the secret from keyring (best-effort) and the metadata from config.
+// If the secret is not present in the keyring the deletion still proceeds so that orphaned
+// metadata entries can always be cleaned up.
 func (a *App) DeleteAPIToken(name string) error {
 	if name == "" {
 		return errors.Errorf("token name required")
 	}
+	// Attempt to delete from keyring; ignore "not found" style errors so that tokens
+	// that were never stored (or were already removed) can still be cleaned up.
 	if err := utils.DeleteAPITokenSecret(name); err != nil {
-		return errors.Wrap(err, "failed to delete token from keyring")
+		// Only abort if the error is something other than "secret not found".
+		if !utils.IsKeyringNotFound(err) {
+			return errors.Wrap(err, "failed to delete token from keyring")
+		}
 	}
 	cfgData, err := a.GetStructuredConfigUI()
 	if err != nil {
@@ -804,6 +811,21 @@ func (a *App) DeleteAPIToken(name string) error {
 		return errors.Wrap(err, "failed to persist API token metadata after delete")
 	}
 	return nil
+}
+
+// CheckAllAPITokenSecrets checks every configured API token against the OS keyring and
+// returns a map of token name → found (true/false).
+func (a *App) CheckAllAPITokenSecrets() (map[string]bool, error) {
+	cfgData, err := a.GetStructuredConfigUI()
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to load structured config")
+	}
+	result := make(map[string]bool, len(cfgData.APITokens))
+	for _, e := range cfgData.APITokens {
+		_, kerr := utils.GetAPITokenSecret(e.Name)
+		result[e.Name] = kerr == nil
+	}
+	return result, nil
 }
 
 // HasAPITokenSecret checks whether a token with the given name exists in keyring (without returning the secret)

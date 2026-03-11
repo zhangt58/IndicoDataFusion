@@ -28,3 +28,9 @@ func DeleteAPITokenSecret(name string) error {
 	}
 	return keyring.Delete(keyringService, name)
 }
+
+// IsKeyringNotFound returns true when err represents a "secret not found" error
+// from the go-keyring library (keyring.ErrNotFound).
+func IsKeyringNotFound(err error) bool {
+	return err == keyring.ErrNotFound
+}

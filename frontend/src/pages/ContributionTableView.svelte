@@ -29,6 +29,18 @@
   // Column filters state
   let activeFilters = $state({});
 
+  // Index of the currently open abstract within sortedItems
+  let currentDialogIndex = $state(-1);
+  // Navigate to prev/next abstract in sortedItems
+  function navigateDialog(direction) {
+    const nextIndex = direction === 'prev' ? currentDialogIndex - 1 : currentDialogIndex + 1;
+    if (nextIndex < 0 || nextIndex >= sortedItems.length) return;
+    const item = sortedItems[nextIndex];
+    const sid = String(item.ID);
+    selectedContribution = findContributionById(sid);
+    currentDialogIndex = nextIndex;
+  }
+
   // Aggregate all unique sessions from contributions
   let allAvailableSessions = $derived(
     contributionData.reduce((acc, c) => {
@@ -91,6 +103,7 @@
   function openContribution(id) {
     const sid = String(id);
     selectedContribution = findContributionById(sid);
+    currentDialogIndex = sortedItems.findIndex((it) => String(it.ID) === sid);
     if (selectedContribution) showContributionDialog = true;
   }
 
@@ -394,7 +407,13 @@
 </div>
 
 <!-- Contribution Detail Dialog -->
-<ContributionDetailsDialog bind:open={showContributionDialog} contribution={selectedContribution} />
+<ContributionDetailsDialog
+  bind:open={showContributionDialog}
+  contribution={selectedContribution}
+  currentIndex={currentDialogIndex}
+  totalCount={sortedItems.length}
+  onNavigate={navigateDialog}
+/>
 
 <!-- Track Details Dialog -->
 <TrackDetailsDialog
