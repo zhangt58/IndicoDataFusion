@@ -2,7 +2,6 @@
   import {
     ExportAbstractsToFile,
     SaveAbstractsFileDialog,
-    IsTestMode,
     ReviewMode,
     GetRedactionConfig,
     SaveRedactionConfig,
@@ -35,8 +34,8 @@
 
   async function loadAbstractsExportState() {
     try {
-      const [testMode, reviewMode] = await Promise.all([IsTestMode(), ReviewMode()]);
-      canExportAbstracts = !testMode && !reviewMode;
+      const reviewMode = await ReviewMode();
+      canExportAbstracts = !reviewMode;
     } catch (e) {
       console.error('Failed to determine export eligibility:', e);
       canExportAbstracts = false;

@@ -11,7 +11,6 @@ import (
 	"net/http"
 	"net/url"
 	"os"
-	"path/filepath"
 	"strings"
 	"sync"
 	"time"
@@ -20,13 +19,11 @@ import (
 )
 
 // DataSourceHandler provides a high-level interface for accessing event data
-// from different sources (Indico API or local test files).
+// from different sources (Indico API or local abstracts file override).
 type DataSourceHandler struct {
-	config     *config.DataSource
-	client     *indico.IndicoClient
-	dataDir    string
-	isTestMode bool
-	cache      *cache.Cache
+	config *config.DataSource
+	client *indico.IndicoClient
+	cache  *cache.Cache
 	// initProblems collects non-fatal initialization issues (e.g., missing API token)
 	initProblems []string
 	// userID is the ID of the current user, populated from the Indico client after fetching review tracks
@@ -103,7 +100,6 @@ func NewDataSourceHandler(ds *config.DataSource, cacheConfig *config.CacheConfig
 			handler.initProblems = append(handler.initProblems, fmt.Sprintf("data source %s: missing api_token_name", ds.Name))
 			log.Printf("Warning: %s", handler.initProblems[len(handler.initProblems)-1])
 			// Leave client nil so API calls will return a clear error; UI can add the token
-			handler.isTestMode = false
 			return handler, nil
 		}
 		// tokens must be provided to resolve api_token_name
@@ -112,7 +108,6 @@ func NewDataSourceHandler(ds *config.DataSource, cacheConfig *config.CacheConfig
 			handler.initProblems = append(handler.initProblems, fmt.Sprintf("api tokens not provided for data source %s; api_token_name %s cannot be resolved", ds.Name, ds.Indico.APITokenName))
 			log.Printf("Warning: %s", handler.initProblems[len(handler.initProblems)-1])
 			// Leave client nil so API calls will return a clear error; app/UI can fix tokens and reinitialize handler
-			handler.isTestMode = false
 			return handler, nil
 		}
 		// Match by Name only
@@ -131,7 +126,6 @@ func NewDataSourceHandler(ds *config.DataSource, cacheConfig *config.CacheConfig
 			handler.initProblems = append(handler.initProblems, fmt.Sprintf("api token %q for data source %s not found in provided api-tokens", ds.Indico.APITokenName, ds.Name))
 			log.Printf("Warning: %s", handler.initProblems[len(handler.initProblems)-1])
 			// Leave client nil so API calls will return a clear error; UI can add the token
-			handler.isTestMode = false
 			return handler, nil
 		}
 
@@ -147,7 +141,6 @@ func NewDataSourceHandler(ds *config.DataSource, cacheConfig *config.CacheConfig
 				handler.initProblems = append(handler.initProblems, fmt.Sprintf("api token %q for data source %s has no token in config or keyring", ds.Indico.APITokenName, ds.Name))
 				log.Printf("Warning: %s", handler.initProblems[len(handler.initProblems)-1])
 				// Leave client nil so API calls will return a clear error; UI can add the token
-				handler.isTestMode = false
 				return handler, nil
 			}
 		}
@@ -166,7 +159,6 @@ func NewDataSourceHandler(ds *config.DataSource, cacheConfig *config.CacheConfig
 			}
 		}
 		handler.client = client
-		handler.isTestMode = false
 		log.Printf("Used Indico API token for %s: (%s) [REDACTED]", ds.Name, ds.Indico.APITokenName)
 
 		// If the data source specifies abstracts_file in the config, apply it now.
@@ -175,12 +167,8 @@ func NewDataSourceHandler(ds *config.DataSource, cacheConfig *config.CacheConfig
 			log.Printf("abstracts_file set in config for %s: %s", ds.Name, ds.Indico.AbstractsFile)
 			handler.abstractsFile = ds.Indico.AbstractsFile
 		}
-	} else if ds.Test != nil {
-		// Test mode with local files
-		handler.dataDir, _ = filepath.Abs(ds.Test.DataDir)
-		handler.isTestMode = true
 	} else {
-		return nil, fmt.Errorf("data source %s has no valid configuration", ds.Name)
+		return nil, fmt.Errorf("data source %s has no valid Indico configuration", ds.Name)
 	}
 
 	return handler, nil
@@ -405,9 +393,6 @@ func (h *DataSourceHandler) GetClient() *indico.IndicoClient {
 
 // GetInfo retrieves event information from the configured data source.
 func (h *DataSourceHandler) GetInfo(ctx context.Context) (*indico.Event, error) {
-	if h.isTestMode {
-		return h.getInfoFromFile()
-	}
 
 	// Check cache first in API mode
 	if h.cache != nil {
@@ -451,27 +436,6 @@ func (h *DataSourceHandler) GetInfo(ctx context.Context) (*indico.Event, error) 
 	return event, nil
 }
 
-// getInfoFromFile reads event info from a local JSON file (test mode).
-func (h *DataSourceHandler) getInfoFromFile() (*indico.Event, error) {
-	if h.config.Test == nil {
-		return nil, fmt.Errorf("test configuration not available")
-	}
-
-	filePath := filepath.Join(h.dataDir, h.config.Test.EventInfo)
-	log.Printf("Reading event info from: %v\n", filePath)
-	data, err := os.ReadFile(filePath)
-	if err != nil {
-		return nil, fmt.Errorf("failed to read %s: %w", filePath, err)
-	}
-
-	var ev indico.EventAPIResponse
-	if err := json.Unmarshal(data, &ev); err != nil {
-		return nil, fmt.Errorf("failed to parse %s: %w", filePath, err)
-	}
-
-	return &ev.Results[0], nil
-}
-
 // getInfoFromAPI fetches event info from the Indico API.
 func (h *DataSourceHandler) getInfoFromAPI(ctx context.Context) (*indico.Event, error) {
 	_ = ctx // referenced to avoid unused parameter warning
@@ -507,10 +471,6 @@ func (h *DataSourceHandler) GetAbstracts(ctx context.Context) ([]indico.Abstract
 			h.cache.Set("abstracts", abstracts)
 		}
 		return abstracts, nil
-	}
-
-	if h.isTestMode {
-		return h.getAbstractsFromFile()
 	}
 
 	// Check cache first in API mode
@@ -553,28 +513,6 @@ func (h *DataSourceHandler) GetAbstracts(ctx context.Context) ([]indico.Abstract
 	}
 
 	return abstracts, nil
-}
-
-// getAbstractsFromFile reads abstracts from a local JSON file (test mode).
-func (h *DataSourceHandler) getAbstractsFromFile() ([]indico.AbstractData, error) {
-	if h.config.Test == nil {
-		return nil, fmt.Errorf("test configuration not available")
-	}
-
-	filePath := filepath.Join(h.dataDir, h.config.Test.Abstracts)
-	log.Printf("Reading abstract data from: %v\n", filePath)
-	data, err := os.ReadFile(filePath)
-	if err != nil {
-		return nil, fmt.Errorf("failed to read %s: %w", filePath, err)
-	}
-
-	var response indico.AbstractsResponse
-	if err := json.Unmarshal(data, &response); err != nil {
-		return nil, fmt.Errorf("failed to parse %s: %w", filePath, err)
-	}
-
-	h.parseAbstractsResponse(&response)
-	return response.Abstracts, nil
 }
 
 // getAbstractsFromAPI fetches abstracts from the Indico API.
@@ -737,9 +675,6 @@ func (h *DataSourceHandler) enrichAbstractsWithClient(ctx context.Context, abstr
 
 // GetContributions retrieves contribution data from the configured data source.
 func (h *DataSourceHandler) GetContributions(ctx context.Context) ([]indico.ContributionData, error) {
-	if h.isTestMode {
-		return h.getContributionsFromFile()
-	}
 
 	// Check cache first in API mode
 	if h.cache != nil {
@@ -781,31 +716,6 @@ func (h *DataSourceHandler) GetContributions(ctx context.Context) ([]indico.Cont
 	}
 
 	return contribs, nil
-}
-
-// getContributionsFromFile reads contributions from a local JSON file (test mode).
-func (h *DataSourceHandler) getContributionsFromFile() ([]indico.ContributionData, error) {
-	if h.config.Test == nil {
-		return nil, fmt.Errorf("test configuration not available")
-	}
-
-	filePath := filepath.Join(h.dataDir, h.config.Test.Contribs)
-	log.Printf("Reading contribution data from: %v\n", filePath)
-	data, err := os.ReadFile(filePath)
-	if err != nil {
-		return nil, fmt.Errorf("failed to read %s: %w", filePath, err)
-	}
-
-	var response indico.ContributionsAPIResponse
-	if err := json.Unmarshal(data, &response); err != nil {
-		return nil, fmt.Errorf("failed to parse %s: %w", filePath, err)
-	}
-
-	if len(response.Results) == 0 {
-		return []indico.ContributionData{}, nil
-	}
-
-	return response.Results[0].Contributions, nil
 }
 
 // getContributionsFromAPI fetches contributions from the Indico API.
@@ -1260,12 +1170,7 @@ func (h *DataSourceHandler) GetContributionsByTrack(ctx context.Context, track s
 }
 
 // GetReviewTracks returns the list of review tracks for the configured data source.
-// In API mode this queries the Indico client; in test mode it returns data from a test file if configured.
 func (h *DataSourceHandler) GetReviewTracks(ctx context.Context) (*indico.ReviewTracks, error) {
-	if h.isTestMode {
-		// No test fixture currently configured for review tracks; return empty set to keep behavior predictable
-		return &indico.ReviewTracks{Tracks: []indico.ReviewTrack{}}, nil
-	}
 
 	if h.client == nil {
 		return nil, fmt.Errorf("indico client not initialized")
@@ -1279,9 +1184,6 @@ func (h *DataSourceHandler) GetReviewTracks(ctx context.Context) (*indico.Review
 // Rating.QuestionDetails from the handler's question map.
 // Returns nil (no error) when the abstract has not been reviewed yet.
 func (h *DataSourceHandler) GetMyReviewForAbstract(ctx context.Context, abstractID int) (*indico.Review, error) {
-	if h.isTestMode {
-		return nil, fmt.Errorf("cannot fetch live review in test mode")
-	}
 	review, _, err := h.scrapeMyReview(ctx, abstractID)
 	return review, err
 }
@@ -1289,10 +1191,6 @@ func (h *DataSourceHandler) GetMyReviewForAbstract(ctx context.Context, abstract
 // GetAssignedReviewCount returns the number of unique abstracts assigned to the current user
 // across all review tracks. Returns 0 if none or if review track information is not available.
 func (h *DataSourceHandler) GetAssignedReviewCount(ctx context.Context) (int, error) {
-	if h.isTestMode {
-		// In test mode no review-assignment fixtures are available; return 0 to keep behavior predictable
-		return 0, nil
-	}
 
 	if h.client == nil {
 		return 0, fmt.Errorf("indico client not initialized")
@@ -1307,11 +1205,7 @@ func (h *DataSourceHandler) GetAssignedReviewCount(ctx context.Context) (int, er
 }
 
 // GetReviewAbstractIDs returns the list of abstract IDs (friendly_id) for a given review track ID.
-// In API mode this queries the Indico client; in test mode it returns an empty list.
 func (h *DataSourceHandler) GetReviewAbstractIDs(ctx context.Context, reviewTrackID int) ([]int, error) {
-	if h.isTestMode {
-		return []int{}, nil
-	}
 
 	if h.client == nil {
 		return nil, fmt.Errorf("indico client not initialized")
@@ -1407,11 +1301,6 @@ func (h *DataSourceHandler) GetCacheKeys() []string {
 		return []string{}
 	}
 	return h.cache.Keys()
-}
-
-// IsTestMode returns true if the data source is in test mode (local files)
-func (h *DataSourceHandler) IsTestMode() bool {
-	return h.isTestMode
 }
 
 // ReviewMode returns true when abstract data is served from the

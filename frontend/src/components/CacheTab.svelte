@@ -7,7 +7,6 @@
     RefreshCache,
     ClearCache,
     DeleteCacheEntry,
-    IsTestMode,
     OpenCacheDirectory,
     GetStructuredConfigUI,
     ApplyStructuredConfigUI,
@@ -22,7 +21,6 @@
   let refreshing = $state({});
   let errorMsg = $state('');
   let successMsg = $state('');
-  let isTestMode = $state(false);
   let showClearConfirm = $state(false);
   let expandedDataSources = $state({});
 
@@ -88,13 +86,6 @@
   }
 
   onMount(async () => {
-    // Check if in test mode
-    try {
-      isTestMode = await IsTestMode();
-    } catch (e) {
-      console.error('Failed to check test mode', e);
-    }
-
     await loadCacheInfo();
 
     // Listen for cache update events from backend
@@ -387,18 +378,6 @@
       </div>
     </div>
 
-    <!-- Test Mode Note -->
-    {#if isTestMode}
-      <div
-        class="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-2"
-      >
-        <p class="text-sm text-blue-800 dark:text-blue-300">
-          <strong>Note:</strong> Cached data is not available for test data sources. Test data is loaded
-          directly from local files.
-        </p>
-      </div>
-    {/if}
-
     <!-- Cached Data Entries (Grouped by Data Source) -->
     {#if cacheEntries && Object.keys(cacheEntries).length > 0}
       <div class="space-y-1">
@@ -496,27 +475,25 @@
                             </div>
                           </div>
                         </div>
-                        {#if !isTestMode}
-                          <div class="flex gap-2 ml-4">
-                            <button
-                              type="button"
-                              onclick={() => handleRefresh(entry.key)}
-                              disabled={refreshing[entry.key]}
-                              class="px-2 py-1 rounded bg-indigo-600 text-white text-sm hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors whitespace-nowrap"
-                              title="Refresh from API"
-                            >
-                              {refreshing[entry.key] ? 'Refreshing...' : 'Refresh'}
-                            </button>
-                            <button
-                              type="button"
-                              onclick={() => handleDeleteEntry(entry.key)}
-                              class="px-2 py-1 rounded bg-red-600 text-white text-sm hover:bg-red-700 transition-colors whitespace-nowrap"
-                              title="Delete this cache entry"
-                            >
-                              Delete
-                            </button>
-                          </div>
-                        {/if}
+                        <div class="flex gap-2 ml-4">
+                          <button
+                            type="button"
+                            onclick={() => handleRefresh(entry.key)}
+                            disabled={refreshing[entry.key]}
+                            class="px-2 py-1 rounded bg-indigo-600 text-white text-sm hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors whitespace-nowrap"
+                            title="Refresh from API"
+                          >
+                            {refreshing[entry.key] ? 'Refreshing...' : 'Refresh'}
+                          </button>
+                          <button
+                            type="button"
+                            onclick={() => handleDeleteEntry(entry.key)}
+                            class="px-2 py-1 rounded bg-red-600 text-white text-sm hover:bg-red-700 transition-colors whitespace-nowrap"
+                            title="Delete this cache entry"
+                          >
+                            Delete
+                          </button>
+                        </div>
                       </div>
                     </div>
                   {/each}
@@ -526,7 +503,7 @@
           </div>
         {/each}
       </div>
-    {:else if !isTestMode}
+    {:else}
       <div
         class="bg-gray-50 dark:bg-gray-800 rounded-lg p-8 text-center border border-gray-200 dark:border-gray-700"
       >

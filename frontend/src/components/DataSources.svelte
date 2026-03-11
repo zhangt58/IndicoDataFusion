@@ -37,13 +37,6 @@
     timeout: '60s',
   });
 
-  let testDataSourcePlaceholders = $state({
-    dataDir: './testdata',
-    eventInfo: 'info.json',
-    abstracts: 'abstracts.json',
-    contribs: 'contribs.json',
-  });
-
   // Collect all existing tags across data sources (for suggestions)
   function getAllTags() {
     return collectAllTags(configData && configData.dataSources ? configData.dataSources : []);
@@ -156,11 +149,9 @@
             <!-- pencil icon to indicate editability -->
             <Icon icon="mdi:pencil" class="w-4 h-4 text-gray-400 ml-1" aria-hidden="true" />
             <span
-              class="px-2 py-0.5 text-xs rounded-full {dataSource.type === 'indico'
-                ? 'bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200'
-                : 'bg-gray-100 dark:bg-gray-900 text-gray-800 dark:text-gray-200'}"
+              class="px-2 py-0.5 text-xs rounded-full bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200"
             >
-              {dataSource.type === 'indico' ? 'API' : 'Test Data'}
+              API
             </span>
             {#if currentActiveIndex === i}
               <span
@@ -371,66 +362,6 @@
                   When set, abstract data is read from this file (review mode). Clear to use the
                   live Indico API.
                 </p>
-              </div>
-            {:else if dataSource.type === 'test' && dataSource.test}
-              <!-- Test Data Configuration -->
-              <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
-                <div class="md:col-span-2">
-                  <label
-                    for={`ds-${i}-test-dataDir`}
-                    class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
-                    >Data Directory</label
-                  >
-                  <input
-                    id={`ds-${i}-test-dataDir`}
-                    type="text"
-                    bind:value={dataSource.test.dataDir}
-                    placeholder={testDataSourcePlaceholders.dataDir}
-                    class="w-full rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 subtle-placeholder"
-                  />
-                </div>
-                <div>
-                  <label
-                    for={`ds-${i}-test-eventInfo`}
-                    class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
-                    >Event Info File</label
-                  >
-                  <input
-                    id={`ds-${i}-test-eventInfo`}
-                    type="text"
-                    bind:value={dataSource.test.eventInfo}
-                    placeholder={testDataSourcePlaceholders.eventInfo}
-                    class="w-full rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 subtle-placeholder"
-                  />
-                </div>
-                <div>
-                  <label
-                    for={`ds-${i}-test-abstracts`}
-                    class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
-                    >Abstracts File</label
-                  >
-                  <input
-                    id={`ds-${i}-test-abstracts`}
-                    type="text"
-                    bind:value={dataSource.test.abstracts}
-                    placeholder={testDataSourcePlaceholders.abstracts}
-                    class="w-full rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 subtle-placeholder"
-                  />
-                </div>
-                <div>
-                  <label
-                    for={`ds-${i}-test-contribs`}
-                    class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
-                    >Contributions File</label
-                  >
-                  <input
-                    id={`ds-${i}-test-contribs`}
-                    type="text"
-                    bind:value={dataSource.test.contribs}
-                    placeholder={testDataSourcePlaceholders.contribs}
-                    class="w-full rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 subtle-placeholder"
-                  />
-                </div>
               </div>
             {/if}
 

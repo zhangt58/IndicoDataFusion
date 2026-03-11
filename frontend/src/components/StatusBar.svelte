@@ -36,19 +36,41 @@
     }
   }
 
-  function handleAppDatasource(ev) {
+  // Prefer authoritative GetAppInfo on datasource events — some runtimes may not deliver
+  // the payload consistently. Also refresh review mode.
+  async function handleAppDatasource(ev) {
     try {
+      // Try to extract a candidate from the event payload
       const v = ev && ev.detail ? ev.detail : ev;
+      let candidate = null;
       if (typeof v === 'string') {
-        dataSource = v;
+        candidate = v;
       } else if (v && v.data_source_name) {
-        dataSource = v.data_source_name;
-      } else if (v && v.name) {
-        dataSource = v.name;
+        candidate = v.data_source_name;
+      }
+
+      // Attempt to fetch authoritative app info from backend. This covers cases where
+      // the event payload is missing or uses different field names.
+      try {
+        const info = await GetAppInfo();
+        if (info) {
+          // Try several plausible fields used across backend shapes
+          candidate = info.dataSource ?? candidate;
+          if (info.name) appName = info.name;
+          if (info.version) appVersion = info.version;
+        }
+      } catch (e) {
+        // Not fatal — we'll fall back to the event payload if necessary
+        // (keep candidate as-is)
+      }
+
+      if (candidate) {
+        dataSource = candidate;
       }
     } catch (e) {
       console.debug('app:datasource handler error', e);
     }
+
     // Re-fetch reviewMode whenever the active data source changes
     ReviewMode()
       .then((v) => (reviewMode = v))

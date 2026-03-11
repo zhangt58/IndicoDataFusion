@@ -3,7 +3,6 @@
   import Icon from '@iconify/svelte';
   import {
     GetAbstracts,
-    IsTestMode,
     ReviewMode,
     GetVisibilityConfig,
     GetCacheStats,
@@ -24,7 +23,6 @@
   let abstractData = $state([]);
   let error = $state(null);
   let viewMode = $state('card');
-  let isTestMode = $state(false);
   let reviewMode = $state(false);
   let visibilityConfig = $state(null);
   let cacheExpired = $state(false);
@@ -80,11 +78,6 @@
   }
 
   async function refreshModeState() {
-    try {
-      isTestMode = await IsTestMode();
-    } catch (e) {
-      console.warn('Failed to refresh test mode', e);
-    }
     try {
       reviewMode = await ReviewMode();
       visibilityConfig = await GetVisibilityConfig();
@@ -194,36 +187,29 @@
       Abstracts ({abstractData.length})
     </h2>
     <div class="flex gap-1 ml-2">
-      {#if !isTestMode}
-        <div class="relative">
-          <button
-            onclick={() => handleRefresh()}
-            disabled={refreshing}
-            class="p-1.5 rounded transition-colors hover:bg-sky-100 disabled:opacity-50"
-            title={cacheExpired
-              ? 'Cache expired - Click to refresh'
-              : lastRefreshed
-                ? `Last refreshed: ${formatRelativeTime(lastRefreshed)}\n${formatFullDateTime(lastRefreshed)}`
-                : 'Refresh from API'}
-          >
-            <Icon
-              icon="mdi:refresh"
-              class={`shrink-0 h-6 w-6 ${refreshing ? 'animate-spin' : ''}`}
-            />
-          </button>
-          {#if cacheExpired && !refreshing}
-            <span class="absolute -top-1 -right-1 flex h-3 w-3">
-              <span
-                class="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"
-              ></span>
-              <span
-                class="relative inline-flex rounded-full h-3 w-3 bg-red-500"
-                title="Cache expired"
-              ></span>
-            </span>
-          {/if}
-        </div>
-      {/if}
+      <div class="relative">
+        <button
+          onclick={() => handleRefresh()}
+          disabled={refreshing}
+          class="p-1.5 rounded transition-colors hover:bg-sky-100 disabled:opacity-50"
+          title={cacheExpired
+            ? 'Cache expired - Click to refresh'
+            : lastRefreshed
+              ? `Last refreshed: ${formatRelativeTime(lastRefreshed)}\n${formatFullDateTime(lastRefreshed)}`
+              : 'Refresh from API'}
+        >
+          <Icon icon="mdi:refresh" class={`shrink-0 h-6 w-6 ${refreshing ? 'animate-spin' : ''}`} />
+        </button>
+        {#if cacheExpired && !refreshing}
+          <span class="absolute -top-1 -right-1 flex h-3 w-3">
+            <span
+              class="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"
+            ></span>
+            <span class="relative inline-flex rounded-full h-3 w-3 bg-red-500" title="Cache expired"
+            ></span>
+          </span>
+        {/if}
+      </div>
       <button
         onclick={() => (viewMode = 'card')}
         class="p-1.5 rounded transition-colors {viewMode === 'card'

@@ -37,3 +37,5 @@ node_modules
 frontend/dist
 
 notes
+backend/indico/*.html
+backend/indico/*.json

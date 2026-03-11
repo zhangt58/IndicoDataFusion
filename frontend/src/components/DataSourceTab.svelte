@@ -146,7 +146,7 @@
     });
   }
 
-  // New: sort dataSources by name (case-insensitive), but place items with type 'test' at the end.
+  // Sort dataSources by name (case-insensitive).
   // Preserve the active data source selection by name.
   function sortDataSources() {
     if (!configData || !Array.isArray(configData.dataSources)) return;
@@ -159,12 +159,6 @@
       null;
 
     configData.dataSources.sort((a, b) => {
-      const aIsTest = a && a.type === 'test';
-      const bIsTest = b && b.type === 'test';
-      if (aIsTest !== bIsTest) {
-        // push test types to the end
-        return aIsTest ? 1 : -1;
-      }
       const na = a && a.name ? String(a.name).toLowerCase() : '';
       const nb = b && b.name ? String(b.name).toLowerCase() : '';
       if (na < nb) return -1;
@@ -299,7 +293,7 @@
         configData.activeDataSourceName = configData.dataSources[selectedActiveIndex].name;
       }
 
-      // sort before sending so backend receives a consistent ordering (test types go to the bottom)
+      // sort before sending so backend receives a consistent ordering
       sortDataSources();
 
       await ApplyStructuredConfigUI(configData);
